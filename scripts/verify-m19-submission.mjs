@@ -28,6 +28,7 @@ const evidencePaths = [
   'docs/evidence/m16-load-test-results.json',
   'docs/evidence/m17-security-checklist.json',
   'docs/evidence/m18-deployment-checklist.json',
+  'docs/evidence/m18-smtp-verification.json',
 ];
 await Promise.all(evidencePaths.map((path) => readFile(join(root, path))));
 await access(join(root, reportPdf));
@@ -89,7 +90,7 @@ const checks = [
     'DOC-06',
     'Test Report labels unavailable evidence as pending',
     files.tests.includes('Pending external study') &&
-      files.tests.includes('live URL has not been claimed'),
+      files.tests.includes('Hosted M16 load rerun pending'),
   ),
   check(
     'DOC-07',
@@ -118,7 +119,7 @@ const checks = [
   check(
     'DOC-10',
     'Required evidence files are present',
-    evidencePaths.length === 8,
+    evidencePaths.length === 9,
   ),
 ];
 
@@ -132,8 +133,7 @@ const report = {
     failed: checks.filter((item) => !item.passed).length,
   },
   externalCloseOut: [
-    'M18 live URL and SMTP verification',
-    'Docker/PostgreSQL integration and recovery run',
+    'Hosted M16 performance rerun and disposable restore drill',
     'Five-faculty phone timing study',
     'College deadline, naming convention and demonstration date',
   ],

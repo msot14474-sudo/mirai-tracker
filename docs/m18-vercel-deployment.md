@@ -69,3 +69,15 @@ pnpm verify:m18:live
 ```
 
 `M18_API_URL` is optional for the original same-origin Docker deployment.
+
+## Verified production result
+
+The production deployment was verified on 8 October 2026:
+
+- `https://mirai-tracker.vercel.app` serves the public React application and proxies `/api` to the NestJS deployment;
+- managed Neon PostgreSQL and Upstash Redis pass dependency readiness;
+- the seeded Program Manager can sign in and read campus and progress data;
+- two authenticated QStash schedules process both missed-log stages every five minutes; and
+- Brevo SMTP accepted an authenticated application test message.
+
+The public and SMTP evidence is stored in `docs/evidence/m18-deployment-checklist.json` and `docs/evidence/m18-smtp-verification.json`. No SMTP key, session secret or background-job secret is stored in Git.

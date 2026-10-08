@@ -1,6 +1,6 @@
 {
   "milestone": "M19",
-  "generatedAt": "2026-10-08T06:56:59.851Z",
+  "generatedAt": "2026-10-08T16:27:19.537Z",
   "passed": true,
   "summary": {
     "total": 10,
@@ -8,8 +8,7 @@
     "failed": 0
   },
   "externalCloseOut": [
-    "M18 live URL and SMTP verification",
-    "Docker/PostgreSQL integration and recovery run",
+    "Hosted M16 performance rerun and disposable restore drill",
     "Five-faculty phone timing study",
     "College deadline, naming convention and demonstration date"
   ],

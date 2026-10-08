@@ -15,6 +15,9 @@
 - [x] M16 JSON/CSV load-test evidence and k6 scenario
 - [x] M17 JSON/CSV security checklist
 - [x] M18 JSON/CSV deployment-package checklist
+- [x] Public M18 Vercel deployment with managed PostgreSQL and Redis
+- [x] Authenticated five-minute QStash alert schedules
+- [x] Brevo SMTP delivery accepted from the production application
 - [x] Combined 17-page PDF submission report
 - [x] No committed `.env`, password, token or API key
 - [x] M20 read-only recovery planner with CSV/print output and feature tests
@@ -24,11 +27,12 @@
 ## Must be completed before claiming a fully live submission
 
 - [ ] Confirm the college submission deadline, naming convention and demonstration date
-- [ ] Select the deployment account/server and point DNS to it
-- [ ] Configure the deployer's SMTP account
-- [ ] Run production Docker image, migration, seed and readiness checks
-- [ ] Record the M18 HTTPS URL and run `pnpm verify:m18:live`
-- [ ] Run PostgreSQL integration tests and the disposable restore drill
+- [x] Select the deployment account and publish the Vercel production domain
+- [x] Configure and verify the deployer's SMTP account
+- [x] Run production Docker image, migration, seed and readiness checks
+- [x] Record the M18 HTTPS URL and run `pnpm verify:m18:live`
+- [x] Run PostgreSQL integration tests
+- [ ] Run the disposable production restore drill
 - [ ] Run the authenticated M16 test against the deployed stack
 - [ ] Time five faculty volunteers on phones and run `pnpm study:m09`
 - [ ] Obtain approval before using any real institutional data

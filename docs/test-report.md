@@ -4,7 +4,7 @@
 
 The verified source baseline passes **239 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
 
-The result is conditional: database integration tests and container execution were not run because Docker/PostgreSQL/Redis are unavailable on the development machine. The five-faculty phone study and public deployment verification remain external activities.
+The production Docker smoke test, PostgreSQL integration suite and public Vercel deployment have now passed. The live deployment uses managed PostgreSQL and Redis, authenticated five-minute QStash jobs and verified Brevo SMTP delivery. The five-faculty phone study remains an external activity.
 
 ## 2. Automated suite inventory
 
@@ -66,16 +66,16 @@ M17 verifies production secret rules, protected-by-default routing, role scopes,
 
 ## 7. Deployment package
 
-M18's 11 static checks verify private persistent data services, Caddy HTTPS, startup migrations, unprivileged API/worker users, same-origin routing, restart/health policy, secret templates, one-time demo password handling, seed completeness, database verification and SPA headers. The package status is `configuration-ready`; a live URL has not been claimed.
+M18's 11 static checks verify private persistent data services, Caddy HTTPS, startup migrations, unprivileged API/worker users, same-origin routing, restart/health policy, secret templates, one-time demo password handling, seed completeness, database verification and SPA headers. The public Vercel deployment at `https://mirai-tracker.vercel.app` passes all five live checks: web availability, API dependency readiness, demonstration login, deployed campus data and populated progress results. Brevo accepted an authenticated production test email, recorded in `docs/evidence/m18-smtp-verification.json`. The package status is `live-verified`.
 
 ## 8. Known gaps and risk
 
-| Gap                                      | Impact                                                                      | Required close-out                                          |
-| ---------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Docker unavailable                       | No live migration, database constraints, backup restore or image smoke test | Run the documented Compose commands on the deployment host  |
-| Volunteer study empty                    | Required usability evidence is incomplete                                   | Time five faculty on phones and run `pnpm study:m09`        |
-| M18 URL absent                           | HTTPS, SMTP and real dependency latency unverified                          | Deploy, seed, then run `pnpm verify:m18:live` and M16 again |
-| Real institutional sample data undecided | Demo remains fictional                                                      | Obtain approval and import only non-sensitive data          |
+| Gap                                      | Impact                                                        | Required close-out                                                      |
+| ---------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Production restore drill pending         | Recovery time is not yet measured against the hosted database | Restore a fresh backup into a disposable database and record the result |
+| Volunteer study empty                    | Required usability evidence is incomplete                     | Time five faculty on phones and run `pnpm study:m09`                    |
+| Hosted M16 load rerun pending            | Local performance evidence excludes public network latency    | Run the authenticated M16 scenario against the Vercel deployment        |
+| Real institutional sample data undecided | Demo remains fictional                                        | Obtain approval and import only non-sensitive data                      |
 
 ## 9. Stretch-feature evidence
 
@@ -93,4 +93,4 @@ pnpm verify:m19
 pnpm verify:m20
 ```
 
-With infrastructure available, also run `pnpm db:test`, `pnpm deploy:verify-data`, the backup verification, live M18 verification and the authenticated production load test.
+Before final submission, run the disposable restore drill, the authenticated production M16 load test and the five-faculty M09 phone study.

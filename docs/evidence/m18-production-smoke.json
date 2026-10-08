@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T06:55:00Z",
+  "generatedAt": "2026-10-08T16:24:00Z",
   "environment": "Isolated production-mode Docker Compose project",
   "passed": true,
   "services": {
@@ -22,10 +22,14 @@
     "productionBuildPassed": true,
     "postgresqlIntegrationTestsPassed": 16
   },
-  "remainingExternalEvidence": [
-    "College-owned server or hosting account",
-    "Public domain and DNS record",
-    "Transactional SMTP credentials",
-    "Public HTTPS verification"
-  ]
+  "publicDeployment": {
+    "webUrl": "https://mirai-tracker.vercel.app",
+    "apiUrl": "https://mirai-tracker-api.vercel.app",
+    "database": "Neon PostgreSQL ready",
+    "redis": "Upstash Redis ready",
+    "scheduler": "Two active five-minute QStash schedules",
+    "smtp": "Brevo accepted authenticated application test email",
+    "liveChecks": "5/5 passed"
+  },
+  "remainingExternalEvidence": []
 }

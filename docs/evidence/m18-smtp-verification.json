@@ -1,0 +1,13 @@
+{
+  "milestone": "M18",
+  "generatedAt": "2026-10-08T16:24:00.000Z",
+  "provider": "Brevo SMTP",
+  "sender": "m***@gmail.com",
+  "recipient": "m***@gmail.com",
+  "endpoint": "https://mirai-tracker.vercel.app/api/missed-log-alerts/test-email",
+  "authorization": "PROGRAM_MANAGER role and authenticated session",
+  "httpStatus": 200,
+  "providerAccepted": true,
+  "providerMessageId": "<39cd70ae-5446-b521-27ce-6f1c0e60d514@gmail.com>",
+  "secretsCommitted": false
+}

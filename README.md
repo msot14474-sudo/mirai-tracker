@@ -136,6 +136,8 @@ M17 adds production environment validation, failed-login throttling, browser-ori
 
 M18 provides production Docker targets for the web, API and worker; private persistent PostgreSQL and Redis services; automatic HTTPS through Caddy; startup migrations; an idempotent fictional demonstration seed; and static, database and public-URL verifiers. Run `pnpm verify:m18` to validate the deployment package. See [docs/m18-deployment-and-demo-data.md](docs/m18-deployment-and-demo-data.md) for the server, DNS, SMTP, seed and live-verification procedure.
 
+The verified public deployment is available at [mirai-tracker.vercel.app](https://mirai-tracker.vercel.app). It uses a same-origin `/api` proxy, managed Neon PostgreSQL, Upstash Redis, two five-minute QStash schedules and Brevo SMTP. All 11 static and 5 live M18 checks pass; SMTP acceptance evidence is recorded in `docs/evidence/m18-smtp-verification.json`.
+
 ## What-if recovery planner
 
 M20 turns a warning into an explainable intervention plan. Managers and faculty can choose a TIGHT or ON TRACK target, see DANGER subjects first, calculate the minimum additional capacity in half-hour units, test proposed hours, then print or download a spreadsheet-safe CSV. The scenario is read-only and uses each subject's existing M10 thresholds. Run `pnpm verify:m20`; see [docs/m20-stretch-features.md](docs/m20-stretch-features.md) for formulas, safeguards and evidence.

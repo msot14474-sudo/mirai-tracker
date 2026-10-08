@@ -16,8 +16,8 @@ This index collects the documents and evidence for Problem 1.
 
 ## Evidence
 
-Machine-readable evidence is stored in `docs/evidence/`. The main records are the M10 hand calculations, M11-M14 interface screenshots, M16 load-test results, M17 security checklist, M18 deployment checklist, M19 submission-pack checklist and M20 stretch-feature checklist.
+Machine-readable evidence is stored in `docs/evidence/`. The main records are the M10 hand calculations, M11-M14 interface screenshots, M16 load-test results, M17 security checklist, M18 live deployment and SMTP evidence, M19 submission-pack checklist and M20 stretch-feature checklist.
 
 ## Current readiness
 
-The source, documentation, 239 automated tests, production builds and static deployment controls pass. M20 adds a tested, read-only recovery planner. The checklist deliberately keeps the external items open: a live M18 URL, Docker/PostgreSQL integration execution, the five-faculty phone timing study, and final college dates or naming rules.
+The source, documentation, 239 automated tests, production builds and deployment controls pass. M18 is publicly deployed with managed PostgreSQL, Redis, authenticated five-minute jobs and verified SMTP delivery. M20 adds a tested, read-only recovery planner. The remaining external items are the five-faculty phone timing study, hosted performance rerun, disposable restore drill and final college dates or naming rules.
