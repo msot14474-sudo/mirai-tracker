@@ -134,6 +134,7 @@ function check(id, control, passed) {
 
 async function verifyLiveDeployment() {
   const rawUrl = process.env.M18_DEMO_URL;
+  const rawApiUrl = process.env.M18_API_URL;
   const email = process.env.M18_DEMO_EMAIL;
   const password = process.env.M18_DEMO_PASSWORD;
   if (!rawUrl || !email || !password) {
@@ -142,15 +143,22 @@ async function verifyLiveDeployment() {
     );
   }
   const baseUrl = new URL(rawUrl);
+  const apiBaseUrl = new URL(rawApiUrl || rawUrl);
   if (baseUrl.protocol !== 'https:') {
     throw new Error('M18_DEMO_URL must use HTTPS.');
   }
-  const request = (path, init) => fetch(new URL(path, baseUrl), init);
+  if (apiBaseUrl.protocol !== 'https:') {
+    throw new Error('M18_API_URL must use HTTPS.');
+  }
+  const webRequest = (path, init) => fetch(new URL(path, baseUrl), init);
+  const apiPrefix = rawApiUrl ? '' : '/api';
+  const apiRequest = (path, init) =>
+    fetch(new URL(`${apiPrefix}${path}`, apiBaseUrl), init);
   const [webHealth, apiHealth] = await Promise.all([
-    request('/health.html'),
-    request('/api/health/ready'),
+    webRequest(rawApiUrl ? '/' : '/health.html'),
+    apiRequest('/health/ready'),
   ]);
-  const login = await request('/api/auth/login', {
+  const login = await apiRequest('/auth/login', {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: baseUrl.origin },
     body: JSON.stringify({ email, password }),
@@ -159,8 +167,8 @@ async function verifyLiveDeployment() {
   if (!cookie) throw new Error('Live login did not return a session cookie.');
   const authenticatedHeaders = { cookie };
   const [campusesResponse, dashboardResponse] = await Promise.all([
-    request('/api/academic/campuses', { headers: authenticatedHeaders }),
-    request('/api/progress/dashboard?asOf=2026-10-08', {
+    apiRequest('/academic/campuses', { headers: authenticatedHeaders }),
+    apiRequest('/progress/dashboard?asOf=2026-10-08', {
       headers: authenticatedHeaders,
     }),
   ]);
@@ -187,6 +195,7 @@ async function verifyLiveDeployment() {
   ];
   return {
     url: baseUrl.origin,
+    apiUrl: apiBaseUrl.origin,
     passed: liveChecks.every((item) => item.passed),
     checks: liveChecks,
   };

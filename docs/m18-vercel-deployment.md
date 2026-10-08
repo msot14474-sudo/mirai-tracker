@@ -2,10 +2,10 @@
 
 Mirai Tracker deploys from one GitHub monorepo as two Vercel projects:
 
-| Project | Root directory | Purpose |
-| --- | --- | --- |
-| `mirai-tracker-api` | `apps/api` | NestJS API deployed as one Vercel Function |
-| `mirai-tracker` | `apps/web` | React/Vite static frontend |
+| Project             | Root directory | Purpose                                    |
+| ------------------- | -------------- | ------------------------------------------ |
+| `mirai-tracker-api` | `apps/api`     | NestJS API deployed as one Vercel Function |
+| `mirai-tracker`     | `apps/web`     | React/Vite static frontend                 |
 
 Vercel automatically includes workspace packages outside each root directory for
 pnpm monorepos. Keep that setting enabled for the API because it imports
@@ -57,3 +57,15 @@ that support permanent processes.
 3. Deploy the web project with `VITE_API_URL` set to the API production URL.
 4. Set `WEB_ORIGIN` to the web production URL and redeploy the API.
 5. Configure QStash and SMTP, then run the live M18 verification.
+
+For the split Vercel deployment, verify the public web and API domains together:
+
+```sh
+M18_DEMO_URL='https://mirai-tracker.vercel.app' \
+M18_API_URL='https://mirai-tracker-api.vercel.app' \
+M18_DEMO_EMAIL='admin@mirai.local' \
+M18_DEMO_PASSWORD='<temporary-demo-password>' \
+pnpm verify:m18:live
+```
+
+`M18_API_URL` is optional for the original same-origin Docker deployment.
