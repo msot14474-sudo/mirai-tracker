@@ -20,4 +20,4 @@ Machine-readable evidence is stored in `docs/evidence/`. The main records are th
 
 ## Current readiness
 
-The source, documentation, 243 automated tests, production builds and deployment controls pass. M18 is publicly deployed with managed PostgreSQL, Redis, authenticated five-minute jobs, verified SMTP delivery and password plus email-OTP login. M20 adds a tested, read-only recovery planner. The remaining external items are the five-faculty phone timing study, hosted performance rerun, disposable restore drill and final college dates or naming rules.
+The source, documentation, 246 automated tests, production builds and deployment controls pass. M18 is publicly deployed with managed PostgreSQL, Redis, authenticated five-minute jobs, verified SMTP delivery and password plus email-OTP login. M20 adds a tested, read-only recovery planner. The remaining external items are the five-faculty phone timing study, hosted performance rerun, disposable restore drill and final college dates or naming rules.

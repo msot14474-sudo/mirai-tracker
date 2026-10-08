@@ -52,7 +52,7 @@ describe('AccessPolicyService', () => {
     expect(policy.canManageCampus(manager, 'campus-a')).toBe(true);
     expect(policy.canManageCampus(manager, 'campus-b')).toBe(false);
     expect(() => policy.assertCanManageCampus(manager, 'campus-b')).toThrow(
-      'cannot manage the timetable',
+      'cannot manage this campus',
     );
     expect(policy.canViewCampus(manager, 'campus-a')).toBe(true);
     expect(policy.canViewCampus(manager, 'campus-b')).toBe(false);

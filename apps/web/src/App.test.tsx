@@ -184,6 +184,9 @@ describe('App authentication', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
+      if (url.includes('/faculty-access/campuses/')) {
+        return facultyAccessResponse();
+      }
       return new Response(JSON.stringify([]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -199,7 +202,7 @@ describe('App authentication', () => {
     ).toBeInTheDocument();
     expect(
       (await screen.findAllByRole('option', { name: 'HI-Tech' })).length,
-    ).toBe(2);
+    ).toBe(3);
     expect(
       await screen.findByRole('heading', { name: 'Semester import' }),
     ).toBeInTheDocument();
@@ -248,6 +251,9 @@ describe('App authentication', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
+      if (url.includes('/faculty-access/campuses/')) {
+        return facultyAccessResponse();
+      }
       if (url.endsWith('/missed-log-alerts/me')) {
         return new Response(
           JSON.stringify({
@@ -274,6 +280,12 @@ describe('App authentication', () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', {
+        name: 'Faculty access',
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
         name: 'Lesson plans and exam scope',
       }),
     ).toBeInTheDocument();
@@ -294,3 +306,20 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+function facultyAccessResponse() {
+  return new Response(
+    JSON.stringify({
+      campus: {
+        id: 'campus-a',
+        code: 'HI-TECH',
+        name: 'HI-Tech',
+        timezone: 'Asia/Kolkata',
+        active: true,
+      },
+      faculty: [],
+      offerings: [],
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  );
+}

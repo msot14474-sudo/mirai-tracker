@@ -6,12 +6,12 @@ Mirai Tracker replaces spreadsheet-based syllabus monitoring with one calendar-a
 
 ## 2. Users and permissions
 
-| Role                    | Main capabilities                                                         | Scope                          |
-| ----------------------- | ------------------------------------------------------------------------- | ------------------------------ |
-| Admin / Program Manager | Academic setup, imports, all dashboards, audit history and exports        | All campuses                   |
-| Campus Manager          | Campus timetable, faculty coordination, campus dashboards and escalations | Assigned campus                |
-| Faculty                 | Lesson plans, assigned daily sessions and own subject dashboards          | Active assignments             |
-| Student                 | Covered topics, next topics and exam scope                                | Authenticated batch, read-only |
+| Role                    | Main capabilities                                                           | Scope                          |
+| ----------------------- | --------------------------------------------------------------------------- | ------------------------------ |
+| Admin / Program Manager | Academic setup, imports, all dashboards, audit history and exports          | All campuses                   |
+| Campus Manager          | Faculty access, timetable, faculty coordination, dashboards and escalations | Assigned campus                |
+| Faculty                 | Lesson plans, assigned daily sessions and own subject dashboards            | Active assignments             |
+| Student                 | Covered topics, next topics and exam scope                                  | Authenticated batch, read-only |
 
 Authentication uses password plus a six-digit email OTP before issuing an HTTP-only opaque session. The permission layer can later accept Google Workspace or institutional identities without changing domain access rules.
 
@@ -55,7 +55,7 @@ The worker scans every five minutes. An unlogged class triggers a faculty remind
 
 The PostgreSQL model contains 30 domain models. Major groups are:
 
-- identity: User, PasswordCredential, RoleAssignment, StaffProfile and StudentProfile;
+- identity: User, PasswordCredential, RoleAssignment, StaffProfile and StudentProfile, including audited campus-scoped faculty onboarding;
 - setup: Campus, Track, Semester, Batch, Subject and SubjectOffering;
 - calendar: CalendarDayOverride and ExamWindow;
 - scheduling: FacultyAssignment, TimetableEntry and ScheduledSession;

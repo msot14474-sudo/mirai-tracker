@@ -76,6 +76,8 @@ Set `DEMO_USER_PASSWORD` and `DEMO_NOTIFICATION_EMAIL` in `.env`, start the stac
 
 After a correct password, the API emails a ten-minute one-time code. A session is created only after that code is verified. Sessions are stored in Redis and delivered through an HTTP-only cookie. The API reloads role and scope information from PostgreSQL on every protected request. See [docs/m03-authentication-and-permissions.md](docs/m03-authentication-and-permissions.md) for the security flow and permission matrix.
 
+Campus Managers can create faculty accounts only for their assigned campus from the Faculty access workspace. They set the login and OTP email, employee code, regular or visiting status, an initial password and optional subject assignments. Creation is transactional and audited; the password is stored only as a scrypt hash. See [docs/faculty-access.md](docs/faculty-access.md) for the workflow and safeguards.
+
 ## Semester calendar
 
 Program Managers can create campus semesters, choose the working-Saturday rule, add dated holidays/events/extra working days and define exam windows. The API produces an explainable working/non-working result for every date. See [docs/m04-semester-calendar.md](docs/m04-semester-calendar.md) for the decision order, routes, validations and test coverage.

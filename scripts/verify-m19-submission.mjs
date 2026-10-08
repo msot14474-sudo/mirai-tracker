@@ -83,7 +83,7 @@ const checks = [
   check(
     'DOC-05',
     'Test Report records suite counts and mandatory evidence',
-    files.tests.includes('243 automated tests') &&
+    files.tests.includes('246 automated tests') &&
       files.tests.includes('Mandatory evidence matrix'),
   ),
   check(

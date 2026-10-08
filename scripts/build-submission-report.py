@@ -262,7 +262,7 @@ story.extend([
     Spacer(1, 8*mm),
     HRFlowable(width="72%", thickness=3, color=GREEN, hAlign="LEFT"),
     Spacer(1, 8*mm),
-    metric_cards([("243", "automated tests"), ("2,100", "load requests"), ("0%", "load errors")]),
+    metric_cards([("246", "automated tests"), ("2,100", "load requests"), ("0%", "load errors")]),
     Spacer(1, 14*mm),
     p("Prepared 8 October 2026", "CoverSub"),
     p("Status: public deployment verified; external field study, hosted load rerun and restore drill pending", "Smallx"),
@@ -282,7 +282,7 @@ story += [
     bullet("Whether future timetable capacity can finish the remaining syllabus."),
     bullet("Which subjects, campuses and exams need attention first."),
     h2("Verified baseline"),
-    p("All workspace type checks, 243 automated tests and production application builds pass. Three hand calculations match to two decimals. The local four-campus, 30-subject load baseline completed 2,100 requests with zero errors at up to 200 concurrent users."),
+    p("All workspace type checks, 246 automated tests and production application builds pass. Three hand calculations match to two decimals. The local four-campus, 30-subject load baseline completed 2,100 requests with zero errors at up to 200 concurrent users."),
     h2("Honest completion boundary"),
     p("The public Vercel deployment, managed PostgreSQL and Redis, migrations, database tests, scheduled jobs and Brevo SMTP have been verified. The disposable restore drill, hosted load rerun and five-faculty phone study remain open and are not overstated."),
     PageBreak(),
@@ -295,7 +295,7 @@ story += [
     table([
         ["Role", "Capabilities", "Enforced scope"],
         ["Program Manager", "Academic setup, imports, all dashboards, audit and exports", "All campuses"],
-        ["Campus Manager", "Timetable, campus dashboards and escalations", "Assigned campus"],
+        ["Campus Manager", "Faculty access, timetable, dashboards and escalations", "Assigned campus"],
         ["Faculty", "Lesson plans, assigned daily logs and subject view", "Active assignments"],
         ["Student", "Covered, next and exam-scope information", "Own batch; read-only"],
     ], [35*mm, 88*mm, 49*mm]),
@@ -395,7 +395,7 @@ story += [
 
 story += h1("Test strategy and results")
 story += [
-    metric_cards([("174", "API tests"), ("43", "web tests"), ("26", "worker + shared"), ("243", "total")]),
+    metric_cards([("176", "API tests"), ("44", "web tests"), ("26", "worker + shared"), ("246", "total")]),
     Spacer(1, 5*mm),
     table([
         ["Test layer", "What it proves", "Current result"],
@@ -498,7 +498,7 @@ story += [
     h2("Complete"),
     bullet("Source, migrations, seed, local and production configuration."),
     bullet("Architecture, design, Test Report, demo script and evidence index."),
-    bullet("243 automated tests, type checks and production application builds."),
+    bullet("246 automated tests, type checks and production application builds."),
     bullet("Calculation, load, security, deployment and stretch-feature verifiers."),
     bullet("Public Vercel release with managed data services, scheduled jobs, Brevo SMTP and email OTP."),
     h2("Close before a fully live claim"),

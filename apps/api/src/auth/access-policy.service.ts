@@ -50,9 +50,7 @@ export class AccessPolicyService {
 
   assertCanManageCampus(user: AuthenticatedUser, campusId: string) {
     if (!this.canManageCampus(user, campusId)) {
-      throw new ForbiddenException(
-        'You cannot manage the timetable for this campus.',
-      );
+      throw new ForbiddenException('You cannot manage this campus.');
     }
   }
 

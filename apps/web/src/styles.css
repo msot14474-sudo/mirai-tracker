@@ -1777,6 +1777,175 @@ select {
   min-height: 230px;
 }
 
+.faculty-access-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.faculty-access-form {
+  gap: 0.8rem;
+}
+
+.faculty-access-form label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.faculty-access-form small,
+.optional-label {
+  color: #748079;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.faculty-offering-picker {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.faculty-offering-picker legend {
+  color: #31433d;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.faculty-offering-picker > p {
+  margin: 0.35rem 0 0.7rem;
+  color: #6c7972;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.faculty-offering-picker > div {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 250px;
+  overflow: auto;
+}
+
+.faculty-offering-picker label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid #d9dcd3;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.faculty-offering-picker input {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
+.faculty-offering-picker span {
+  display: grid;
+  gap: 0.15rem;
+  font-weight: 500;
+}
+
+.faculty-offering-picker strong {
+  color: #1c5a49;
+}
+
+.form-success {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  color: #245a46;
+  background: #dcebdd;
+  font-size: 0.82rem;
+}
+
+.faculty-directory {
+  min-height: 480px;
+  padding: 1.2rem;
+  border: 1px solid #d2d5cb;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.faculty-directory h3 {
+  margin: 0.45rem 0 0;
+}
+
+.faculty-directory-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.faculty-directory-list article {
+  padding: 1rem;
+  border: 1px solid #d9dcd3;
+  border-radius: 0.8rem;
+  background: rgba(250, 249, 244, 0.78);
+}
+
+.faculty-directory-list header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.faculty-directory-list header > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.faculty-directory-list header span,
+.faculty-directory-list article > p,
+.faculty-directory-list article > small {
+  color: #6c7972;
+  font-size: 0.76rem;
+}
+
+.faculty-directory-list article > p {
+  margin: 0.8rem 0 0.2rem;
+}
+
+.faculty-directory-list header b {
+  align-self: start;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+}
+
+.faculty-directory-list header b.active {
+  color: #24654f;
+  background: #dcebdd;
+}
+
+.faculty-directory-list header b.inactive {
+  color: #8a4a42;
+  background: #f0dfdb;
+}
+
+.faculty-subject-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.faculty-subject-tags span {
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  color: #31584b;
+  background: #e5ece3;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.faculty-empty-state {
+  min-height: 350px;
+}
+
 .loading-shell {
   min-height: 100vh;
   display: grid;
@@ -1848,6 +2017,7 @@ select {
   }
 
   .semester-layout,
+  .faculty-access-layout,
   .setup-forms,
   .import-layout,
   .timetable-layout,

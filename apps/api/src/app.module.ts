@@ -15,6 +15,7 @@ import { ProgressModule } from './progress/progress.module';
 import { StudentViewModule } from './student-view/student-view.module';
 import { MissedLogAlertModule } from './missed-log-alert/missed-log-alert.module';
 import { ExportModule } from './export/export.module';
+import { FacultyAccessModule } from './faculty-access/faculty-access.module';
 import { RequestTimingInterceptor } from './performance/request-timing.interceptor';
 import { SafeHttpExceptionFilter } from './security/http-exception.filter';
 
@@ -34,6 +35,7 @@ import { SafeHttpExceptionFilter } from './security/http-exception.filter';
     StudentViewModule,
     MissedLogAlertModule,
     ExportModule,
+    FacultyAccessModule,
     HealthModule,
   ],
   providers: [

@@ -15,7 +15,7 @@
 | 0:00 | Opening                    | State the spreadsheet problem and desired early warning                        | One calendar-aware source of truth                |
 | 0:45 | Program Manager - Semester | Dates, holidays, events, Saturday rule and exams                               | Planning uses real working days                   |
 | 1:45 | Program Manager - Import   | Preview the four-campus/25-subject template and row feedback                   | Whole-semester setup is validated before commit   |
-| 2:30 | Campus Manager - Timetable | Two recurring slots and generated dated sessions                               | Planned hours come from the timetable             |
+| 2:30 | Campus Manager             | Create campus-scoped faculty access, then show timetable allocation            | Branch managers control their own teaching team   |
 | 3:15 | Faculty - Lesson Plan      | Units, ordered topics, planned hours and exam scope                            | Syllabus scope is structured and versioned        |
 | 4:15 | Faculty - Planned Dates    | Show topic start/finish dates and capacity                                     | Holidays and cancellations shift later work       |
 | 5:00 | Faculty - Daily Log        | Open a pre-filled class, adjust completion and submit                          | Phone-first logging needs minimal entry           |
@@ -23,7 +23,7 @@
 | 7:30 | Manager - Exam Readiness   | Compare mid-term and end-term topic scope                                      | Each exam uses its own mapped topics              |
 | 8:00 | Student                    | Covered topics, coming next and exam scope; point out no edit controls         | Student access is batch-scoped and read-only      |
 | 8:45 | Manager - Alerts/Exports   | Reminder, 48-hour escalation and CSV export history                            | Operational follow-up and reporting are auditable |
-| 9:30 | Closing                    | Mention 243 tests, load results, security and deployment                       | Evidence supports the design claims               |
+| 9:30 | Closing                    | Mention 246 tests, load results, security and deployment                       | Evidence supports the design claims               |
 
 ## Suggested narration
 

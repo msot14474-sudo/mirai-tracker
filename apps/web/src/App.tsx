@@ -72,6 +72,12 @@ const ExportCenter = lazy(() =>
   import('./ExportCenter').then((module) => ({ default: module.ExportCenter })),
 );
 
+const FacultyAccessWorkspace = lazy(() =>
+  import('./FacultyAccessWorkspace').then((module) => ({
+    default: module.FacultyAccessWorkspace,
+  })),
+);
+
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Administrator',
   PROGRAM_MANAGER: 'Program Manager',
@@ -81,9 +87,19 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 const featureAccess: Record<UserRole, string[]> = {
-  ADMIN: ['All campuses', 'Academic setup', 'Reports and exports'],
-  PROGRAM_MANAGER: ['All campuses', 'Academic setup', 'Reports and exports'],
-  CAMPUS_MANAGER: ['Campus timetable', 'Faculty allocation', 'Campus alerts'],
+  ADMIN: [
+    'All campuses',
+    'Academic setup',
+    'Faculty access',
+    'Reports and exports',
+  ],
+  PROGRAM_MANAGER: [
+    'All campuses',
+    'Academic setup',
+    'Faculty access',
+    'Reports and exports',
+  ],
+  CAMPUS_MANAGER: ['Campus timetable', 'Faculty access', 'Campus alerts'],
   FACULTY: [
     'My lesson plans',
     'Daily session logging',
@@ -263,6 +279,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       role === 'PROGRAM_MANAGER' ||
       role === 'CAMPUS_MANAGER',
   );
+  const canManageFaculty = canManageTimetable;
   const canManageLessonPlans = roles.some(
     (role) =>
       role === 'ADMIN' ||
@@ -392,6 +409,15 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             <SemesterImport />
           </Suspense>
         </>
+      ) : null}
+      {canManageFaculty ? (
+        <Suspense
+          fallback={
+            <p className="workspace-loading">Loading faculty access…</p>
+          }
+        >
+          <FacultyAccessWorkspace />
+        </Suspense>
       ) : null}
       {canManageTimetable ? (
         <Suspense
