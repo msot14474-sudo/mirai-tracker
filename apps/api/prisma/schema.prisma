@@ -1,0 +1,740 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum UserRole {
+  ADMIN
+  PROGRAM_MANAGER
+  CAMPUS_MANAGER
+  FACULTY
+  STUDENT
+}
+
+enum StaffType {
+  REGULAR
+  VISITING
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+}
+
+enum SemesterStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum WorkingSaturdayRule {
+  ALL
+  NONE
+  SECOND_AND_FOURTH
+}
+
+enum CalendarDayType {
+  HOLIDAY
+  EVENT
+  EXTRA_WORKING_DAY
+  CAMPUS_CLOSED
+}
+
+enum ExamType {
+  SESSIONAL
+  MID_TERM
+  PUT
+  END_TERM
+  OTHER
+}
+
+enum SubjectOfferingStatus {
+  DRAFT
+  ACTIVE
+  COMPLETE
+  ARCHIVED
+}
+
+enum FacultyAssignmentType {
+  PRIMARY
+  CO_FACULTY
+  VISITING
+}
+
+enum LessonPlanStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum TopicStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum ScheduledSessionStatus {
+  SCHEDULED
+  COMPLETED
+  IN_PROGRESS
+  SKIPPED
+  MERGED
+  CANCELLED
+}
+
+enum SessionLogStatus {
+  COMPLETED
+  IN_PROGRESS
+  SKIPPED
+  MERGED
+  CANCELLED
+}
+
+enum WorkStatus {
+  NOT_APPLICABLE
+  NOT_ASSIGNED
+  ASSIGNED
+  PARTIAL
+  COMPLETED
+}
+
+enum ScheduleCalculationReason {
+  INITIAL
+  CALENDAR_CHANGE
+  TIMETABLE_CHANGE
+  SESSION_CANCELLED
+  LESSON_PLAN_CHANGE
+  MANUAL_RECALCULATION
+}
+
+enum ProgressStatus {
+  ON_TRACK
+  TIGHT
+  DANGER
+  COMPLETE
+}
+
+enum AlertType {
+  FACULTY_MISSED_LOG
+  CAMPUS_MANAGER_ESCALATION
+}
+
+enum AlertStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+  TELEGRAM
+  IN_APP
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum ImportType {
+  CAMPUSES
+  USERS
+  SEMESTERS
+  CALENDAR
+  BATCHES
+  SUBJECTS
+  TIMETABLE
+  LESSON_PLANS
+  FULL_SEMESTER
+}
+
+enum JobStatus {
+  UPLOADED
+  VALIDATING
+  VALIDATED
+  PROCESSING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+}
+
+enum ExportType {
+  FULL_DATA
+  CAMPUS_PROGRESS
+  SUBJECT_PROGRESS
+  VISITING_FACULTY_HONORARIUM
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  ARCHIVE
+  RESTORE
+  IMPORT
+  EXPORT
+  LOGIN
+  ROLE_CHANGE
+}
+
+model User {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  name                   String                 @db.VarChar(160)
+  email                  String                 @unique @db.VarChar(320)
+  phone                  String?                @unique @db.VarChar(32)
+  externalAuthId         String?                @unique @db.VarChar(255)
+  status                 UserStatus             @default(INVITED)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(3)
+  roleAssignments        RoleAssignment[]
+  passwordCredential     PasswordCredential?
+  staffProfile           StaffProfile?
+  studentProfile         StudentProfile?
+  uploadedLessonPlans    LessonPlan[]           @relation("LessonPlanUploadedBy")
+  approvedLessonPlans    LessonPlan[]           @relation("LessonPlanApprovedBy")
+  sessionLogs            SessionLog[]
+  alertRecipients        MissedLogAlert[]
+  notificationDeliveries NotificationDelivery[]
+  importJobs             ImportJob[]
+  exportJobs             ExportJob[]
+  auditEvents            AuditEvent[]           @relation("AuditActor")
+
+  @@index([status])
+}
+
+model PasswordCredential {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @db.Uuid
+  passwordHash String   @db.VarChar(128)
+  passwordSalt String   @db.VarChar(64)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RoleAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  role      UserRole
+  campusId  String?  @db.Uuid
+  scopeKey  String   @db.VarChar(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus    Campus?  @relation(fields: [campusId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role, scopeKey])
+  @@index([campusId, role])
+}
+
+model StaffProfile {
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             String              @unique @db.Uuid
+  employeeCode       String              @unique @db.VarChar(64)
+  staffType          StaffType           @default(REGULAR)
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  facultyAssignments FacultyAssignment[]
+}
+
+model StudentProfile {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @unique @db.Uuid
+  studentCode      String           @unique @db.VarChar(64)
+  batchId          String           @db.Uuid
+  enrollmentStatus EnrollmentStatus @default(ACTIVE)
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @db.Timestamptz(3)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  batch            Batch            @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  @@index([batchId, enrollmentStatus])
+}
+
+model Campus {
+  id              String           @id @default(uuid()) @db.Uuid
+  code            String           @unique @db.VarChar(32)
+  name            String           @unique @db.VarChar(160)
+  timezone        String           @default("Asia/Kolkata") @db.VarChar(64)
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+  roleAssignments RoleAssignment[]
+  semesters       Semester[]
+  importJobs      ImportJob[]
+  auditEvents     AuditEvent[]
+}
+
+model Track {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(32)
+  name      String   @unique @db.VarChar(160)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  batches   Batch[]
+}
+
+model Semester {
+  id                      String                @id @default(uuid()) @db.Uuid
+  campusId                String                @db.Uuid
+  name                    String                @db.VarChar(160)
+  startDate               DateTime              @db.Date
+  endDate                 DateTime              @db.Date
+  workingSaturdayRule     WorkingSaturdayRule   @default(NONE)
+  defaultOnTrackThreshold Decimal               @default(1.15) @db.Decimal(6, 3)
+  defaultTightThreshold   Decimal               @default(1.00) @db.Decimal(6, 3)
+  status                  SemesterStatus        @default(DRAFT)
+  createdAt               DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime              @updatedAt @db.Timestamptz(3)
+  campus                  Campus                @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  calendarDays            CalendarDayOverride[]
+  examWindows             ExamWindow[]
+  batches                 Batch[]
+
+  @@unique([campusId, name])
+  @@index([campusId, startDate, endDate])
+}
+
+model CalendarDayOverride {
+  id              String          @id @default(uuid()) @db.Uuid
+  semesterId      String          @db.Uuid
+  date            DateTime        @db.Date
+  type            CalendarDayType
+  title           String          @db.VarChar(200)
+  teachingAllowed Boolean         @default(false)
+  notes           String?         @db.Text
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
+  semester        Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  @@unique([semesterId, date])
+  @@index([semesterId, type, date])
+}
+
+model ExamWindow {
+  id               String      @id @default(uuid()) @db.Uuid
+  semesterId       String      @db.Uuid
+  name             String      @db.VarChar(160)
+  type             ExamType
+  startDate        DateTime    @db.Date
+  endDate          DateTime    @db.Date
+  syllabusDeadline DateTime    @db.Date
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
+  semester         Semester    @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  topicScopes      ExamScope[]
+
+  @@unique([semesterId, name])
+  @@index([semesterId, startDate])
+}
+
+model Batch {
+  id               String            @id @default(uuid()) @db.Uuid
+  semesterId       String            @db.Uuid
+  trackId          String            @db.Uuid
+  code             String            @db.VarChar(64)
+  name             String            @db.VarChar(160)
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  semester         Semester          @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  track            Track             @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  students         StudentProfile[]
+  subjectOfferings SubjectOffering[]
+
+  @@unique([semesterId, code])
+  @@index([trackId, semesterId])
+}
+
+model Subject {
+  id          String            @id @default(uuid()) @db.Uuid
+  code        String            @unique @db.VarChar(64)
+  name        String            @db.VarChar(200)
+  description String?           @db.Text
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  offerings   SubjectOffering[]
+}
+
+model SubjectOffering {
+  id                String                 @id @default(uuid()) @db.Uuid
+  batchId           String                 @db.Uuid
+  subjectId         String                 @db.Uuid
+  targetFinishDate  DateTime               @db.Date
+  onTrackThreshold  Decimal?               @db.Decimal(6, 3)
+  tightThreshold    Decimal?               @db.Decimal(6, 3)
+  status            SubjectOfferingStatus  @default(DRAFT)
+  createdAt         DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @db.Timestamptz(3)
+  batch             Batch                  @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  subject           Subject                @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  faculty           FacultyAssignment[]
+  timetableEntries  TimetableEntry[]
+  sessions          ScheduledSession[]
+  lessonPlans       LessonPlan[]
+  scheduleVersions  TopicScheduleVersion[]
+  progressSnapshots ProgressSnapshot[]
+
+  @@unique([batchId, subjectId])
+  @@index([batchId, status])
+  @@index([targetFinishDate])
+}
+
+model FacultyAssignment {
+  id               String                @id @default(uuid()) @db.Uuid
+  offeringId       String                @db.Uuid
+  staffProfileId   String                @db.Uuid
+  type             FacultyAssignmentType @default(PRIMARY)
+  startDate        DateTime              @db.Date
+  endDate          DateTime?             @db.Date
+  active           Boolean               @default(true)
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  offering         SubjectOffering       @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  staffProfile     StaffProfile          @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
+  timetableEntries TimetableEntry[]
+  sessions         ScheduledSession[]
+
+  @@unique([offeringId, staffProfileId, startDate])
+  @@index([staffProfileId, active])
+}
+
+model TimetableEntry {
+  id                  String             @id @default(uuid()) @db.Uuid
+  offeringId          String             @db.Uuid
+  facultyAssignmentId String?            @db.Uuid
+  weekday             Int
+  startTime           DateTime           @db.Time(0)
+  endTime             DateTime           @db.Time(0)
+  effectiveFrom       DateTime           @db.Date
+  effectiveTo         DateTime?          @db.Date
+  active              Boolean            @default(true)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  offering            SubjectOffering    @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  facultyAssignment   FacultyAssignment? @relation(fields: [facultyAssignmentId], references: [id], onDelete: SetNull)
+  sessions            ScheduledSession[]
+
+  @@unique([offeringId, weekday, startTime, effectiveFrom])
+  @@index([weekday, active])
+  @@index([facultyAssignmentId, weekday])
+}
+
+model ScheduledSession {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  sourceKey           String                 @unique @db.VarChar(255)
+  offeringId          String                 @db.Uuid
+  timetableEntryId    String?                @db.Uuid
+  facultyAssignmentId String?                @db.Uuid
+  sessionDate         DateTime               @db.Date
+  startsAt            DateTime               @db.Timestamptz(3)
+  endsAt              DateTime               @db.Timestamptz(3)
+  status              ScheduledSessionStatus @default(SCHEDULED)
+  isExtraSession      Boolean                @default(false)
+  cancellationReason  String?                @db.Text
+  mergedIntoSessionId String?                @db.Uuid
+  createdAt           DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime               @updatedAt @db.Timestamptz(3)
+  offering            SubjectOffering        @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  timetableEntry      TimetableEntry?        @relation(fields: [timetableEntryId], references: [id], onDelete: SetNull)
+  facultyAssignment   FacultyAssignment?     @relation(fields: [facultyAssignmentId], references: [id], onDelete: SetNull)
+  mergedIntoSession   ScheduledSession?      @relation("MergedSessions", fields: [mergedIntoSessionId], references: [id], onDelete: SetNull)
+  mergedSessions      ScheduledSession[]     @relation("MergedSessions")
+  logs                SessionLog[]
+  alerts              MissedLogAlert[]
+
+  @@index([sessionDate, status])
+  @@index([facultyAssignmentId, sessionDate])
+  @@index([offeringId, sessionDate])
+}
+
+model LessonPlan {
+  id           String           @id @default(uuid()) @db.Uuid
+  offeringId   String           @db.Uuid
+  version      Int
+  status       LessonPlanStatus @default(DRAFT)
+  uploadedById String           @db.Uuid
+  approvedById String?          @db.Uuid
+  fileName     String?          @db.VarChar(255)
+  storageKey   String?          @db.VarChar(512)
+  approvedAt   DateTime?        @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+  offering     SubjectOffering  @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  uploadedBy   User             @relation("LessonPlanUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  approvedBy   User?            @relation("LessonPlanApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  units        Unit[]
+
+  @@unique([offeringId, version])
+  @@index([offeringId, status])
+}
+
+model Unit {
+  id           String     @id @default(uuid()) @db.Uuid
+  lessonPlanId String     @db.Uuid
+  sequence     Int
+  title        String     @db.VarChar(200)
+  description  String?    @db.Text
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+  lessonPlan   LessonPlan @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
+  topics       Topic[]
+
+  @@unique([lessonPlanId, sequence])
+}
+
+model Topic {
+  id                          String               @id @default(uuid()) @db.Uuid
+  unitId                      String               @db.Uuid
+  sequence                    Int
+  title                       String               @db.VarChar(240)
+  description                 String?              @db.Text
+  plannedMinutes              Int
+  status                      TopicStatus          @default(NOT_STARTED)
+  currentCompletionPercentage Decimal              @default(0) @db.Decimal(5, 2)
+  skipReason                  String?              @db.Text
+  createdAt                   DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime             @updatedAt @db.Timestamptz(3)
+  unit                        Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  examScopes                  ExamScope[]
+  scheduleEntries             TopicSchedule[]
+  sessionUpdates              SessionTopicUpdate[]
+  carryForwardLogs            SessionLog[]         @relation("CarryForwardTopic")
+
+  @@unique([unitId, sequence])
+  @@index([unitId, status])
+}
+
+model ExamScope {
+  id           String     @id @default(uuid()) @db.Uuid
+  examWindowId String     @db.Uuid
+  topicId      String     @db.Uuid
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  examWindow   ExamWindow @relation(fields: [examWindowId], references: [id], onDelete: Cascade)
+  topic        Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([examWindowId, topicId])
+  @@index([topicId])
+}
+
+model TopicScheduleVersion {
+  id           String                    @id @default(uuid()) @db.Uuid
+  offeringId   String                    @db.Uuid
+  version      Int
+  reason       ScheduleCalculationReason
+  calculatedAt DateTime                  @default(now()) @db.Timestamptz(3)
+  offering     SubjectOffering           @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  entries      TopicSchedule[]
+
+  @@unique([offeringId, version])
+  @@index([offeringId, calculatedAt])
+}
+
+model TopicSchedule {
+  id                String               @id @default(uuid()) @db.Uuid
+  scheduleVersionId String               @db.Uuid
+  topicId           String               @db.Uuid
+  plannedStartDate  DateTime             @db.Date
+  plannedFinishDate DateTime             @db.Date
+  allocatedMinutes  Int
+  scheduleVersion   TopicScheduleVersion @relation(fields: [scheduleVersionId], references: [id], onDelete: Cascade)
+  topic             Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleVersionId, topicId])
+  @@index([topicId, plannedFinishDate])
+}
+
+model SessionLog {
+  id                          String               @id @default(uuid()) @db.Uuid
+  scheduledSessionId          String               @db.Uuid
+  revision                    Int
+  status                      SessionLogStatus
+  overallCompletionPercentage Decimal?             @db.Decimal(5, 2)
+  coveredSummary              String               @db.Text
+  leftOverSummary             String?              @db.Text
+  carryForwardTopicId         String?              @db.Uuid
+  classworkStatus             WorkStatus           @default(NOT_APPLICABLE)
+  homeworkStatus              WorkStatus           @default(NOT_APPLICABLE)
+  notes                       String?              @db.Text
+  loggedById                  String               @db.Uuid
+  loggedAt                    DateTime             @default(now()) @db.Timestamptz(3)
+  createdAt                   DateTime             @default(now()) @db.Timestamptz(3)
+  scheduledSession            ScheduledSession     @relation(fields: [scheduledSessionId], references: [id], onDelete: Cascade)
+  carryForwardTopic           Topic?               @relation("CarryForwardTopic", fields: [carryForwardTopicId], references: [id], onDelete: SetNull)
+  loggedBy                    User                 @relation(fields: [loggedById], references: [id], onDelete: Restrict)
+  topicUpdates                SessionTopicUpdate[]
+
+  @@unique([scheduledSessionId, revision])
+  @@index([scheduledSessionId, loggedAt])
+  @@index([loggedById, loggedAt])
+}
+
+model SessionTopicUpdate {
+  id                         String     @id @default(uuid()) @db.Uuid
+  sessionLogId               String     @db.Uuid
+  topicId                    String     @db.Uuid
+  completionBeforePercentage Decimal    @db.Decimal(5, 2)
+  completionAfterPercentage  Decimal    @db.Decimal(5, 2)
+  minutesUsed                Int?
+  notes                      String?    @db.Text
+  createdAt                  DateTime   @default(now()) @db.Timestamptz(3)
+  sessionLog                 SessionLog @relation(fields: [sessionLogId], references: [id], onDelete: Cascade)
+  topic                      Topic      @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionLogId, topicId])
+  @@index([topicId, createdAt])
+}
+
+model ProgressSnapshot {
+  id                  String          @id @default(uuid()) @db.Uuid
+  offeringId          String          @db.Uuid
+  asOfDate            DateTime        @db.Date
+  calculationVersion  Int
+  hoursInScopeMinutes Decimal         @db.Decimal(12, 2)
+  coveredMinutes      Decimal         @db.Decimal(12, 2)
+  remainingMinutes    Decimal         @db.Decimal(12, 2)
+  availableMinutes    Decimal         @db.Decimal(12, 2)
+  coveragePercentage  Decimal         @db.Decimal(7, 4)
+  bufferRatio         Decimal?        @db.Decimal(10, 4)
+  paceMinutes         Decimal         @db.Decimal(12, 2)
+  status              ProgressStatus
+  calculatedAt        DateTime        @default(now()) @db.Timestamptz(3)
+  offering            SubjectOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+
+  @@unique([offeringId, asOfDate, calculationVersion])
+  @@index([offeringId, calculatedAt])
+  @@index([status, asOfDate])
+}
+
+model MissedLogAlert {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  scheduledSessionId String                 @db.Uuid
+  type               AlertType
+  status             AlertStatus            @default(PENDING)
+  recipientUserId    String                 @db.Uuid
+  dueAt              DateTime               @db.Timestamptz(3)
+  sentAt             DateTime?              @db.Timestamptz(3)
+  deduplicationKey   String                 @unique @db.VarChar(255)
+  lastError          String?                @db.Text
+  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  scheduledSession   ScheduledSession       @relation(fields: [scheduledSessionId], references: [id], onDelete: Cascade)
+  recipient          User                   @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+  deliveries         NotificationDelivery[]
+
+  @@index([status, dueAt])
+  @@index([scheduledSessionId, type])
+}
+
+model NotificationDelivery {
+  id                String              @id @default(uuid()) @db.Uuid
+  alertId           String?             @db.Uuid
+  recipientUserId   String              @db.Uuid
+  channel           NotificationChannel
+  status            NotificationStatus  @default(QUEUED)
+  attemptNumber     Int                 @default(1)
+  providerMessageId String?             @db.VarChar(255)
+  scheduledAt       DateTime            @db.Timestamptz(3)
+  sentAt            DateTime?           @db.Timestamptz(3)
+  deliveredAt       DateTime?           @db.Timestamptz(3)
+  errorMessage      String?             @db.Text
+  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
+  alert             MissedLogAlert?     @relation(fields: [alertId], references: [id], onDelete: SetNull)
+  recipient         User                @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@unique([alertId, recipientUserId, channel, attemptNumber])
+  @@index([status, scheduledAt])
+}
+
+model ImportJob {
+  id             String        @id @default(uuid()) @db.Uuid
+  type           ImportType
+  status         JobStatus     @default(UPLOADED)
+  campusId       String?       @db.Uuid
+  uploadedById   String        @db.Uuid
+  fileName       String        @db.VarChar(255)
+  storageKey     String?       @db.VarChar(512)
+  totalRows      Int           @default(0)
+  successfulRows Int           @default(0)
+  failedRows     Int           @default(0)
+  startedAt      DateTime?     @db.Timestamptz(3)
+  completedAt    DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+  campus         Campus?       @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  uploadedBy     User          @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  errors         ImportError[]
+
+  @@index([status, createdAt])
+  @@index([campusId, type])
+}
+
+model ImportError {
+  id             String    @id @default(uuid()) @db.Uuid
+  importJobId    String    @db.Uuid
+  rowNumber      Int
+  columnName     String?   @db.VarChar(160)
+  submittedValue String?   @db.Text
+  errorMessage   String    @db.Text
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  importJob      ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId, rowNumber])
+}
+
+model ExportJob {
+  id            String     @id @default(uuid()) @db.Uuid
+  type          ExportType
+  status        JobStatus  @default(PROCESSING)
+  requestedById String     @db.Uuid
+  storageKey    String?    @db.VarChar(512)
+  errorMessage  String?    @db.Text
+  completedAt   DateTime?  @db.Timestamptz(3)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+  requestedBy   User       @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([requestedById, createdAt])
+  @@index([status, createdAt])
+}
+
+model AuditEvent {
+  id         String      @id @default(uuid()) @db.Uuid
+  actorId    String?     @db.Uuid
+  campusId   String?     @db.Uuid
+  action     AuditAction
+  entityType String      @db.VarChar(120)
+  entityId   String      @db.VarChar(120)
+  before     Json?
+  after      Json?
+  metadata   Json?
+  occurredAt DateTime    @default(now()) @db.Timestamptz(3)
+  actor      User?       @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  campus     Campus?     @relation(fields: [campusId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([campusId, occurredAt])
+  @@index([actorId, occurredAt])
+}

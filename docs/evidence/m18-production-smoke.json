@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-10-08T06:55:00Z",
+  "environment": "Isolated production-mode Docker Compose project",
+  "passed": true,
+  "services": {
+    "postgres": "healthy",
+    "redis": "healthy",
+    "api": "healthy",
+    "worker": "running",
+    "web": "healthy"
+  },
+  "checks": {
+    "cleanProductionImagesBuilt": true,
+    "migrationsAppliedAtStartup": true,
+    "apiLiveHealthPassed": true,
+    "apiDependencyReadinessPassed": true,
+    "webHealthPassed": true,
+    "fictionalSeedCompleted": true,
+    "demonstrationDatasetVerifierPassed": true,
+    "fullTypecheckPassed": true,
+    "automatedTestsPassed": 239,
+    "productionBuildPassed": true,
+    "postgresqlIntegrationTestsPassed": 16
+  },
+  "remainingExternalEvidence": [
+    "College-owned server or hosting account",
+    "Public domain and DNS record",
+    "Transactional SMTP credentials",
+    "Public HTTPS verification"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "milestone": "M20",
+  "generatedAt": "2026-10-08T06:56:59.972Z",
+  "passed": true,
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "featureTests": 7,
+  "checks": [
+    {
+      "id": "STRETCH-01",
+      "control": "Recovery planner is integrated with the scoped progress dashboard",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-02",
+      "control": "TIGHT and ON TRACK targets use subject-specific thresholds",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-03",
+      "control": "Minimum interventions round up to schedulable half hours",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-04",
+      "control": "Scenario is explicitly read-only",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-05",
+      "control": "Priority order and bulk minimum plan are available",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-06",
+      "control": "CSV output is spreadsheet-safe",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-07",
+      "control": "Responsive, printable and accessible presentation is included",
+      "passed": true
+    },
+    {
+      "id": "STRETCH-08",
+      "control": "Documentation explains formula, safety and marking value",
+      "passed": true
+    }
+  ]
+}

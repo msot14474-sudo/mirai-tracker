@@ -1,0 +1,43 @@
+{
+  "name": "mirai-course-progression-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "db:generate": "pnpm --filter @mirai/api prisma:generate",
+    "db:migrate": "pnpm --filter @mirai/api prisma:migrate",
+    "db:migrate:deploy": "pnpm --filter @mirai/api prisma:migrate:deploy",
+    "db:seed": "pnpm --filter @mirai/api prisma:seed",
+    "db:test": "pnpm --filter @mirai/api test:database",
+    "study:m09": "node scripts/analyze-m09-timing.mjs",
+    "verify:m10": "node scripts/verify-m10-hand-calculations.mjs",
+    "load:m16": "node scripts/m16-load-test.mjs",
+    "verify:m16": "node scripts/verify-m16-load-results.mjs",
+    "backup:database": "sh scripts/backup-postgres.sh",
+    "verify:backup": "sh scripts/verify-postgres-backup.sh",
+    "restore:database": "sh scripts/restore-postgres.sh",
+    "verify:m17": "node scripts/verify-m17-security.mjs",
+    "verify:m18": "node scripts/verify-m18-deployment.mjs",
+    "verify:m18:live": "node scripts/verify-m18-deployment.mjs --live",
+    "verify:m19": "node scripts/verify-m19-submission.mjs",
+    "verify:m20": "node scripts/verify-m20-stretch.mjs",
+    "deploy:config": "docker compose --env-file .env.production -f docker-compose.production.yml config",
+    "deploy:up": "docker compose --env-file .env.production -f docker-compose.production.yml up -d --build",
+    "deploy:down": "docker compose --env-file .env.production -f docker-compose.production.yml down",
+    "deploy:seed": "sh scripts/seed-production-demo.sh",
+    "deploy:verify-data": "docker compose --env-file .env.production -f docker-compose.production.yml exec api pnpm --filter @mirai/api verify:demo",
+    "compose:up": "docker compose up --build",
+    "compose:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
+}

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Mirai Tracker production architecture</title>
+  <desc id="desc">Users connect through a Caddy HTTPS gateway to the React web application and NestJS API. The API uses PostgreSQL and Redis. A BullMQ worker uses Redis and the internal API, and the API sends SMTP notifications.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f9fc"/>
+      <stop offset="1" stop-color="#edf4ff"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#49627a"/>
+    </marker>
+    <style>
+      .title{font:700 30px Inter,Arial,sans-serif;fill:#102a43}.subtitle{font:400 15px Inter,Arial,sans-serif;fill:#486581}.label{font:700 17px Inter,Arial,sans-serif;fill:#102a43}.small{font:400 13px Inter,Arial,sans-serif;fill:#486581}.box{fill:#fff;stroke:#9fb3c8;stroke-width:2}.accent{fill:#e1f0ff;stroke:#2680c2}.data{fill:#eafaf1;stroke:#38a169}.ops{fill:#fff4df;stroke:#d69e2e}.line{fill:none;stroke:#49627a;stroke-width:2.2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1200" height="760" rx="24" fill="url(#bg)"/>
+  <text x="60" y="60" class="title">Mirai Course Progression Tracker</text>
+  <text x="60" y="88" class="subtitle">Production containers, data flow and trust boundaries</text>
+
+  <rect x="55" y="130" width="190" height="320" rx="18" class="box"/>
+  <text x="80" y="168" class="label">Users</text>
+  <text x="80" y="215" class="small">Program Manager</text>
+  <text x="80" y="263" class="small">Campus Manager</text>
+  <text x="80" y="311" class="small">Faculty</text>
+  <text x="80" y="359" class="small">Student</text>
+  <text x="80" y="414" class="small">Responsive browser / PWA</text>
+
+  <rect x="320" y="205" width="190" height="100" rx="16" class="accent"/>
+  <text x="350" y="244" class="label">Caddy Gateway</text>
+  <text x="350" y="274" class="small">HTTPS + /api routing</text>
+
+  <rect x="590" y="130" width="210" height="100" rx="16" class="box"/>
+  <text x="625" y="169" class="label">React Web</text>
+  <text x="625" y="199" class="small">Nginx static PWA</text>
+
+  <rect x="590" y="290" width="210" height="115" rx="16" class="accent"/>
+  <text x="625" y="330" class="label">NestJS API</text>
+  <text x="625" y="360" class="small">Roles, validation, services</text>
+  <text x="625" y="383" class="small">calculations and audit</text>
+
+  <rect x="590" y="480" width="210" height="100" rx="16" class="ops"/>
+  <text x="625" y="520" class="label">BullMQ Worker</text>
+  <text x="625" y="550" class="small">reminders + escalation</text>
+
+  <rect x="900" y="210" width="220" height="100" rx="16" class="data"/>
+  <text x="935" y="250" class="label">PostgreSQL</text>
+  <text x="935" y="280" class="small">academic source of truth</text>
+
+  <rect x="900" y="365" width="220" height="100" rx="16" class="data"/>
+  <text x="935" y="405" class="label">Redis</text>
+  <text x="935" y="435" class="small">sessions + BullMQ state</text>
+
+  <rect x="900" y="520" width="220" height="100" rx="16" class="ops"/>
+  <text x="935" y="560" class="label">SMTP</text>
+  <text x="935" y="590" class="small">email notifications</text>
+
+  <path d="M245 270 H315" class="line"/>
+  <path d="M510 235 C545 210 555 180 585 180" class="line"/>
+  <path d="M510 275 C545 300 555 345 585 345" class="line"/>
+  <path d="M800 335 C845 320 855 270 895 265" class="line"/>
+  <path d="M800 365 C845 380 855 410 895 415" class="line"/>
+  <path d="M800 520 C850 500 855 440 895 425" class="line"/>
+  <path d="M800 350 C860 410 850 540 895 565" class="line"/>
+  <path d="M590 530 C545 505 540 400 585 375" class="line"/>
+
+  <rect x="55" y="665" width="1065" height="48" rx="12" fill="#102a43"/>
+  <text x="85" y="695" style="font:600 14px Inter,Arial,sans-serif;fill:#fff">Public: Caddy only</text>
+  <text x="300" y="695" style="font:400 14px Inter,Arial,sans-serif;fill:#d9e2ec">Private network: web, API, worker, PostgreSQL and Redis</text>
+  <text x="850" y="695" style="font:400 14px Inter,Arial,sans-serif;fill:#d9e2ec">Durable: PostgreSQL</text>
+</svg>

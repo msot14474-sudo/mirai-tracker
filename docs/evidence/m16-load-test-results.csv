@@ -1,0 +1,7 @@
+scenario,concurrent_users,requests,successes,errors,error_rate_percentage,requests_per_second,p50_ms,p95_ms,p99_ms,max_ms,threshold_ms,passed
+dashboard,50,150,150,0,0,3099.33,2.76,37.38,40.78,41.36,2000,true
+logging,50,150,150,0,0,6134.56,7.49,10.9,11.31,11.51,1000,true
+dashboard,100,300,300,0,0,4678.37,9.14,52.18,58.56,59.99,2000,true
+logging,100,300,300,0,0,7978,12.39,15.42,16.03,16.23,1000,true
+dashboard,200,600,600,0,0,4113.78,36.37,78.73,134.75,137.11,2000,true
+logging,200,600,600,0,0,7986.1,25.19,29.99,33.73,34.3,1000,true

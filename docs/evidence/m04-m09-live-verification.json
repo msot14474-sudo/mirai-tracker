@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-10-08T06:48:00Z",
+  "environment": "Local Docker Compose with PostgreSQL 16 and Redis 7",
+  "passed": true,
+  "results": {
+    "M04": {
+      "passed": true,
+      "calendarDays": 168,
+      "workingDays": 131,
+      "examWindows": 2
+    },
+    "M05": {
+      "passed": true,
+      "rows": 33,
+      "campuses": 4,
+      "semesters": 4,
+      "tracks": 1,
+      "batches": 4,
+      "subjects": 25,
+      "offerings": 25,
+      "calendarDays": 8,
+      "importStatus": "COMPLETED",
+      "failedRows": 0
+    },
+    "M06": {
+      "passed": true,
+      "weeklyPlannedMinutes": 150,
+      "generatedSessions": 48,
+      "semesterPlannedMinutes": 3600
+    },
+    "M07": {
+      "passed": true,
+      "units": 3,
+      "topics": 8,
+      "totalPlannedMinutes": 1380,
+      "activePlanAndExamScopesVerified": true
+    },
+    "M08": {
+      "passed": true,
+      "scheduledTopics": 8,
+      "versionBeforeCancellation": 2,
+      "versionAfterCancellation": 3,
+      "versionAfterRestore": 4,
+      "cancelledSessionRestored": true
+    },
+    "M09": {
+      "liveWorkflowPassed": true,
+      "facultySessionsReturned": 1,
+      "prefilledTopics": 8,
+      "fiveFacultyTimingStudyPassed": false,
+      "remainingEvidence": "Record valid completion times from five real faculty volunteers and run pnpm study:m09."
+    }
+  }
+}

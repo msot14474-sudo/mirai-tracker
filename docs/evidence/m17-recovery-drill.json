@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-10-08T06:57:31Z",
+  "environment": "Local Docker Compose PostgreSQL 16",
+  "passed": true,
+  "checks": {
+    "customFormatBackupCreated": true,
+    "restrictedBackupWorkflowUsed": true,
+    "sha256ChecksumVerified": true,
+    "archiveListedByPgRestore": true,
+    "temporaryDatabaseCreated": true,
+    "backupRestoredIntoTemporaryDatabase": true,
+    "restoredDatabaseAcceptedQueries": true,
+    "temporaryDatabaseRemoved": true
+  },
+  "backupFile": "mirai-tracker-20261008T065728Z.dump"
+}

@@ -1,0 +1,91 @@
+{
+  "milestone": "M17",
+  "generatedAt": "2026-10-08T06:57:00.354Z",
+  "passed": true,
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "runtimeRecoveryDrill": "Run pnpm backup:database, then pnpm verify:backup BACKUP_FILE while the Docker stack is available.",
+  "checks": [
+    {
+      "id": "SEC-01",
+      "control": "Production environment rejects weak secrets, HTTP origins and demo passwords",
+      "passed": true,
+      "evidence": "Automated environment-schema tests"
+    },
+    {
+      "id": "SEC-02",
+      "control": "Protected-by-default authentication and role guards are global",
+      "passed": true,
+      "evidence": "Auth module inspection and authorization tests"
+    },
+    {
+      "id": "SEC-03",
+      "control": "Browser mutations reject an unexpected Origin",
+      "passed": true,
+      "evidence": "Origin guard unit tests"
+    },
+    {
+      "id": "SEC-04",
+      "control": "Password login is throttled and account discovery remains generic",
+      "passed": true,
+      "evidence": "Auth service unit tests"
+    },
+    {
+      "id": "SEC-05",
+      "control": "Login events are audited and audit history is manager-only",
+      "passed": true,
+      "evidence": "Auth and audit service unit tests"
+    },
+    {
+      "id": "SEC-06",
+      "control": "HTTP security headers and exact credentialed CORS origin are configured",
+      "passed": true,
+      "evidence": "Bootstrap configuration inspection"
+    },
+    {
+      "id": "SEC-07",
+      "control": "Unexpected server failures do not expose internal exception details",
+      "passed": true,
+      "evidence": "Exception-filter unit tests"
+    },
+    {
+      "id": "SEC-08",
+      "control": "Local service ports bind only to the loopback interface",
+      "passed": true,
+      "evidence": "Compose configuration inspection"
+    },
+    {
+      "id": "SEC-09",
+      "control": "Environment files and database backups are excluded from Git",
+      "passed": true,
+      "evidence": ".gitignore inspection"
+    },
+    {
+      "id": "SEC-10",
+      "control": "Application source contains no recognizable private key or API-key pattern",
+      "passed": true,
+      "evidence": "Static source scan"
+    },
+    {
+      "id": "REC-01",
+      "control": "PostgreSQL backups use custom format, restricted permissions and SHA-256",
+      "passed": true,
+      "evidence": "Backup script inspection and shell syntax check"
+    },
+    {
+      "id": "REC-02",
+      "control": "Backup verification performs a real restore into a disposable database",
+      "passed": true,
+      "evidence": "Recovery-drill script inspection and shell syntax check"
+    },
+    {
+      "id": "REC-03",
+      "control": "A destructive restore requires an explicit confirmation phrase",
+      "passed": true,
+      "evidence": "Restore script inspection and shell syntax check"
+    }
+  ]
+}

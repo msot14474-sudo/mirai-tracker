@@ -1,0 +1,68 @@
+{
+  "milestone": "M18",
+  "generatedAt": "2026-10-08T06:56:59.518Z",
+  "status": "configuration-ready",
+  "passed": true,
+  "staticSummary": {
+    "total": 11,
+    "passed": 11
+  },
+  "live": null,
+  "checks": [
+    {
+      "id": "DEP-01",
+      "control": "PostgreSQL and Redis have persistent volumes and no public host ports",
+      "passed": true
+    },
+    {
+      "id": "DEP-02",
+      "control": "Caddy terminates HTTPS and is the only public application gateway",
+      "passed": true
+    },
+    {
+      "id": "DEP-03",
+      "control": "API migrations run before the production server starts",
+      "passed": true
+    },
+    {
+      "id": "DEP-04",
+      "control": "API and worker run as an unprivileged user",
+      "passed": true
+    },
+    {
+      "id": "DEP-05",
+      "control": "Web and API use one HTTPS origin with an /api reverse proxy",
+      "passed": true
+    },
+    {
+      "id": "DEP-06",
+      "control": "Production services restart automatically and expose health checks",
+      "passed": true
+    },
+    {
+      "id": "DEP-07",
+      "control": "Production environment template requires independent service secrets",
+      "passed": true
+    },
+    {
+      "id": "DEP-08",
+      "control": "Demo password is excluded from the persistent production environment",
+      "passed": true
+    },
+    {
+      "id": "DEP-09",
+      "control": "Idempotent seed includes campus, semester, batch, timetable and sessions",
+      "passed": true
+    },
+    {
+      "id": "DEP-10",
+      "control": "Database-backed demo readiness verifier checks the deployed dataset",
+      "passed": true
+    },
+    {
+      "id": "DEP-11",
+      "control": "SPA fallback and browser security headers are configured",
+      "passed": true
+    }
+  ]
+}
