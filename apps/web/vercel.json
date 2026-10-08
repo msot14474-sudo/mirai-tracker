@@ -3,6 +3,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://mirai-tracker-api.vercel.app/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
