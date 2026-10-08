@@ -29,6 +29,19 @@ export class EmailNotificationService {
     });
   }
 
+  async sendDeploymentTest(recipientEmail: string) {
+    return this.transporter.sendMail({
+      from: process.env.SMTP_FROM ?? 'notifications@mirai.local',
+      to: recipientEmail,
+      subject: 'Mirai Tracker production email test',
+      text: [
+        'Mirai Tracker successfully sent this message through the configured production SMTP service.',
+        '',
+        `Verified at: ${new Date().toISOString()}`,
+      ].join('\n'),
+    });
+  }
+
   async sendMissedLog(message: MissedLogEmail) {
     const manager = message.kind === 'manager-escalation';
     const title = manager
