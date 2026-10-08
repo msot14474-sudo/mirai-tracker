@@ -1,6 +1,6 @@
 {
   "milestone": "M18",
-  "generatedAt": "2026-10-08T10:15:04.560Z",
+  "generatedAt": "2026-10-08T10:40:07.900Z",
   "status": "live-verified",
   "passed": true,
   "staticSummary": {
@@ -9,7 +9,7 @@
   },
   "live": {
     "url": "https://mirai-tracker.vercel.app",
-    "apiUrl": "https://mirai-tracker-api.vercel.app",
+    "apiUrl": "https://mirai-tracker.vercel.app",
     "passed": true,
     "checks": [
       {
