@@ -37,16 +37,18 @@ pnpm deploy:up
 
 The API waits for PostgreSQL and Redis, applies committed migrations, and then starts. Caddy publishes the application only after API and web health checks pass.
 
-Seed the fictional demonstration records once. The password exists only in this command's process and is not stored in `.env.production`:
+Seed the fictional demonstration records once. The password and notification destination exist only in this command's process and are not stored in `.env.production`:
 
 ```bash
-DEMO_USER_PASSWORD='choose-a-temporary-demo-password' pnpm deploy:seed
+DEMO_USER_PASSWORD='choose-a-temporary-demo-password' \
+DEMO_NOTIFICATION_EMAIL='demo-inbox@example.edu' \
+pnpm deploy:seed
 pnpm deploy:verify-data
 ```
 
 The idempotent seed provides one HI-Tech campus, one Mirai batch, a July–December semester, Saturday rules, four calendar overrides, mid-term and end-term windows, two weekly timetable slots, generated dated sessions, one lesson plan, eight topics, progress data and the four demo roles.
 
-Demo emails are `admin@mirai.local`, `campus.manager@mirai.local`, `faculty@mirai.local` and `student@mirai.local`. They are fictional login identifiers and do not create external email accounts. Rotate or remove the shared temporary password after the college demonstration.
+Demo emails are `admin@mirai.local`, `campus.manager@mirai.local`, `faculty@mirai.local` and `student@mirai.local`. They are fictional login identifiers and do not create external email accounts. Their `notificationEmail` points to the real demonstration inbox, which receives login OTPs and applicable alerts. Rotate or remove the shared temporary password after the college demonstration.
 
 ## Verify the public deployment
 
@@ -59,7 +61,7 @@ M18_DEMO_PASSWORD='the-temporary-password' \
 pnpm verify:m18:live
 ```
 
-It verifies HTTPS web health, API dependency readiness, login, campus visibility and a populated progress dashboard. It saves no password in the evidence files.
+After password verification, the command prompts for the six-digit code delivered to the demonstration inbox. It verifies HTTPS web health, API dependency readiness, password plus OTP login, campus visibility and a populated progress dashboard. It saves neither the password nor OTP in the evidence files.
 
 ## Operations
 

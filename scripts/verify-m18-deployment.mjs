@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 
 const root = process.cwd();
 const read = (path) => readFile(join(root, path), 'utf8');
@@ -163,8 +164,35 @@ async function verifyLiveDeployment() {
     headers: { 'content-type': 'application/json', origin: baseUrl.origin },
     body: JSON.stringify({ email, password }),
   });
-  const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
-  if (!cookie) throw new Error('Live login did not return a session cookie.');
+  if (!login.ok) throw new Error('Live password verification failed.');
+  const challenge = await login.json();
+  if (typeof challenge?.challengeId !== 'string') {
+    throw new Error('Live login did not return an OTP challenge.');
+  }
+  if (!process.stdin.isTTY) {
+    throw new Error(
+      'Live verification needs an interactive terminal for the emailed OTP.',
+    );
+  }
+  const prompt = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  const otp = (
+    await prompt.question(
+      `Enter the six-digit code sent to ${challenge.destination}: `,
+    )
+  ).trim();
+  prompt.close();
+  const verification = await apiRequest('/auth/verify-otp', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: baseUrl.origin },
+    body: JSON.stringify({ challengeId: challenge.challengeId, code: otp }),
+  });
+  const cookie = verification.headers.get('set-cookie')?.split(';', 1)[0];
+  if (!verification.ok || !cookie) {
+    throw new Error('Live OTP verification did not return a session cookie.');
+  }
   const authenticatedHeaders = { cookie };
   const [campusesResponse, dashboardResponse] = await Promise.all([
     apiRequest('/academic/campuses', { headers: authenticatedHeaders }),
@@ -179,7 +207,11 @@ async function verifyLiveDeployment() {
   const liveChecks = [
     check('LIVE-01', 'Web health endpoint responds', webHealth.ok),
     check('LIVE-02', 'API and dependencies are ready', apiHealth.ok),
-    check('LIVE-03', 'Demonstration login succeeds', login.ok),
+    check(
+      'LIVE-03',
+      'Password and email-OTP demonstration login succeeds',
+      login.ok && verification.ok,
+    ),
     check(
       'LIVE-04',
       'At least one deployed campus is visible',

@@ -18,11 +18,12 @@
 - [x] Public M18 Vercel deployment with managed PostgreSQL and Redis
 - [x] Authenticated five-minute QStash alert schedules
 - [x] Brevo SMTP delivery accepted from the production application
-- [x] Combined 17-page PDF submission report
+- [x] Password plus email-OTP authentication with expiring, rate-limited challenges
+- [x] Combined 18-page PDF submission report
 - [x] No committed `.env`, password, token or API key
 - [x] M20 read-only recovery planner with CSV/print output and feature tests
 - [x] M20 applied-scenario interface screenshot
-- [x] `pnpm check`: 239 tests, all type checks and builds pass
+- [x] `pnpm check`: 243 tests, all type checks and builds pass
 
 ## Must be completed before claiming a fully live submission
 

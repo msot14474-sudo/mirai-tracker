@@ -13,7 +13,7 @@ Mirai Tracker replaces spreadsheet-based syllabus monitoring with one calendar-a
 | Faculty                 | Lesson plans, assigned daily sessions and own subject dashboards          | Active assignments             |
 | Student                 | Covered topics, next topics and exam scope                                | Authenticated batch, read-only |
 
-Authentication uses an HTTP-only opaque session. Password login supports the fictional demonstration; the permission layer can later accept Google Workspace or student OTP identities without changing domain access rules.
+Authentication uses password plus a six-digit email OTP before issuing an HTTP-only opaque session. The permission layer can later accept Google Workspace or institutional identities without changing domain access rules.
 
 ## 3. Functional design
 
@@ -67,7 +67,7 @@ Foreign keys, compound uniqueness, enum states and SQL constraints complement ap
 
 ## 5. Security design
 
-Passwords use scrypt with individual salts. Session tokens contain 256 random bits and only an HMAC-derived key is stored in Redis. Cookies are HTTP-only, SameSite=Lax and Secure in production. Failed login counts expire after 15 minutes. Helmet, exact CORS, the mutation-origin guard, Zod schemas, upload limits and generic unexpected-error responses reduce common web risks.
+Passwords use scrypt with individual salts. OTP challenges expire after ten minutes, store only an HMAC digest and enforce request and verification limits. Session tokens contain 256 random bits and only an HMAC-derived key is stored in Redis. Cookies are HTTP-only, SameSite=Lax and Secure in production. Failed login counts expire after 15 minutes. Helmet, exact CORS, the mutation-origin guard, Zod schemas, upload limits and generic unexpected-error responses reduce common web risks.
 
 Production startup rejects weak secrets, HTTP origins and demo passwords. The local and production databases are not published directly. Backups use PostgreSQL custom format, owner-restricted file permissions and SHA-256 checksums. Verification restores into a disposable database before a real restore is allowed.
 

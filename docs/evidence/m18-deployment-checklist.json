@@ -1,44 +1,13 @@
 {
   "milestone": "M18",
-  "generatedAt": "2026-10-08T10:40:07.900Z",
-  "status": "live-verified",
+  "generatedAt": "2026-10-08T16:43:27.166Z",
+  "status": "configuration-ready",
   "passed": true,
   "staticSummary": {
     "total": 11,
     "passed": 11
   },
-  "live": {
-    "url": "https://mirai-tracker.vercel.app",
-    "apiUrl": "https://mirai-tracker.vercel.app",
-    "passed": true,
-    "checks": [
-      {
-        "id": "LIVE-01",
-        "control": "Web health endpoint responds",
-        "passed": true
-      },
-      {
-        "id": "LIVE-02",
-        "control": "API and dependencies are ready",
-        "passed": true
-      },
-      {
-        "id": "LIVE-03",
-        "control": "Demonstration login succeeds",
-        "passed": true
-      },
-      {
-        "id": "LIVE-04",
-        "control": "At least one deployed campus is visible",
-        "passed": true
-      },
-      {
-        "id": "LIVE-05",
-        "control": "Deployed progress dashboard contains subjects",
-        "passed": true
-      }
-    ]
-  },
+  "live": null,
   "checks": [
     {
       "id": "DEP-01",

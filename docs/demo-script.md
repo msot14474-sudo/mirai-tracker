@@ -4,7 +4,7 @@
 
 1. Open the M18 HTTPS URL on a laptop and phone-sized browser window.
 2. Run API readiness and the demo-data verifier.
-3. Confirm the four fictional users can log in with the temporary demonstration password.
+3. Confirm the four fictional users can complete password and email-OTP login through the demonstration inbox.
 4. Keep the M11-M14 screenshots available as a fallback.
 5. Never display `.env.production`, SMTP credentials or service secrets.
 
@@ -23,7 +23,7 @@
 | 7:30 | Manager - Exam Readiness   | Compare mid-term and end-term topic scope                                      | Each exam uses its own mapped topics              |
 | 8:00 | Student                    | Covered topics, coming next and exam scope; point out no edit controls         | Student access is batch-scoped and read-only      |
 | 8:45 | Manager - Alerts/Exports   | Reminder, 48-hour escalation and CSV export history                            | Operational follow-up and reporting are auditable |
-| 9:30 | Closing                    | Mention 239 tests, load results, security and deployment                       | Evidence supports the design claims               |
+| 9:30 | Closing                    | Mention 243 tests, load results, security and deployment                       | Evidence supports the design claims               |
 
 ## Suggested narration
 

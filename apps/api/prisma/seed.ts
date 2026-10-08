@@ -42,6 +42,8 @@ async function main() {
   if (!demoPassword || demoPassword.length < 12) {
     throw new Error('DEMO_USER_PASSWORD must contain at least 12 characters.');
   }
+  const demoNotificationEmail =
+    process.env.DEMO_NOTIFICATION_EMAIL?.trim().toLowerCase() || null;
 
   const campus = await prisma.campus.upsert({
     where: { code: 'HI-TECH' },
@@ -57,10 +59,11 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@mirai.local' },
-    update: {},
+    update: { notificationEmail: demoNotificationEmail },
     create: {
       name: 'Local Program Manager',
       email: 'admin@mirai.local',
+      notificationEmail: demoNotificationEmail,
       status: UserStatus.ACTIVE,
     },
   });
@@ -85,10 +88,11 @@ async function main() {
 
   const campusManager = await prisma.user.upsert({
     where: { email: 'campus.manager@mirai.local' },
-    update: {},
+    update: { notificationEmail: demoNotificationEmail },
     create: {
       name: 'Local Campus Manager',
       email: 'campus.manager@mirai.local',
+      notificationEmail: demoNotificationEmail,
       status: UserStatus.ACTIVE,
     },
   });
@@ -237,10 +241,11 @@ async function main() {
 
   const studentUser = await prisma.user.upsert({
     where: { email: 'student@mirai.local' },
-    update: {},
+    update: { notificationEmail: demoNotificationEmail },
     create: {
       name: 'Sample Student',
       email: 'student@mirai.local',
+      notificationEmail: demoNotificationEmail,
       status: UserStatus.ACTIVE,
     },
   });
@@ -276,10 +281,11 @@ async function main() {
 
   const facultyUser = await prisma.user.upsert({
     where: { email: 'faculty@mirai.local' },
-    update: {},
+    update: { notificationEmail: demoNotificationEmail },
     create: {
       name: 'Sample Faculty',
       email: 'faculty@mirai.local',
+      notificationEmail: demoNotificationEmail,
       status: UserStatus.ACTIVE,
     },
   });

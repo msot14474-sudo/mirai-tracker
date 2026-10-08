@@ -199,6 +199,7 @@ model User {
   id                     String                 @id @default(uuid()) @db.Uuid
   name                   String                 @db.VarChar(160)
   email                  String                 @unique @db.VarChar(320)
+  notificationEmail      String?                @db.VarChar(320)
   phone                  String?                @unique @db.VarChar(32)
   externalAuthId         String?                @unique @db.VarChar(255)
   status                 UserStatus             @default(INVITED)

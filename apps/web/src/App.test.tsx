@@ -62,18 +62,38 @@ describe('App authentication', () => {
     expect(screen.getByLabelText('Email')).toHaveValue('faculty@mirai.local');
   });
 
-  it('signs in and displays role-aware faculty access', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) =>
-      init?.method === 'POST'
-        ? userResponse('FACULTY')
-        : new Response(null, { status: 401 }),
-    );
+  it('verifies an email code before displaying role-aware faculty access', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/login')) {
+        return new Response(
+          JSON.stringify({
+            challengeId: 'challenge-identifier-with-enough-length',
+            expiresInSeconds: 600,
+            destination: 'm***@gmail.com',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
+      return new Response(null, { status: 401 });
+    });
     renderApp();
 
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'correct-password' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Continue with email code' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Check your email' }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Verification code'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(
       await screen.findByText('Welcome, Sample Faculty'),

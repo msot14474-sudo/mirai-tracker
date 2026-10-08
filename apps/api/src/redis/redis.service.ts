@@ -42,6 +42,20 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
     await this.client.del(key);
   }
 
+  async consumeIfValue(key: string, expectedValue: string) {
+    const result = await this.client.eval(
+      `if redis.call('GET', KEYS[1]) == ARGV[1] then
+         redis.call('DEL', KEYS[1])
+         return 1
+       end
+       return 0`,
+      1,
+      key,
+      expectedValue,
+    );
+    return Number(result) === 1;
+  }
+
   async incrementWithExpiry(key: string, ttlSeconds: number) {
     const result = await this.client.eval(
       `local count = redis.call('INCR', KEYS[1])

@@ -2,7 +2,7 @@
 
 ## 1. Result summary
 
-The verified source baseline passes **239 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
+The verified source baseline passes **243 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
 
 The production Docker smoke test, PostgreSQL integration suite and public Vercel deployment have now passed. The live deployment uses managed PostgreSQL and Redis, authenticated five-minute QStash jobs and verified Brevo SMTP delivery. The five-faculty phone study remains an external activity.
 
@@ -10,12 +10,12 @@ The production Docker smoke test, PostgreSQL integration suite and public Vercel
 
 | Area                           | Framework                |                  Result |
 | ------------------------------ | ------------------------ | ----------------------: |
-| NestJS API and domain services | Jest                     | 170 passed in 31 suites |
+| NestJS API and domain services | Jest                     | 174 passed in 31 suites |
 | React interface                | Vitest + Testing Library |   43 passed in 13 files |
 | Background worker              | Vitest                   |                6 passed |
 | Shared calculations            | Vitest                   |               18 passed |
 | Shared validation              | Vitest                   |                2 passed |
-| **Total**                      |                          |          **239 passed** |
+| **Total**                      |                          |          **243 passed** |
 
 `pnpm check` runs workspace type checks, tests and production builds. Prisma schema contracts and committed SQL safeguards are included in the API suite.
 

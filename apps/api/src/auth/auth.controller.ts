@@ -23,6 +23,11 @@ const loginInputSchema = z.object({
   password: z.string().min(8).max(256),
 });
 
+const verifyOtpInputSchema = z.object({
+  challengeId: z.string().min(20).max(100),
+  code: z.string().regex(/^\d{6}$/),
+});
+
 type HeaderResponse = {
   setHeader(name: string, value: string): void;
 };
@@ -34,18 +39,29 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
-  async login(
-    @Body() body: unknown,
-    @Res({ passthrough: true }) response: HeaderResponse,
-  ) {
+  async login(@Body() body: unknown) {
     const parsed = loginInputSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException('Enter a valid email and password.');
     }
 
-    const result = await this.auth.login(
-      parsed.data.email,
-      parsed.data.password,
+    return this.auth.login(parsed.data.email, parsed.data.password);
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(200)
+  async verifyOtp(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: HeaderResponse,
+  ) {
+    const parsed = verifyOtpInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException('Enter a valid six-digit code.');
+    }
+    const result = await this.auth.verifyOtp(
+      parsed.data.challengeId,
+      parsed.data.code,
     );
     response.setHeader(
       'Set-Cookie',

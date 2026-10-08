@@ -56,6 +56,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
       INTERNAL_JOB_SECRET: ${INTERNAL_JOB_SECRET:?Set INTERNAL_JOB_SECRET in .env}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?Set DEMO_USER_PASSWORD in .env}
+      DEMO_NOTIFICATION_EMAIL: ${DEMO_NOTIFICATION_EMAIL:-demo-inbox@mirai.local}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_FROM: ${SMTP_FROM:-notifications@mirai.local}

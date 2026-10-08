@@ -10,6 +10,12 @@ export type AuthenticatedUser = {
   studentProfile: { id: string; batchId: string } | null;
 };
 
+export type LoginChallenge = {
+  challengeId: string;
+  expiresInSeconds: number;
+  destination: string;
+};
+
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function messageFrom(response: Response) {
@@ -36,6 +42,17 @@ export async function login(email: string, password: string) {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error(await messageFrom(response));
+  return response.json() as Promise<LoginChallenge>;
+}
+
+export async function verifyOtp(challengeId: string, code: string) {
+  const response = await fetch(`${apiUrl}/auth/verify-otp`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, code }),
   });
   if (!response.ok) throw new Error(await messageFrom(response));
   const body = (await response.json()) as { user: AuthenticatedUser };

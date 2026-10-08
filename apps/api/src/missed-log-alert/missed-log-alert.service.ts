@@ -177,9 +177,20 @@ export class MissedLogAlertService {
         role: UserRole.CAMPUS_MANAGER,
         user: { status: UserStatus.ACTIVE },
       },
-      select: { user: { select: { id: true, name: true, email: true } } },
+      select: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            notificationEmail: true,
+          },
+        },
+      },
     });
-    const recipients = assignments.map((assignment) => assignment.user);
+    const recipients = assignments.map((assignment) =>
+      recipientForUser(assignment.user),
+    );
     cache.set(campusId, recipients);
     return recipients;
   }
@@ -329,7 +340,7 @@ export class MissedLogAlertService {
 
 function facultyRecipients(session: AlertSession): Recipient[] {
   const direct = session.facultyAssignment?.staffProfile.user;
-  if (direct?.status === UserStatus.ACTIVE) return [direct];
+  if (direct?.status === UserStatus.ACTIVE) return [recipientForUser(direct)];
   const date = session.sessionDate.getTime();
   const assignment = session.offering.faculty.find(
     (candidate) =>
@@ -337,7 +348,20 @@ function facultyRecipients(session: AlertSession): Recipient[] {
       (!candidate.endDate || candidate.endDate.getTime() >= date) &&
       candidate.staffProfile.user.status === UserStatus.ACTIVE,
   );
-  return assignment ? [assignment.staffProfile.user] : [];
+  return assignment ? [recipientForUser(assignment.staffProfile.user)] : [];
+}
+
+function recipientForUser(user: {
+  id: string;
+  name: string;
+  email: string;
+  notificationEmail?: string | null;
+}): Recipient {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.notificationEmail ?? user.email,
+  };
 }
 
 function sameSecret(expected: string, provided: string) {

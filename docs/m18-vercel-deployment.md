@@ -68,7 +68,7 @@ M18_DEMO_PASSWORD='<temporary-demo-password>' \
 pnpm verify:m18:live
 ```
 
-`M18_API_URL` is optional for the original same-origin Docker deployment.
+`M18_API_URL` is optional for the original same-origin Docker deployment. The verifier sends the login email and then asks for its six-digit OTP in the terminal.
 
 ## Verified production result
 
@@ -76,7 +76,7 @@ The production deployment was verified on 8 October 2026:
 
 - `https://mirai-tracker.vercel.app` serves the public React application and proxies `/api` to the NestJS deployment;
 - managed Neon PostgreSQL and Upstash Redis pass dependency readiness;
-- the seeded Program Manager can sign in and read campus and progress data;
+- the seeded Program Manager can complete password and email-OTP sign-in and read campus and progress data;
 - two authenticated QStash schedules process both missed-log stages every five minutes; and
 - Brevo SMTP accepted an authenticated application test message.
 

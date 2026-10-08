@@ -72,9 +72,9 @@ The M02 model, relationship diagram and requirement mapping are documented in [d
 
 ## Local demo login
 
-Set `DEMO_USER_PASSWORD` in `.env`, start the stack and run the seed command. The login page can then use one of four fictional identities: `admin@mirai.local`, `campus.manager@mirai.local`, `faculty@mirai.local` or `student@mirai.local`. These addresses create no external accounts.
+Set `DEMO_USER_PASSWORD` and `DEMO_NOTIFICATION_EMAIL` in `.env`, start the stack and run the seed command. The login page can then use one of four fictional identities: `admin@mirai.local`, `campus.manager@mirai.local`, `faculty@mirai.local` or `student@mirai.local`. These addresses create no external accounts; the notification address receives their six-digit login codes. With local Mailpit, use any address such as `demo-inbox@mirai.local` and read the message at http://localhost:8025.
 
-Sessions are stored in Redis and delivered through an HTTP-only cookie. The API reloads role and scope information from PostgreSQL on every protected request. See [docs/m03-authentication-and-permissions.md](docs/m03-authentication-and-permissions.md) for the security flow and permission matrix.
+After a correct password, the API emails a ten-minute one-time code. A session is created only after that code is verified. Sessions are stored in Redis and delivered through an HTTP-only cookie. The API reloads role and scope information from PostgreSQL on every protected request. See [docs/m03-authentication-and-permissions.md](docs/m03-authentication-and-permissions.md) for the security flow and permission matrix.
 
 ## Semester calendar
 

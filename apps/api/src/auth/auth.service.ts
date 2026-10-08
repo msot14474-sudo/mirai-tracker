@@ -1,25 +1,56 @@
-import { createHmac, randomBytes } from 'node:crypto';
+import {
+  createHmac,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { AuditAction, UserStatus } from '@prisma/client';
 import {
   HttpException,
   HttpStatus,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { AuthEmailService } from './auth-email.service';
 import { DEFAULT_SESSION_TTL_SECONDS } from './auth.constants';
 import { AuthenticatedUser } from './auth.types';
 import { verifyPassword } from './password';
 
+const OTP_TTL_SECONDS = 10 * 60;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_MAX_REQUESTS = 3;
+
+type OtpChallenge = {
+  userId: string;
+  codeDigest: string;
+};
+
+type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  status: UserStatus;
+  roleAssignments: Array<{
+    role: AuthenticatedUser['roles'][number]['role'];
+    campusId: string | null;
+  }>;
+  staffProfile: { id: string } | null;
+  studentProfile: { id: string; batchId: string } | null;
+};
+
 @Injectable()
 export class AuthService {
   readonly sessionTtlSeconds: number;
+  readonly otpTtlSeconds = OTP_TTL_SECONDS;
   private readonly sessionSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly email: AuthEmailService,
   ) {
     const configuredTtl = Number(process.env.SESSION_TTL_SECONDS);
     this.sessionTtlSeconds =
@@ -82,26 +113,116 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    const token = randomBytes(32).toString('base64url');
-    const sessionKey = this.sessionKey(token);
-    await this.redis.setWithExpiry(sessionKey, user.id, this.sessionTtlSeconds);
+    const requestCount = await this.redis.incrementWithExpiry(
+      this.otpRequestKey(user.id),
+      OTP_TTL_SECONDS,
+    );
+    if (requestCount > OTP_MAX_REQUESTS) {
+      throw new HttpException(
+        'Too many verification codes requested. Try again in 10 minutes.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const challengeId = randomBytes(24).toString('base64url');
+    const code = randomInt(100_000, 1_000_000).toString();
+    const challenge: OtpChallenge = {
+      userId: user.id,
+      codeDigest: this.otpCodeDigest(challengeId, code),
+    };
+    const challengeKey = this.otpChallengeKey(challengeId);
+    await this.redis.setWithExpiry(
+      challengeKey,
+      JSON.stringify(challenge),
+      OTP_TTL_SECONDS,
+    );
+
+    const recipientEmail = user.notificationEmail ?? user.email;
     try {
-      await this.prisma.auditEvent.create({
-        data: {
-          actorId: user.id,
-          action: AuditAction.LOGIN,
-          entityType: 'UserSession',
-          entityId: user.id,
-          metadata: { authenticationMethod: 'password' },
-        },
+      await this.email.sendLoginOtp({
+        recipientEmail,
+        recipientName: user.name,
+        code,
+        expiresInMinutes: OTP_TTL_SECONDS / 60,
       });
-    } catch (error) {
-      await this.redis.delete(sessionKey);
-      throw error;
+    } catch {
+      await this.redis.delete(challengeKey);
+      throw new ServiceUnavailableException(
+        'The verification email could not be sent. Try again shortly.',
+      );
     }
     await this.redis.delete(failureKey);
 
-    return { token, user: this.toAuthenticatedUser(user) };
+    return {
+      challengeId,
+      expiresInSeconds: OTP_TTL_SECONDS,
+      destination: maskEmail(recipientEmail),
+    };
+  }
+
+  async verifyOtp(challengeId: string, code: string) {
+    const challengeKey = this.otpChallengeKey(challengeId);
+    const rawChallenge = await this.redis.get(challengeKey);
+    if (!rawChallenge) {
+      throw new UnauthorizedException('Invalid or expired verification code.');
+    }
+
+    let challenge: OtpChallenge;
+    try {
+      challenge = JSON.parse(rawChallenge) as OtpChallenge;
+    } catch {
+      await this.redis.delete(challengeKey);
+      throw new UnauthorizedException('Invalid or expired verification code.');
+    }
+
+    const attemptsKey = this.otpAttemptsKey(challengeId);
+    const attempts = await this.redis.incrementWithExpiry(
+      attemptsKey,
+      OTP_TTL_SECONDS,
+    );
+    if (attempts > OTP_MAX_ATTEMPTS) {
+      await Promise.all([
+        this.redis.delete(challengeKey),
+        this.redis.delete(attemptsKey),
+      ]);
+      throw new HttpException(
+        'Too many incorrect verification codes. Sign in again.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const candidateDigest = this.otpCodeDigest(challengeId, code);
+    if (!sameSecret(challenge.codeDigest, candidateDigest)) {
+      if (attempts === OTP_MAX_ATTEMPTS) {
+        await this.redis.delete(challengeKey);
+      }
+      throw new UnauthorizedException('Invalid or expired verification code.');
+    }
+
+    const consumed = await this.redis.consumeIfValue(
+      challengeKey,
+      rawChallenge,
+    );
+    if (!consumed) {
+      throw new UnauthorizedException('Invalid or expired verification code.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: challenge.userId },
+      include: {
+        roleAssignments: { select: { role: true, campusId: true } },
+        staffProfile: { select: { id: true } },
+        studentProfile: { select: { id: true, batchId: true } },
+      },
+    });
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      await this.redis.delete(challengeKey);
+      throw new UnauthorizedException('Invalid or expired verification code.');
+    }
+
+    const result = await this.createSession(user, 'password_email_otp');
+    await this.redis.delete(attemptsKey);
+    return result;
   }
 
   async userForSession(token: string): Promise<AuthenticatedUser | null> {
@@ -130,31 +251,56 @@ export class AuthService {
     await this.redis.delete(this.sessionKey(token));
   }
 
+  private async createSession(user: SessionUser, authenticationMethod: string) {
+    const token = randomBytes(32).toString('base64url');
+    const sessionKey = this.sessionKey(token);
+    await this.redis.setWithExpiry(sessionKey, user.id, this.sessionTtlSeconds);
+    try {
+      await this.prisma.auditEvent.create({
+        data: {
+          actorId: user.id,
+          action: AuditAction.LOGIN,
+          entityType: 'UserSession',
+          entityId: user.id,
+          metadata: { authenticationMethod },
+        },
+      });
+    } catch (error) {
+      await this.redis.delete(sessionKey);
+      throw error;
+    }
+    return { token, user: this.toAuthenticatedUser(user) };
+  }
+
   private sessionKey(token: string) {
-    const digest = createHmac('sha256', this.sessionSecret)
-      .update(token)
-      .digest('hex');
-    return `auth:session:${digest}`;
+    return `auth:session:${this.digest(token)}`;
   }
 
   private loginFailureKey(email: string) {
-    const digest = createHmac('sha256', this.sessionSecret)
-      .update(email)
-      .digest('hex');
-    return `auth:login-failures:${digest}`;
+    return `auth:login-failures:${this.digest(email)}`;
   }
 
-  private toAuthenticatedUser(user: {
-    id: string;
-    name: string;
-    email: string;
-    roleAssignments: Array<{
-      role: AuthenticatedUser['roles'][number]['role'];
-      campusId: string | null;
-    }>;
-    staffProfile: { id: string } | null;
-    studentProfile: { id: string; batchId: string } | null;
-  }): AuthenticatedUser {
+  private otpRequestKey(userId: string) {
+    return `auth:otp-requests:${this.digest(userId)}`;
+  }
+
+  private otpChallengeKey(challengeId: string) {
+    return `auth:otp-challenge:${this.digest(challengeId)}`;
+  }
+
+  private otpAttemptsKey(challengeId: string) {
+    return `auth:otp-attempts:${this.digest(challengeId)}`;
+  }
+
+  private otpCodeDigest(challengeId: string, code: string) {
+    return this.digest(`${challengeId}:${code}`);
+  }
+
+  private digest(value: string) {
+    return createHmac('sha256', this.sessionSecret).update(value).digest('hex');
+  }
+
+  private toAuthenticatedUser(user: SessionUser): AuthenticatedUser {
     return {
       id: user.id,
       name: user.name,
@@ -164,4 +310,16 @@ export class AuthService {
       studentProfile: user.studentProfile,
     };
   }
+}
+
+function sameSecret(expected: string, provided: string) {
+  const left = Buffer.from(expected);
+  const right = Buffer.from(provided);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function maskEmail(email: string) {
+  const [local = '', domain = ''] = email.split('@');
+  const visible = local.slice(0, 1);
+  return `${visible}${'*'.repeat(Math.max(3, Math.min(local.length - 1, 6)))}@${domain}`;
 }

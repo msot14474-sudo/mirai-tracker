@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, lazy, Suspense, useState } from 'react';
 import {
   AuthenticatedUser,
+  LoginChallenge,
   loadCurrentUser,
   login,
   logout,
   UserRole,
+  verifyOtp,
 } from './auth';
 
 const SemesterSetup = lazy(() =>
@@ -97,14 +99,32 @@ function LoginScreen() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('faculty@mirai.local');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
+    onSuccess: setChallenge,
+  });
+  const otpMutation = useMutation({
+    mutationFn: () => verifyOtp(challenge!.challengeId, code),
     onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
   });
 
-  function submit(event: FormEvent) {
+  function submitCredentials(event: FormEvent) {
     event.preventDefault();
     loginMutation.mutate();
+  }
+
+  function submitOtp(event: FormEvent) {
+    event.preventDefault();
+    otpMutation.mutate();
+  }
+
+  function restartLogin() {
+    setChallenge(null);
+    setCode('');
+    loginMutation.reset();
+    otpMutation.reset();
   }
 
   return (
@@ -126,46 +146,92 @@ function LoginScreen() {
       <section className="login-panel" aria-labelledby="login-title">
         <div className="login-card">
           <p className="step-label">Secure access</p>
-          <h2 id="login-title">Welcome back</h2>
+          <h2 id="login-title">
+            {challenge ? 'Check your email' : 'Welcome back'}
+          </h2>
           <p className="supporting-copy">
-            Sign in with a fictional local account while we verify the role
-            system.
+            {challenge
+              ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
+              : 'Enter your account password. We will email a verification code before creating your session.'}
           </p>
 
-          <form onSubmit={submit}>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+          {challenge ? (
+            <form onSubmit={submitOtp}>
+              <label htmlFor="otp-code">Verification code</label>
+              <input
+                id="otp-code"
+                name="otp-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                autoFocus
+                required
+              />
 
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={8}
-              required
-            />
+              {otpMutation.error ? (
+                <p className="form-error" role="alert">
+                  {otpMutation.error.message}
+                </p>
+              ) : null}
 
-            {loginMutation.error ? (
-              <p className="form-error" role="alert">
-                {loginMutation.error.message}
-              </p>
-            ) : null}
+              <button
+                type="submit"
+                disabled={otpMutation.isPending || code.length !== 6}
+              >
+                {otpMutation.isPending ? 'Verifying…' : 'Verify and sign in'}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={restartLogin}
+              >
+                Use a different account
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={submitCredentials}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
 
-            <button type="submit" disabled={loginMutation.isPending}>
-              {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+
+              {loginMutation.error ? (
+                <p className="form-error" role="alert">
+                  {loginMutation.error.message}
+                </p>
+              ) : null}
+
+              <button type="submit" disabled={loginMutation.isPending}>
+                {loginMutation.isPending
+                  ? 'Sending code…'
+                  : 'Continue with email code'}
+              </button>
+            </form>
+          )}
 
           <div className="demo-note">
             <strong>Local demo accounts</strong>
@@ -174,7 +240,8 @@ function LoginScreen() {
               <code>@mirai.local</code>
             </span>
             <span>
-              Password: the `DEMO_USER_PASSWORD` value in your `.env`.
+              Verification codes arrive in Mailpit locally and the configured
+              notification inbox in production.
             </span>
           </div>
         </div>

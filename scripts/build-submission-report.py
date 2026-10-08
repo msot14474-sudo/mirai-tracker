@@ -262,10 +262,10 @@ story.extend([
     Spacer(1, 8*mm),
     HRFlowable(width="72%", thickness=3, color=GREEN, hAlign="LEFT"),
     Spacer(1, 8*mm),
-    metric_cards([("239", "automated tests"), ("2,100", "load requests"), ("0%", "load errors")]),
+    metric_cards([("243", "automated tests"), ("2,100", "load requests"), ("0%", "load errors")]),
     Spacer(1, 14*mm),
     p("Prepared 8 October 2026", "CoverSub"),
-    p("Status: source and documentation verified; public deployment and external field study pending", "Smallx"),
+    p("Status: public deployment verified; external field study, hosted load rerun and restore drill pending", "Smallx"),
     Spacer(1, 30*mm),
     p("This report uses only fictional demonstration identities and non-sensitive sample data.", "Smallx"),
     PageBreak(),
@@ -282,9 +282,9 @@ story += [
     bullet("Whether future timetable capacity can finish the remaining syllabus."),
     bullet("Which subjects, campuses and exams need attention first."),
     h2("Verified baseline"),
-    p("All workspace type checks, 239 automated tests and production application builds pass. Three hand calculations match to two decimals. The local four-campus, 30-subject load baseline completed 2,100 requests with zero errors at up to 200 concurrent users."),
+    p("All workspace type checks, 243 automated tests and production application builds pass. Three hand calculations match to two decimals. The local four-campus, 30-subject load baseline completed 2,100 requests with zero errors at up to 200 concurrent users."),
     h2("Honest completion boundary"),
-    p("The production package is configuration-ready, but this report does not claim a live URL. Docker-backed database tests, backup restoration, the public deployment check and the five-faculty phone study require infrastructure or people supplied by the deployer."),
+    p("The public Vercel deployment, managed PostgreSQL and Redis, migrations, database tests, scheduled jobs and Brevo SMTP have been verified. The disposable restore drill, hosted load rerun and five-faculty phone study remain open and are not overstated."),
     PageBreak(),
 ]
 
@@ -378,7 +378,7 @@ story += h1("Security and recovery")
 story += [
     table([
         ["Control", "Implementation"],
-        ["Credentials", "scrypt password hashes with individual salts"],
+        ["Credentials", "scrypt password plus a ten-minute, rate-limited email OTP"],
         ["Sessions", "256-bit opaque token; HMAC-derived Redis key; HTTP-only cookie"],
         ["Authorization", "Global authentication and role guards plus resource-level scope checks"],
         ["Browser writes", "Exact Origin match; SameSite cookie; exact credentialed CORS"],
@@ -395,7 +395,7 @@ story += [
 
 story += h1("Test strategy and results")
 story += [
-    metric_cards([("170", "API tests"), ("43", "web tests"), ("26", "worker + shared"), ("239", "total")]),
+    metric_cards([("174", "API tests"), ("43", "web tests"), ("26", "worker + shared"), ("243", "total")]),
     Spacer(1, 5*mm),
     table([
         ["Test layer", "What it proves", "Current result"],
@@ -403,12 +403,12 @@ story += [
         ["Services", "Permissions, transactions, reminders, imports and exports", "Pass"],
         ["React", "Role-aware screens, forms and read-only behavior", "Pass"],
         ["Schema contracts", "Models, relations and expected SQL safeguards", "Pass"],
-        ["Database integration", "Real PostgreSQL constraints and migrations", "Pending runtime"],
+        ["Database integration", "Real PostgreSQL constraints and migrations", "Pass"],
         ["Field usability", "Five faculty on phones under 60 seconds", "Pending volunteers"],
-        ["Public deployment", "HTTPS, live dependencies, SMTP and cloud latency", "Pending M18 URL"],
+        ["Public deployment", "HTTPS, live dependencies and SMTP", "Pass"],
     ], [37*mm, 88*mm, 47*mm]),
     h2("Evidence discipline"),
-    p("Unavailable evidence remains labelled pending. The report does not convert prepared scripts, screenshots or local mocks into claims about a live database, real volunteers or a public deployment."),
+    p("Unavailable evidence remains labelled pending. The report does not convert local performance into a hosted-capacity claim or prepared study material into volunteer evidence."),
     PageBreak(),
 ]
 
@@ -458,13 +458,13 @@ story += [
 
 story += h1("Production deployment")
 story += [
-    p("The M18 production package builds three targets: Nginx web, NestJS API and BullMQ worker. Caddy publishes HTTPS. PostgreSQL and Redis remain private and persistent. Health checks order startup and the API applies migrations before serving."),
+    p("The M18 package supports the Docker stack and the verified Vercel deployment. The live system uses managed Neon PostgreSQL, Upstash Redis, authenticated QStash schedules and Brevo SMTP behind HTTPS. The API migration ran before the authentication release."),
     table([
         ["Step", "Command or outcome"],
         ["Configure", "Copy .env.production.example and supply independent secrets"],
         ["Validate", "pnpm deploy:config and pnpm verify:m18"],
         ["Start", "pnpm deploy:up"],
-        ["Seed", "One-time DEMO_USER_PASSWORD process; not stored in production env"],
+        ["Seed", "One-time password and OTP inbox; password is not stored"],
         ["Verify data", "pnpm deploy:verify-data"],
         ["Verify public", "pnpm verify:m18:live with transient credentials"],
     ], [39*mm, 133*mm]),
@@ -498,11 +498,11 @@ story += [
     h2("Complete"),
     bullet("Source, migrations, seed, local and production configuration."),
     bullet("Architecture, design, Test Report, demo script and evidence index."),
-    bullet("239 automated tests, type checks and production application builds."),
+    bullet("243 automated tests, type checks and production application builds."),
     bullet("Calculation, load, security, deployment and stretch-feature verifiers."),
+    bullet("Public Vercel release with managed data services, scheduled jobs, Brevo SMTP and email OTP."),
     h2("Close before a fully live claim"),
-    bullet("Choose the server/account, point DNS, configure SMTP and record the M18 URL."),
-    bullet("Run migrations, the demo verifier, PostgreSQL integration tests and restore drill."),
+    bullet("Run the disposable production restore drill and record recovery time."),
     bullet("Repeat M16 against the authenticated deployed stack."),
     bullet("Collect five real faculty phone timings and calculate the median."),
     bullet("Confirm college deadline, file naming and demonstration date."),
