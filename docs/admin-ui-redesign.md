@@ -27,6 +27,11 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added a visible active-campus switcher after entry.
 - [x] Preselected and locked campus scope in academic setup, faculty access and timetable setup.
 - [x] Updated the active Neon campus catalog to the same three campuses.
+- [x] Replaced the stacked workspace page with single-view sidebar navigation.
+- [x] Made Overview the first screen after selecting a campus.
+- [x] Added a personalized campus welcome, real campus context and role-aware quick actions.
+- [x] Added subtle Mirai orbit motion with reduced-motion support.
+- [x] Split semester import, exam readiness and planned dates into their own sidebar views.
 
 ## Next implementation sequence
 
@@ -38,4 +43,4 @@ This document tracks the administrator interface redesign. The editable design s
 - [ ] Apply it to exports and alerts.
 - [ ] Design and verify responsive tablet and mobile layouts after the desktop administrator structure is approved.
 
-The content cleanup is implemented in the web app. The complete visual React implementation of the Figma overview is the next UI phase.
+The campus entry, animated Overview and single-view workspace navigation are implemented in the web app. The next UI phase applies the same layout system inside each operational workspace.

@@ -468,6 +468,119 @@ function LoginScreen() {
   );
 }
 
+type DashboardView =
+  | 'overview'
+  | 'student-view'
+  | 'alerts'
+  | 'progress'
+  | 'exam-readiness'
+  | 'exports'
+  | 'academic-setup'
+  | 'semester-import'
+  | 'faculty-access'
+  | 'timetable'
+  | 'lesson-plans'
+  | 'planned-dates'
+  | 'daily-logging';
+
+type DashboardNavigationItem = {
+  id: DashboardView;
+  label: string;
+  icon: NavigationIconName;
+};
+
+function CampusOverview({
+  user,
+  campus,
+  roleLabel,
+  workspaces,
+  onOpen,
+}: {
+  user: AuthenticatedUser;
+  campus?: Campus;
+  roleLabel: string;
+  workspaces: DashboardNavigationItem[];
+  onOpen: (view: DashboardView) => void;
+}) {
+  const firstName = user.name.trim().split(/\s+/)[0] || user.name;
+  const shortcuts = workspaces
+    .filter((item) => item.id !== 'overview')
+    .slice(0, 4);
+
+  return (
+    <div className="campus-overview">
+      <section className="overview-hero">
+        <div className="overview-hero-copy">
+          <p className="overview-eyebrow">
+            {campus?.code ?? roleLabel.toUpperCase()}
+          </p>
+          <h1>Welcome back, {firstName}</h1>
+          <p>
+            {campus ? `${campus.name} is ready.` : 'Your workspace is ready.'}
+          </p>
+          <span className="overview-role">{roleLabel}</span>
+        </div>
+
+        <div className="overview-motion" aria-hidden="true">
+          <span className="overview-orbit overview-orbit-outer">
+            <i />
+          </span>
+          <span className="overview-orbit overview-orbit-inner">
+            <i />
+          </span>
+          <span className="overview-logo-core">
+            <img src="/mirai-symbol-light.png" alt="" />
+          </span>
+        </div>
+      </section>
+
+      <section className="overview-details" aria-label="Selected workspace">
+        <div>
+          <span>Campus</span>
+          <strong>{campus?.name ?? 'Assigned campus'}</strong>
+        </div>
+        <div>
+          <span>Campus code</span>
+          <strong>{campus?.code ?? 'Based on your access'}</strong>
+        </div>
+        <div>
+          <span>Timezone</span>
+          <strong>{campus?.timezone ?? 'Asia/Kolkata'}</strong>
+        </div>
+      </section>
+
+      {shortcuts.length ? (
+        <section className="overview-shortcuts">
+          <div className="overview-section-heading">
+            <div>
+              <p className="overview-eyebrow">Quick access</p>
+              <h2>Campus workspaces</h2>
+            </div>
+          </div>
+          <div className="overview-shortcut-grid">
+            {shortcuts.map((item, index) => (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => onOpen(item.id)}
+              >
+                <span className="overview-shortcut-number">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <NavigationIcon name={item.icon} />
+                <strong>{item.label}</strong>
+                <span className="overview-shortcut-action">
+                  Open workspace →
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 function Dashboard({ user }: { user: AuthenticatedUser }) {
   const queryClient = useQueryClient();
   const roles = user.roles.map((assignment) => assignment.role);
@@ -478,6 +591,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     ? roleLabels.ADMIN
     : roleLabels.PROGRAM_MANAGER;
   const [selectedCampusId, setSelectedCampusId] = useState('');
+  const [activeView, setActiveView] = useState<DashboardView>('overview');
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -533,7 +647,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         isLoading={campuses.isPending}
         error={campuses.error}
         onRetry={() => campuses.refetch()}
-        onSelect={setSelectedCampusId}
+        onSelect={(campusId) => {
+          setSelectedCampusId(campusId);
+          setActiveView('overview');
+        }}
         onSignOut={() => logoutMutation.mutate()}
         isSigningOut={logoutMutation.isPending}
         roleLabel={globalRoleLabel}
@@ -541,41 +658,27 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     );
   }
 
-  const navigation: Array<{
-    href: string;
-    label: string;
-    icon: NavigationIconName;
-  }> = [
-    { href: '#overview', label: 'Overview', icon: 'home' },
+  const navigation: DashboardNavigationItem[] = [
+    { id: 'overview', label: 'Overview', icon: 'home' },
     ...(canViewStudentOverview
       ? [
           {
-            href: '#student-view',
+            id: 'student-view' as const,
             label: 'My course progress',
             icon: 'student' as const,
-          },
-        ]
-      : []),
-    ...(canViewAlerts
-      ? [{ href: '#alerts', label: 'Alerts', icon: 'alerts' as const }]
-      : []),
-    ...(canViewProgressDashboard
-      ? [{ href: '#progress', label: 'Progress', icon: 'progress' as const }]
-      : []),
-    ...(canExport
-      ? [
-          {
-            href: '#exports',
-            label: 'Reports and exports',
-            icon: 'exports' as const,
           },
         ]
       : []),
     ...(canManageAcademicCalendar
       ? [
           {
-            href: '#academic-setup',
+            id: 'academic-setup' as const,
             label: 'Academic setup',
+            icon: 'academic' as const,
+          },
+          {
+            id: 'semester-import' as const,
+            label: 'Semester import',
             icon: 'academic' as const,
           },
         ]
@@ -583,20 +686,31 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     ...(canManageFaculty
       ? [
           {
-            href: '#faculty-access',
+            id: 'faculty-access' as const,
             label: 'Faculty access',
             icon: 'faculty' as const,
           },
         ]
       : []),
     ...(canManageTimetable
-      ? [{ href: '#timetable', label: 'Timetable', icon: 'timetable' as const }]
+      ? [
+          {
+            id: 'timetable' as const,
+            label: 'Timetable',
+            icon: 'timetable' as const,
+          },
+        ]
       : []),
     ...(canManageLessonPlans
       ? [
           {
-            href: '#lesson-plans',
+            id: 'lesson-plans' as const,
             label: 'Lesson plans',
+            icon: 'lessons' as const,
+          },
+          {
+            id: 'planned-dates' as const,
+            label: 'Planned dates',
             icon: 'lessons' as const,
           },
         ]
@@ -604,9 +718,35 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     ...(canLogSessions
       ? [
           {
-            href: '#daily-logging',
+            id: 'daily-logging' as const,
             label: 'Daily logging',
             icon: 'sessions' as const,
+          },
+        ]
+      : []),
+    ...(canViewProgressDashboard
+      ? [
+          {
+            id: 'progress' as const,
+            label: 'Progress',
+            icon: 'progress' as const,
+          },
+          {
+            id: 'exam-readiness' as const,
+            label: 'Exam readiness',
+            icon: 'progress' as const,
+          },
+        ]
+      : []),
+    ...(canViewAlerts
+      ? [{ id: 'alerts' as const, label: 'Alerts', icon: 'alerts' as const }]
+      : []),
+    ...(canExport
+      ? [
+          {
+            id: 'exports' as const,
+            label: 'Reports and exports',
+            icon: 'exports' as const,
           },
         ]
       : []),
@@ -618,14 +758,76 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const activeNavigationItem =
+    navigation.find((item) => item.id === activeView) ?? navigation[0]!;
+
+  function openView(view: DashboardView) {
+    setActiveView(view);
+  }
+
+  function renderActiveView() {
+    switch (activeView) {
+      case 'student-view':
+        return <StudentOverview />;
+      case 'alerts':
+        return <AlertCenter />;
+      case 'progress':
+        return <ProgressDashboard scope={progressScope} />;
+      case 'exam-readiness':
+        return <ExamReadinessView />;
+      case 'exports':
+        return <ExportCenter />;
+      case 'academic-setup':
+        return (
+          <SemesterSetup
+            initialCampusId={selectedCampusId}
+            campusLocked={Boolean(selectedCampus)}
+          />
+        );
+      case 'semester-import':
+        return <SemesterImport />;
+      case 'faculty-access':
+        return (
+          <FacultyAccessWorkspace
+            initialCampusId={selectedCampusId}
+            campusLocked={Boolean(selectedCampus)}
+          />
+        );
+      case 'timetable':
+        return (
+          <TimetableSetup
+            initialCampusId={selectedCampusId}
+            campusLocked={Boolean(selectedCampus)}
+          />
+        );
+      case 'lesson-plans':
+        return <LessonPlanWorkspace />;
+      case 'planned-dates':
+        return <TopicScheduleWorkspace />;
+      case 'daily-logging':
+        return <SessionLoggingWorkspace />;
+      case 'overview':
+      default:
+        return (
+          <CampusOverview
+            user={user}
+            campus={selectedCampus}
+            roleLabel={primaryRoleLabel}
+            workspaces={navigation}
+            onOpen={openView}
+          />
+        );
+    }
+  }
 
   return (
     <main className="dashboard-shell">
       <aside className="app-sidebar">
-        <a
+        <button
+          type="button"
           className="sidebar-brand"
-          href="#overview"
           aria-label="Mirai Tracker home"
+          onClick={() => openView('overview')}
         >
           <span className="wordmark-frame sidebar-wordmark-frame">
             <img src="/mirai-wordmark-light.png" alt="" />
@@ -635,18 +837,20 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             src="/mirai-symbol-light.png"
             alt=""
           />
-        </a>
+        </button>
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
-          {navigation.map((item, index) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className={index === 0 ? 'active' : undefined}
+          {navigation.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              className={item.id === activeView ? 'active' : undefined}
+              aria-current={item.id === activeView ? 'page' : undefined}
+              onClick={() => openView(item.id)}
             >
               <NavigationIcon name={item.icon} />
               <span>{item.label}</span>
-            </a>
+            </button>
           ))}
         </nav>
 
@@ -668,7 +872,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             <img className="topbar-brand-logo" src="/mirai-logo.jpg" alt="" />
             <div>
               <p className="eyebrow">Mirai Tracker</p>
-              <strong>{selectedCampus?.name ?? 'Course progression'}</strong>
+              <strong>
+                {selectedCampus?.name ?? 'Course progression'} ·{' '}
+                {activeNavigationItem.label}
+              </strong>
             </div>
           </div>
           <div className="topbar-actions">
@@ -681,7 +888,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               <button
                 type="button"
                 className="campus-switcher"
-                onClick={() => setSelectedCampusId('')}
+                onClick={() => {
+                  setSelectedCampusId('');
+                  setActiveView('overview');
+                }}
               >
                 <span>{selectedCampus.name}</span>
                 <small>Change campus</small>
@@ -697,160 +907,22 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           </div>
         </header>
 
-        <div className="dashboard-content">
-          <section id="overview" className="welcome-card">
-            <div>
-              <h1>Welcome, {user.name}</h1>
-              <p className="lede">
-                {selectedCampus
-                  ? `${selectedCampus.name} · ${selectedCampus.code}`
-                  : user.email}
-              </p>
-            </div>
-            {!selectedCampus ? (
-              <span className="welcome-role">{primaryRoleLabel}</span>
-            ) : null}
+        <div className="dashboard-content" aria-live="polite">
+          <section
+            id={activeView}
+            className="dashboard-view"
+            aria-label={activeNavigationItem.label}
+          >
+            <Suspense
+              fallback={
+                <p className="workspace-loading">
+                  Loading {activeNavigationItem.label.toLowerCase()}...
+                </p>
+              }
+            >
+              {renderActiveView()}
+            </Suspense>
           </section>
-
-          {canViewStudentOverview ? (
-            <div id="student-view" className="dashboard-anchor">
-              <Suspense
-                fallback={
-                  <p className="workspace-loading">Loading your course view…</p>
-                }
-              >
-                <StudentOverview />
-              </Suspense>
-            </div>
-          ) : null}
-          {canViewAlerts ? (
-            <div id="alerts" className="dashboard-anchor">
-              <Suspense
-                fallback={<p className="workspace-loading">Loading alerts…</p>}
-              >
-                <AlertCenter />
-              </Suspense>
-            </div>
-          ) : null}
-          {canViewProgressDashboard ? (
-            <>
-              <div id="progress" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">Loading progress…</p>
-                  }
-                >
-                  <ProgressDashboard scope={progressScope} />
-                </Suspense>
-              </div>
-              <div id="exam-readiness" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">Loading exam readiness…</p>
-                  }
-                >
-                  <ExamReadinessView />
-                </Suspense>
-              </div>
-            </>
-          ) : null}
-          {canExport ? (
-            <div id="exports" className="dashboard-anchor">
-              <Suspense
-                fallback={<p className="workspace-loading">Loading exports…</p>}
-              >
-                <ExportCenter />
-              </Suspense>
-            </div>
-          ) : null}
-          {canManageAcademicCalendar ? (
-            <>
-              <div id="academic-setup" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">Loading academic setup…</p>
-                  }
-                >
-                  <SemesterSetup
-                    initialCampusId={selectedCampusId}
-                    campusLocked={Boolean(selectedCampus)}
-                  />
-                </Suspense>
-              </div>
-              <div id="semester-import" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">
-                      Loading semester import…
-                    </p>
-                  }
-                >
-                  <SemesterImport />
-                </Suspense>
-              </div>
-            </>
-          ) : null}
-          {canManageFaculty ? (
-            <div id="faculty-access" className="dashboard-anchor">
-              <Suspense
-                fallback={
-                  <p className="workspace-loading">Loading faculty access…</p>
-                }
-              >
-                <FacultyAccessWorkspace
-                  initialCampusId={selectedCampusId}
-                  campusLocked={Boolean(selectedCampus)}
-                />
-              </Suspense>
-            </div>
-          ) : null}
-          {canManageTimetable ? (
-            <div id="timetable" className="dashboard-anchor">
-              <Suspense
-                fallback={
-                  <p className="workspace-loading">Loading timetable…</p>
-                }
-              >
-                <TimetableSetup
-                  initialCampusId={selectedCampusId}
-                  campusLocked={Boolean(selectedCampus)}
-                />
-              </Suspense>
-            </div>
-          ) : null}
-          {canManageLessonPlans ? (
-            <>
-              <div id="lesson-plans" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">Loading lesson plans…</p>
-                  }
-                >
-                  <LessonPlanWorkspace />
-                </Suspense>
-              </div>
-              <div id="planned-dates" className="dashboard-anchor">
-                <Suspense
-                  fallback={
-                    <p className="workspace-loading">Loading planned dates…</p>
-                  }
-                >
-                  <TopicScheduleWorkspace />
-                </Suspense>
-              </div>
-            </>
-          ) : null}
-          {canLogSessions ? (
-            <div id="daily-logging" className="dashboard-anchor">
-              <Suspense
-                fallback={
-                  <p className="workspace-loading">Loading daily classes…</p>
-                }
-              >
-                <SessionLoggingWorkspace />
-              </Suspense>
-            </div>
-          ) : null}
         </div>
       </div>
     </main>

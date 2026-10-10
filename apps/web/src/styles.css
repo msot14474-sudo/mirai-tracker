@@ -4233,12 +4233,16 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  width: 100%;
   padding: 0.35rem 0.45rem 1.45rem;
+  border: 0;
   color: #fff;
+  background: transparent;
   font-size: 1.45rem;
   font-weight: 850;
   letter-spacing: -0.035em;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .sidebar-brand svg {
@@ -4257,27 +4261,32 @@ textarea:focus {
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.sidebar-navigation a {
+.sidebar-navigation button {
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  width: 100%;
   min-height: 3rem;
   padding: 0.72rem 0.85rem;
+  border: 0;
   border-radius: 0.78rem;
   color: rgba(235, 241, 255, 0.76);
+  background: transparent;
   font-size: 0.86rem;
   font-weight: 650;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.sidebar-navigation a:hover,
-.sidebar-navigation a:focus-visible {
+.sidebar-navigation button:hover,
+.sidebar-navigation button:focus-visible {
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
   outline: none;
 }
 
-.sidebar-navigation a.active {
+.sidebar-navigation button.active {
   color: var(--mirai-blue);
   background: #fff;
   box-shadow: 0 0.65rem 1.5rem rgba(5, 30, 91, 0.18);
@@ -4392,6 +4401,271 @@ textarea:focus {
   width: min(1560px, 100%);
   margin: 0 auto;
   padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.dashboard-view {
+  min-width: 0;
+}
+
+.dashboard-view > * {
+  width: 100%;
+  max-width: none;
+  margin-top: 0 !important;
+}
+
+.campus-overview {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.overview-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 34%);
+  align-items: center;
+  min-height: 280px;
+  padding: clamp(2rem, 5vw, 4rem);
+  overflow: hidden;
+  border-radius: 1.5rem;
+  color: #fff;
+  background:
+    radial-gradient(
+      circle at 78% 20%,
+      rgba(67, 207, 235, 0.32),
+      transparent 28%
+    ),
+    linear-gradient(125deg, #071b4b 0%, #0d347f 58%, #2564df 100%);
+  box-shadow: 0 1.2rem 3.4rem rgba(16, 55, 139, 0.2);
+}
+
+.overview-hero-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.overview-eyebrow {
+  margin: 0 0 0.7rem;
+  color: #70d7f0;
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.overview-hero h1 {
+  max-width: 720px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.overview-hero-copy > p:not(.overview-eyebrow) {
+  margin: 1rem 0 1.4rem;
+  color: rgba(235, 243, 255, 0.82);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
+.overview-role {
+  display: inline-flex;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.overview-motion {
+  position: relative;
+  width: min(320px, 100%);
+  aspect-ratio: 1;
+  justify-self: end;
+}
+
+.overview-orbit,
+.overview-logo-core {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.overview-orbit {
+  border: 1px solid rgba(187, 228, 255, 0.35);
+  animation: overview-spin 15s linear infinite;
+}
+
+.overview-orbit i {
+  position: absolute;
+  top: 50%;
+  right: -0.45rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: #58d5ed;
+  box-shadow: 0 0 1.5rem rgba(88, 213, 237, 0.9);
+}
+
+.overview-orbit-outer {
+  width: 82%;
+  height: 82%;
+}
+
+.overview-orbit-inner {
+  width: 55%;
+  height: 55%;
+  animation-duration: 10s;
+  animation-direction: reverse;
+}
+
+.overview-orbit-inner i {
+  right: auto;
+  left: -0.35rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: #ffcf65;
+}
+
+.overview-logo-core {
+  display: grid;
+  width: 30%;
+  height: 30%;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 3rem rgba(83, 206, 238, 0.3);
+  animation: overview-float 4.5s ease-in-out infinite;
+  backdrop-filter: blur(10px);
+}
+
+.overview-logo-core img {
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+}
+
+.overview-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--mirai-line);
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.overview-details div {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1.15rem 1.35rem;
+}
+
+.overview-details div + div {
+  border-left: 1px solid var(--mirai-line);
+}
+
+.overview-details span {
+  color: var(--mirai-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overview-details strong {
+  color: var(--mirai-ink);
+  font-size: 0.95rem;
+}
+
+.overview-shortcuts {
+  padding: clamp(1.25rem, 3vw, 1.8rem);
+  border: 1px solid var(--mirai-line);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0.45rem 1.8rem rgba(30, 52, 104, 0.05);
+}
+
+.overview-section-heading h2 {
+  margin: 0;
+  color: var(--mirai-ink);
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.overview-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+.overview-shortcut-grid button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  min-height: 160px;
+  padding: 1.1rem;
+  border: 1px solid #dfe6f3;
+  border-radius: 1rem;
+  color: #18346f;
+  background: linear-gradient(145deg, #fbfcff, #f2f6ff);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.overview-shortcut-grid button:hover,
+.overview-shortcut-grid button:focus-visible {
+  border-color: #9db7ec;
+  box-shadow: 0 0.8rem 1.8rem rgba(35, 72, 151, 0.1);
+  outline: none;
+  transform: translateY(-3px);
+}
+
+.overview-shortcut-grid .sidebar-icon {
+  justify-self: end;
+  color: #2d66df;
+}
+
+.overview-shortcut-number {
+  color: #6d88c3;
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.overview-shortcut-grid strong,
+.overview-shortcut-action {
+  grid-column: 1 / -1;
+}
+
+.overview-shortcut-grid strong {
+  align-self: end;
+  font-size: 1rem;
+}
+
+.overview-shortcut-action {
+  color: #2a5ecb;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+@keyframes overview-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes overview-float {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateY(-4px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(6px);
+  }
 }
 
 .welcome-card,
@@ -4623,13 +4897,13 @@ textarea:focus {
     overflow-x: auto;
   }
 
-  .sidebar-navigation a {
+  .sidebar-navigation button {
     min-height: 2.5rem;
     padding: 0.55rem 0.65rem;
     white-space: nowrap;
   }
 
-  .sidebar-navigation a span:last-child {
+  .sidebar-navigation button span:last-child {
     display: none;
   }
 
@@ -4671,6 +4945,29 @@ textarea:focus {
 
   .dashboard-content {
     padding: 1rem;
+  }
+
+  .overview-hero {
+    grid-template-columns: 1fr;
+    min-height: 250px;
+  }
+
+  .overview-motion {
+    position: absolute;
+    right: -4rem;
+    width: 260px;
+    opacity: 0.48;
+  }
+
+  .overview-details,
+  .overview-shortcut-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-details div:nth-child(3) {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--mirai-line);
+    border-left: 0;
   }
 
   .welcome-card {
@@ -4718,8 +5015,37 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .overview-hero {
+    padding: 1.5rem;
+  }
+
+  .overview-hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .overview-details,
+  .overview-shortcut-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-details div + div,
+  .overview-details div:nth-child(3) {
+    grid-column: auto;
+    border-top: 1px solid var(--mirai-line);
+    border-left: 0;
+  }
+
   .access-grid article {
     min-height: 125px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-orbit,
+  .overview-logo-core,
+  .overview-shortcut-grid button {
+    animation: none;
+    transition: none;
   }
 }
 

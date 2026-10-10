@@ -98,37 +98,38 @@ describe('App authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(
-      await screen.findByText('Welcome, Sample Faculty'),
+      await screen.findByRole('heading', { name: 'Welcome back, Sample' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Daily logging' }),
+      screen.getByRole('button', { name: 'Daily logging' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Available workspaces' }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', {
+        name: 'Lesson plans and exam scope',
+      }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lesson plans' }));
     expect(
       await screen.findByRole('heading', {
         name: 'Lesson plans and exam scope',
       }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Planned topic dates' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('heading', { name: 'Log today’s classes' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Daily logging' }));
     expect(
       await screen.findByRole('heading', { name: 'Log today’s classes' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Progress dashboard' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Exam readiness' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Missed-log alerts' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Exam dates and scope')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'My course progress' }),
+      screen.queryByRole('heading', {
+        name: 'Lesson plans and exam scope',
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -137,22 +138,27 @@ describe('App authentication', () => {
     renderApp();
 
     expect(
-      await screen.findByText('Welcome, Sample Student'),
+      await screen.findByRole('heading', { name: 'Welcome back, Sample' }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'My course progress' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'My course progress' }),
+      screen.getByRole('button', { name: 'My course progress' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Available workspaces' }),
     ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: 'Daily logging' }),
+        screen.queryByRole('button', { name: 'Daily logging' }),
       ).not.toBeInTheDocument(),
     );
+    expect(
+      screen.queryByRole('heading', { name: 'My course progress' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'My course progress' }));
+    expect(
+      await screen.findByRole('heading', { name: 'My course progress' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester calendar' }),
     ).not.toBeInTheDocument();
@@ -205,10 +211,16 @@ describe('App authentication', () => {
     });
     renderApp();
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: /HI-Tech/i }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: /HI-Tech/i }));
 
+    expect(
+      await screen.findByRole('heading', { name: 'Welcome back, Program' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Semester calendar' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Academic setup' }));
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
@@ -217,33 +229,24 @@ describe('App authentication', () => {
     ).toBeInTheDocument();
     expect(
       (await screen.findAllByRole('option', { name: 'HI-Tech' })).length,
-    ).toBe(3);
+    ).toBe(1);
+    expect(
+      screen.queryByRole('heading', { name: 'Semester import' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Semester import' }));
     expect(
       await screen.findByRole('heading', { name: 'Semester import' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Semester calendar' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Download Excel template' }),
     ).toHaveAttribute(
       'href',
       expect.stringContaining('/imports/template?format=xlsx'),
     );
-    expect(
-      await screen.findByRole('heading', { name: 'Weekly timetable' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Progress dashboard' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Exam readiness' }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Lesson plans and exam scope',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Planned topic dates' }),
-    ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();
@@ -299,20 +302,25 @@ describe('App authentication', () => {
       screen.getByRole('button', { name: /Jaggannath Campus/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Academic setup' }),
+      screen.queryByRole('button', { name: 'Academic setup' }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /HI-Tech Campus/i }));
 
     expect(
-      await screen.findByText('Welcome, Yatharth Vishnoi'),
+      await screen.findByRole('heading', { name: 'Welcome back, Yatharth' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Change campus/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Academic setup' }),
+      screen.getByRole('button', { name: 'Academic setup' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Semester calendar' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Academic setup' }));
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
@@ -364,24 +372,13 @@ describe('App authentication', () => {
     renderApp();
 
     expect(
-      await screen.findByRole('heading', { name: 'Weekly timetable' }),
+      await screen.findByRole('heading', { name: 'Welcome back, Campus' }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', {
-        name: 'Faculty access',
-        level: 2,
-      }),
+      screen.getByRole('button', { name: 'Faculty access' }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', {
-        name: 'Lesson plans and exam scope',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Planned topic dates' }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Missed-log alerts' }),
+      screen.getByRole('button', { name: 'Timetable' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
@@ -391,6 +388,25 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester import' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Faculty access' }));
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Faculty access',
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Weekly timetable' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Timetable' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Weekly timetable' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Faculty access', level: 2 }),
     ).not.toBeInTheDocument();
   });
 });
