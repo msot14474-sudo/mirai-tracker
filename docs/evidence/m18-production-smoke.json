@@ -18,7 +18,7 @@
     "fictionalSeedCompleted": true,
     "demonstrationDatasetVerifierPassed": true,
     "fullTypecheckPassed": true,
-    "automatedTestsPassed": 239,
+    "automatedTestsPassed": 246,
     "productionBuildPassed": true,
     "postgresqlIntegrationTestsPassed": 16
   },
