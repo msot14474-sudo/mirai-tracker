@@ -4879,28 +4879,43 @@ textarea:focus {
   width: min(23rem, 100%);
   height: 5.8rem;
   border-radius: 1.15rem;
-  box-shadow: 0 0.9rem 2rem rgba(4, 23, 70, 0.24);
+  background: transparent;
 }
 
 .auth-wordmark-frame img {
-  top: -3.55rem;
-  width: 23rem;
+  top: 50%;
+  width: 22rem;
+  transform: translate(-50%, -50%);
 }
 
 .sidebar-wordmark-frame {
   width: 13.6rem;
   height: 3.8rem;
   border-radius: 0.8rem;
-  box-shadow: 0 0.45rem 1rem rgba(4, 23, 70, 0.2);
+  background: transparent;
 }
 
 .sidebar-wordmark-frame img {
-  top: -2.7rem;
-  width: 16rem;
+  top: 50%;
+  width: 13.5rem;
+  transform: translate(-50%, -50%);
+}
+
+.auth-wordmark-frame img,
+.sidebar-wordmark-frame img {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .sidebar-brand .sidebar-symbol {
   display: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain;
 }
 
 .topbar-wordmark-frame {
@@ -4928,6 +4943,10 @@ textarea:focus {
   .sidebar-brand .sidebar-symbol,
   .topbar-brand-logo {
     display: block;
+  }
+
+  .sidebar-brand .sidebar-symbol {
+    width: 2.15rem;
   }
 }
 
