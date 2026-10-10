@@ -244,8 +244,9 @@ function LoginScreen() {
     <main className="auth-shell">
       <section className="brand-panel">
         <div className="auth-brand">
-          <img src="/mirai-logo.jpg" alt="Mirai" />
-          <strong>Mirai Tracker</strong>
+          <span className="wordmark-frame auth-wordmark-frame">
+            <img src="/mirai-wordmark.webp" alt="Mirai School of Technology" />
+          </span>
         </div>
         <p className="eyebrow">MSOT · Course Progression</p>
         <h1>One clear view of every teaching day.</h1>
@@ -496,8 +497,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           href="#overview"
           aria-label="Mirai Tracker home"
         >
-          <img src="/mirai-logo.jpg" alt="" />
-          <span>Mirai</span>
+          <span className="wordmark-frame sidebar-wordmark-frame">
+            <img src="/mirai-wordmark.webp" alt="" />
+          </span>
+          <img className="sidebar-symbol" src="/mirai-logo.jpg" alt="" />
         </a>
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
@@ -525,6 +528,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       <div className="dashboard-main">
         <header className="topbar">
           <div className="topbar-title">
+            <span className="wordmark-frame topbar-wordmark-frame">
+              <img src="/mirai-wordmark.webp" alt="" />
+            </span>
             <img className="topbar-brand-logo" src="/mirai-logo.jpg" alt="" />
             <div>
               <p className="eyebrow">Mirai Tracker</p>
