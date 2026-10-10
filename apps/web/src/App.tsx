@@ -111,6 +111,103 @@ const featureAccess: Record<UserRole, string[]> = {
 
 const currentUserKey = ['current-user'] as const;
 
+type NavigationIconName =
+  | 'home'
+  | 'student'
+  | 'alerts'
+  | 'progress'
+  | 'exports'
+  | 'academic'
+  | 'faculty'
+  | 'timetable'
+  | 'lessons'
+  | 'sessions';
+
+function NavigationIcon({ name }: { name: NavigationIconName }) {
+  const paths: Record<NavigationIconName, React.ReactNode> = {
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+      </>
+    ),
+    student: (
+      <>
+        <path d="m3 8 9-5 9 5-9 5-9-5Z" />
+        <path d="M7 11v5c3 2 7 2 10 0v-5" />
+      </>
+    ),
+    alerts: (
+      <>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <path d="M10 21h4" />
+      </>
+    ),
+    progress: (
+      <>
+        <path d="M4 20V10" />
+        <path d="M10 20V4" />
+        <path d="M16 20v-7" />
+        <path d="M22 20H2" />
+      </>
+    ),
+    exports: (
+      <>
+        <path d="M12 3v12" />
+        <path d="m7 10 5 5 5-5" />
+        <path d="M4 21h16" />
+      </>
+    ),
+    academic: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+    faculty: (
+      <>
+        <circle cx="9" cy="8" r="4" />
+        <path d="M2 21a7 7 0 0 1 14 0" />
+        <path d="M19 8v6M16 11h6" />
+      </>
+    ),
+    timetable: (
+      <>
+        <rect x="3" y="4" width="18" height="17" rx="2" />
+        <path d="M3 9h18M8 2v4M16 2v4M8 13h3M13 13h3M8 17h3" />
+      </>
+    ),
+    lessons: (
+      <>
+        <path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 0-3 1V4Z" />
+        <path d="M18 7h2v13h-9" />
+      </>
+    ),
+    sessions: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8 12 3 3 5-6" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      className="sidebar-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+
 function LoginScreen() {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('faculty@mirai.local');
@@ -309,148 +406,303 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     onSuccess: () => queryClient.setQueryData(currentUserKey, null),
   });
 
+  const navigation: Array<{
+    href: string;
+    label: string;
+    icon: NavigationIconName;
+  }> = [
+    { href: '#overview', label: 'Overview', icon: 'home' },
+    ...(canViewStudentOverview
+      ? [
+          {
+            href: '#student-view',
+            label: 'My course progress',
+            icon: 'student' as const,
+          },
+        ]
+      : []),
+    ...(canViewAlerts
+      ? [{ href: '#alerts', label: 'Alerts', icon: 'alerts' as const }]
+      : []),
+    ...(canViewProgressDashboard
+      ? [{ href: '#progress', label: 'Progress', icon: 'progress' as const }]
+      : []),
+    ...(canExport
+      ? [
+          {
+            href: '#exports',
+            label: 'Reports and exports',
+            icon: 'exports' as const,
+          },
+        ]
+      : []),
+    ...(canManageAcademicCalendar
+      ? [
+          {
+            href: '#academic-setup',
+            label: 'Academic setup',
+            icon: 'academic' as const,
+          },
+        ]
+      : []),
+    ...(canManageFaculty
+      ? [
+          {
+            href: '#faculty-access',
+            label: 'Faculty access',
+            icon: 'faculty' as const,
+          },
+        ]
+      : []),
+    ...(canManageTimetable
+      ? [{ href: '#timetable', label: 'Timetable', icon: 'timetable' as const }]
+      : []),
+    ...(canManageLessonPlans
+      ? [
+          {
+            href: '#lesson-plans',
+            label: 'Lesson plans',
+            icon: 'lessons' as const,
+          },
+        ]
+      : []),
+    ...(canLogSessions
+      ? [
+          {
+            href: '#daily-logging',
+            label: 'Daily logging',
+            icon: 'sessions' as const,
+          },
+        ]
+      : []),
+  ];
+  const primaryRoleLabel = roles[0] ? roleLabels[roles[0]] : 'User';
+  const initials = user.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <main className="dashboard-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Mirai Tracker</p>
-          <strong>Course progression</strong>
-        </div>
-        <button
-          className="secondary-button"
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
+      <aside className="app-sidebar">
+        <a
+          className="sidebar-brand"
+          href="#overview"
+          aria-label="Mirai Tracker home"
         >
-          Sign out
-        </button>
-      </header>
+          <svg viewBox="0 0 42 30" aria-hidden="true">
+            <circle cx="7" cy="15" r="5" />
+            <circle cx="21" cy="8" r="5" />
+            <circle cx="35" cy="15" r="5" />
+            <path d="M7 15 15 8M27 8l8 7M15 8l6 14 6-14" />
+          </svg>
+          <span>Mirai</span>
+        </a>
 
-      <section className="welcome-card">
-        <div>
-          <p className="step-label">Authenticated workspace</p>
-          <h1>Welcome, {user.name}</h1>
-          <p className="lede">{user.email}</p>
-        </div>
-        <div className="role-list" aria-label="Assigned roles">
-          {roles.map((role) => (
-            <span key={role}>{roleLabels[role]}</span>
+        <nav className="sidebar-navigation" aria-label="Workspace navigation">
+          {navigation.map((item, index) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={index === 0 ? 'active' : undefined}
+            >
+              <NavigationIcon name={item.icon} />
+              <span>{item.label}</span>
+            </a>
           ))}
-        </div>
-      </section>
+        </nav>
 
-      <section className="access-section" aria-labelledby="access-title">
-        <div>
-          <p className="step-label">Your access</p>
-          <h2 id="access-title">Available workspaces</h2>
+        <div className="sidebar-account">
+          <span className="account-avatar">{initials}</span>
+          <span>
+            <strong>{user.name}</strong>
+            <small>{primaryRoleLabel}</small>
+          </span>
         </div>
-        <div className="access-grid">
-          {features.map((feature, index) => (
-            <article key={feature}>
-              <span className="feature-number">0{index + 1}</span>
-              <h3>{feature}</h3>
-              <p>Permission verified from your current role and scope.</p>
-            </article>
-          ))}
+      </aside>
+
+      <div className="dashboard-main">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Mirai Tracker</p>
+            <strong>Course progression</strong>
+          </div>
+          <div className="topbar-actions">
+            <div className="role-list" aria-label="Assigned roles">
+              {roles.map((role) => (
+                <span key={role}>{roleLabels[role]}</span>
+              ))}
+            </div>
+            <button
+              className="secondary-button"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              Sign out
+            </button>
+          </div>
+        </header>
+
+        <div className="dashboard-content">
+          <section id="overview" className="welcome-card">
+            <div>
+              <p className="step-label">Authenticated workspace</p>
+              <h1>Welcome, {user.name}</h1>
+              <p className="lede">{user.email}</p>
+            </div>
+            <span className="welcome-role">{primaryRoleLabel}</span>
+          </section>
+
+          <section className="access-section" aria-labelledby="access-title">
+            <div>
+              <p className="step-label">Your access</p>
+              <h2 id="access-title">Available workspaces</h2>
+            </div>
+            <div className="access-grid">
+              {features.map((feature, index) => (
+                <article key={feature}>
+                  <span className="feature-number">0{index + 1}</span>
+                  <h3>{feature}</h3>
+                  <p>Permission verified from your current role and scope.</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {canViewStudentOverview ? (
+            <div id="student-view" className="dashboard-anchor">
+              <Suspense
+                fallback={
+                  <p className="workspace-loading">Loading your course view…</p>
+                }
+              >
+                <StudentOverview />
+              </Suspense>
+            </div>
+          ) : null}
+          {canViewAlerts ? (
+            <div id="alerts" className="dashboard-anchor">
+              <Suspense
+                fallback={<p className="workspace-loading">Loading alerts…</p>}
+              >
+                <AlertCenter />
+              </Suspense>
+            </div>
+          ) : null}
+          {canViewProgressDashboard ? (
+            <>
+              <div id="progress" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">Loading progress…</p>
+                  }
+                >
+                  <ProgressDashboard scope={progressScope} />
+                </Suspense>
+              </div>
+              <div id="exam-readiness" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">Loading exam readiness…</p>
+                  }
+                >
+                  <ExamReadinessView />
+                </Suspense>
+              </div>
+            </>
+          ) : null}
+          {canExport ? (
+            <div id="exports" className="dashboard-anchor">
+              <Suspense
+                fallback={<p className="workspace-loading">Loading exports…</p>}
+              >
+                <ExportCenter />
+              </Suspense>
+            </div>
+          ) : null}
+          {canManageAcademicCalendar ? (
+            <>
+              <div id="academic-setup" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">Loading academic setup…</p>
+                  }
+                >
+                  <SemesterSetup />
+                </Suspense>
+              </div>
+              <div id="semester-import" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">
+                      Loading semester import…
+                    </p>
+                  }
+                >
+                  <SemesterImport />
+                </Suspense>
+              </div>
+            </>
+          ) : null}
+          {canManageFaculty ? (
+            <div id="faculty-access" className="dashboard-anchor">
+              <Suspense
+                fallback={
+                  <p className="workspace-loading">Loading faculty access…</p>
+                }
+              >
+                <FacultyAccessWorkspace />
+              </Suspense>
+            </div>
+          ) : null}
+          {canManageTimetable ? (
+            <div id="timetable" className="dashboard-anchor">
+              <Suspense
+                fallback={
+                  <p className="workspace-loading">Loading timetable…</p>
+                }
+              >
+                <TimetableSetup />
+              </Suspense>
+            </div>
+          ) : null}
+          {canManageLessonPlans ? (
+            <>
+              <div id="lesson-plans" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">Loading lesson plans…</p>
+                  }
+                >
+                  <LessonPlanWorkspace />
+                </Suspense>
+              </div>
+              <div id="planned-dates" className="dashboard-anchor">
+                <Suspense
+                  fallback={
+                    <p className="workspace-loading">Loading planned dates…</p>
+                  }
+                >
+                  <TopicScheduleWorkspace />
+                </Suspense>
+              </div>
+            </>
+          ) : null}
+          {canLogSessions ? (
+            <div id="daily-logging" className="dashboard-anchor">
+              <Suspense
+                fallback={
+                  <p className="workspace-loading">Loading daily classes…</p>
+                }
+              >
+                <SessionLoggingWorkspace />
+              </Suspense>
+            </div>
+          ) : null}
         </div>
-      </section>
-      {canViewStudentOverview ? (
-        <Suspense
-          fallback={
-            <p className="workspace-loading">Loading your course view…</p>
-          }
-        >
-          <StudentOverview />
-        </Suspense>
-      ) : null}
-      {canViewAlerts ? (
-        <Suspense
-          fallback={<p className="workspace-loading">Loading alerts…</p>}
-        >
-          <AlertCenter />
-        </Suspense>
-      ) : null}
-      {canViewProgressDashboard ? (
-        <>
-          <Suspense
-            fallback={<p className="workspace-loading">Loading progress…</p>}
-          >
-            <ProgressDashboard scope={progressScope} />
-          </Suspense>
-          <Suspense
-            fallback={
-              <p className="workspace-loading">Loading exam readiness…</p>
-            }
-          >
-            <ExamReadinessView />
-          </Suspense>
-        </>
-      ) : null}
-      {canExport ? (
-        <Suspense
-          fallback={<p className="workspace-loading">Loading exports…</p>}
-        >
-          <ExportCenter />
-        </Suspense>
-      ) : null}
-      {canManageAcademicCalendar ? (
-        <>
-          <Suspense
-            fallback={
-              <p className="workspace-loading">Loading academic setup…</p>
-            }
-          >
-            <SemesterSetup />
-          </Suspense>
-          <Suspense
-            fallback={
-              <p className="workspace-loading">Loading semester import…</p>
-            }
-          >
-            <SemesterImport />
-          </Suspense>
-        </>
-      ) : null}
-      {canManageFaculty ? (
-        <Suspense
-          fallback={
-            <p className="workspace-loading">Loading faculty access…</p>
-          }
-        >
-          <FacultyAccessWorkspace />
-        </Suspense>
-      ) : null}
-      {canManageTimetable ? (
-        <Suspense
-          fallback={<p className="workspace-loading">Loading timetable…</p>}
-        >
-          <TimetableSetup />
-        </Suspense>
-      ) : null}
-      {canManageLessonPlans ? (
-        <>
-          <Suspense
-            fallback={
-              <p className="workspace-loading">Loading lesson plans…</p>
-            }
-          >
-            <LessonPlanWorkspace />
-          </Suspense>
-          <Suspense
-            fallback={
-              <p className="workspace-loading">Loading planned dates…</p>
-            }
-          >
-            <TopicScheduleWorkspace />
-          </Suspense>
-        </>
-      ) : null}
-      {canLogSessions ? (
-        <Suspense
-          fallback={<p className="workspace-loading">Loading daily classes…</p>}
-        >
-          <SessionLoggingWorkspace />
-        </Suspense>
-      ) : null}
+      </div>
     </main>
   );
 }

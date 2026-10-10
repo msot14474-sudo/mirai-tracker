@@ -7,8 +7,8 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #14201d;
-  background: #f4f1e9;
+  color: #14213d;
+  background: #f4f6fc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -36,7 +36,7 @@ button {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  background: #f4f1e9;
+  background: #f4f6fc;
 }
 
 .brand-panel {
@@ -53,7 +53,7 @@ button {
       rgba(202, 230, 140, 0.38),
       transparent 25%
     ),
-    #123d34;
+    #0d2d76;
 }
 
 .eyebrow,
@@ -80,7 +80,7 @@ p {
 .brand-panel h1 {
   max-width: 12ch;
   margin: 0.65rem 0 1.25rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(3rem, 7vw, 6.8rem);
   font-weight: 500;
   letter-spacing: -0.055em;
@@ -128,7 +128,7 @@ p {
 .login-card h2,
 .access-section h2 {
   margin: 0.55rem 0 0.65rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.035em;
@@ -147,7 +147,7 @@ form {
 
 label {
   margin-top: 0.6rem;
-  color: #31433d;
+  color: #35415a;
   font-size: 0.82rem;
   font-weight: 750;
 }
@@ -157,13 +157,13 @@ input {
   padding: 0.95rem 1rem;
   border: 1px solid #c9cec5;
   border-radius: 0.7rem;
-  color: #14201d;
+  color: #14213d;
   background: rgba(255, 255, 255, 0.72);
   outline: none;
 }
 
 input:focus {
-  border-color: #286b58;
+  border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(40, 107, 88, 0.13);
 }
 
@@ -174,7 +174,7 @@ form button,
   border: 0;
   border-radius: 0.7rem;
   color: white;
-  background: #1c5a49;
+  background: #245cdb;
   font-weight: 800;
 }
 
@@ -203,7 +203,7 @@ button:disabled {
 }
 
 .demo-note strong {
-  color: #293b35;
+  color: #273755;
 }
 
 .dashboard-shell {
@@ -215,7 +215,7 @@ button:disabled {
       rgba(166, 203, 112, 0.3),
       transparent 22%
     ),
-    #f4f1e9;
+    #f4f6fc;
 }
 
 .topbar,
@@ -241,7 +241,7 @@ button:disabled {
   padding: 0.7rem 1rem;
   border: 1px solid #bac2b8;
   border-radius: 999px;
-  color: #254b40;
+  color: #204ca9;
   background: rgba(255, 255, 255, 0.45);
   font-weight: 750;
 }
@@ -257,7 +257,7 @@ button:disabled {
 
 .welcome-card h1 {
   margin: 0.5rem 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2.8rem, 7vw, 6rem);
   font-weight: 500;
   letter-spacing: -0.055em;
@@ -266,8 +266,8 @@ button:disabled {
 
 .role-list span {
   border-color: #9cb5a6;
-  color: #1c5a49;
-  background: #e7eedf;
+  color: #245cdb;
+  background: #eef3ff;
 }
 
 .access-section {
@@ -291,7 +291,7 @@ button:disabled {
 
 .feature-number {
   color: #7d968b;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.25rem;
 }
 
@@ -311,7 +311,7 @@ select {
   padding: 0.82rem 0.9rem;
   border: 1px solid #c9cec5;
   border-radius: 0.7rem;
-  color: #14201d;
+  color: #14213d;
   background: rgba(255, 255, 255, 0.82);
   font: inherit;
 }
@@ -341,7 +341,7 @@ select {
 
 .workspace-heading h2 {
   margin: 0.45rem 0 0.6rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2.2rem, 5vw, 4rem);
   font-weight: 500;
   letter-spacing: -0.045em;
@@ -395,7 +395,7 @@ select {
   border: 0;
   border-radius: 0.65rem;
   color: white;
-  background: #1c5a49;
+  background: #245cdb;
   font-weight: 800;
 }
 
@@ -419,14 +419,14 @@ select {
   border: 1px solid #d2d5cb;
   border-radius: 0.8rem;
   text-align: left;
-  color: #253a33;
+  color: #243454;
   background: rgba(255, 255, 255, 0.45);
 }
 
 .semester-list button.selected {
-  border-color: #4b806f;
-  background: #e3eddf;
-  box-shadow: inset 3px 0 #1c5a49;
+  border-color: #4775d1;
+  background: #edf3ff;
+  box-shadow: inset 3px 0 #245cdb;
 }
 
 .semester-list span,
@@ -450,7 +450,7 @@ select {
 
 .empty-state > span {
   color: #8ca197;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 2rem;
 }
 
@@ -484,7 +484,7 @@ select {
 }
 
 .calendar-summary strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 2.2rem;
   font-weight: 500;
 }
@@ -593,8 +593,8 @@ select {
   padding: 0.7rem 0.85rem;
   border: 1px solid #9eb4a9;
   border-radius: 0.65rem;
-  color: #1c5a49;
-  background: #edf2e9;
+  color: #245cdb;
+  background: #f1f5ff;
   font-size: 0.76rem;
   font-weight: 800;
   text-decoration: none;
@@ -654,7 +654,7 @@ select {
   border: 0;
   border-radius: 0.7rem;
   color: white;
-  background: #1c5a49;
+  background: #245cdb;
   font-weight: 800;
 }
 
@@ -697,7 +697,7 @@ select {
 }
 
 .import-counts strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.4rem;
   font-weight: 500;
 }
@@ -828,15 +828,15 @@ select {
   padding: 0.9rem;
   border: 1px solid #d7dbd2;
   border-radius: 0.75rem;
-  color: #253a33;
+  color: #243454;
   text-align: left;
   background: rgba(255, 255, 255, 0.45);
 }
 
 .offering-list > button.selected {
-  border-color: #4b806f;
-  background: #e3eddf;
-  box-shadow: inset 3px 0 #1c5a49;
+  border-color: #4775d1;
+  background: #edf3ff;
+  box-shadow: inset 3px 0 #245cdb;
 }
 
 .offering-list span,
@@ -870,7 +870,7 @@ select {
 }
 
 .timetable-summary strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.85rem;
   font-weight: 500;
 }
@@ -916,7 +916,7 @@ select {
   border: 1px solid #abc0b5;
   border-radius: 0.55rem;
   color: #245a46;
-  background: #edf2e9;
+  background: #f1f5ff;
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -955,7 +955,7 @@ select {
       rgba(235, 239, 228, 0.96),
       rgba(248, 244, 235, 0.96)
     ),
-    #f5f2e9;
+    #f7f9fd;
 }
 
 .lesson-plan-layout {
@@ -981,15 +981,15 @@ select {
   padding: 0.9rem;
   border: 1px solid #d4d9d0;
   border-radius: 0.75rem;
-  color: #263a33;
+  color: #243454;
   text-align: left;
   background: rgba(255, 255, 255, 0.52);
 }
 
 .plan-offering-list > button.selected {
-  border-color: #4b806f;
-  background: #e1ebdd;
-  box-shadow: inset 3px 0 #1c5a49;
+  border-color: #4775d1;
+  background: #edf3ff;
+  box-shadow: inset 3px 0 #245cdb;
 }
 
 .plan-offering-list span,
@@ -1073,7 +1073,7 @@ select {
 }
 
 .plan-summary strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.5rem;
   font-weight: 500;
 }
@@ -1149,7 +1149,7 @@ select {
 
 .unit-heading input:disabled,
 .topic-row input:disabled {
-  color: #263a33;
+  color: #243454;
   opacity: 1;
 }
 
@@ -1160,7 +1160,7 @@ select {
   place-content: center;
   border-radius: 50%;
   color: #f7f4eb;
-  background: #1c5a49;
+  background: #245cdb;
   font-size: 0.7rem;
   font-weight: 900;
 }
@@ -1348,7 +1348,7 @@ select {
   border: 0;
   border-radius: 0.65rem;
   color: white;
-  background: #1c5a49;
+  background: #245cdb;
   font-weight: 800;
 }
 
@@ -1378,7 +1378,7 @@ select {
 }
 
 .schedule-metrics strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.45rem;
   font-weight: 500;
 }
@@ -1615,7 +1615,7 @@ select {
 
 .daily-session-card header h3 {
   margin: 0.2rem 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.3rem;
   font-weight: 500;
 }
@@ -1660,7 +1660,7 @@ select {
   padding: 0.78rem 0.85rem;
   border: 1px solid #c9cec5;
   border-radius: 0.65rem;
-  color: #14201d;
+  color: #14213d;
   background: rgba(255, 255, 255, 0.78);
   font: inherit;
   outline: none;
@@ -1673,7 +1673,7 @@ select {
 
 .mobile-log-form select:focus,
 .mobile-log-form textarea:focus {
-  border-color: #286b58;
+  border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(40, 107, 88, 0.13);
 }
 
@@ -1759,7 +1759,7 @@ select {
   border: 0;
   border-radius: 0.75rem;
   color: white;
-  background: #1c5a49;
+  background: #245cdb;
   font-weight: 850;
 }
 
@@ -1807,7 +1807,7 @@ select {
 }
 
 .faculty-offering-picker legend {
-  color: #31433d;
+  color: #35415a;
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -1850,7 +1850,7 @@ select {
 }
 
 .faculty-offering-picker strong {
-  color: #1c5a49;
+  color: #245cdb;
 }
 
 .form-success {
@@ -1953,14 +1953,14 @@ select {
   justify-items: center;
   gap: 1rem;
   padding: 2rem;
-  background: #f4f1e9;
+  background: #f4f6fc;
 }
 
 .loader {
   width: 2rem;
   height: 2rem;
   border: 3px solid #c9d1c8;
-  border-top-color: #1c5a49;
+  border-top-color: #245cdb;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -2183,7 +2183,7 @@ select {
 
 .progress-heading h2 {
   margin: 0.45rem 0 0.5rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2rem, 4vw, 3.25rem);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -2210,15 +2210,15 @@ select {
   gap: 0.7rem;
   margin: 1rem 0 1.25rem;
   padding: 0.8rem 1rem;
-  border-left: 4px solid #1c5a49;
+  border-left: 4px solid #245cdb;
   border-radius: 0 0.65rem 0.65rem 0;
   color: #496159;
-  background: #eef3e7;
+  background: #f1f5ff;
   font-size: 0.88rem;
 }
 
 .rollup-rule strong {
-  color: #183b31;
+  color: #17366f;
   white-space: nowrap;
 }
 
@@ -2230,7 +2230,7 @@ select {
   padding: 1.25rem;
   border-radius: 1rem;
   color: #f7fbf4;
-  background: #153f35;
+  background: #17366f;
 }
 
 .overview-label {
@@ -2275,7 +2275,7 @@ select {
 .progress-rollups .subheading-row h3,
 .subject-progress-heading h3 {
   margin: 0.35rem 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.6rem;
   font-weight: 500;
 }
@@ -2516,8 +2516,8 @@ select {
 
 .recovery-heading h3 {
   margin: 0.35rem 0 0.4rem;
-  color: #183b31;
-  font-family: Georgia, 'Times New Roman', serif;
+  color: #17366f;
+  font-family: inherit;
   font-size: clamp(1.55rem, 3vw, 2.2rem);
   font-weight: 500;
 }
@@ -2839,7 +2839,7 @@ select {
 
 .exam-readiness-heading h2 {
   margin: 0.45rem 0 0.5rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2rem, 4vw, 3.25rem);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -2909,7 +2909,7 @@ select {
 
 .exam-card-header h3 {
   margin: 0.3rem 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(1.6rem, 3vw, 2.25rem);
   font-weight: 500;
 }
@@ -3067,7 +3067,7 @@ select {
 
 .exam-subjects-title h4 {
   margin: 0.25rem 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.35rem;
   font-weight: 500;
 }
@@ -3283,7 +3283,7 @@ select {
   padding: 0.9rem;
   border-radius: 0.8rem;
   color: #f6fff9;
-  background: #173f32;
+  background: #17366f;
 }
 
 .export-controls label {
@@ -3301,7 +3301,7 @@ select {
   padding: 0.58rem 0.65rem;
   border: 1px solid #47705f;
   border-radius: 0.5rem;
-  color: #173f32;
+  color: #17366f;
   background: #fff;
 }
 
@@ -3511,7 +3511,7 @@ select {
 
 .student-overview-heading h2 {
   margin: 0.45rem 0 0.5rem;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: clamp(2rem, 4vw, 3.25rem);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -3560,7 +3560,7 @@ select {
 }
 
 .student-batch-banner > div strong {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.4rem;
   font-weight: 500;
 }
@@ -3598,7 +3598,7 @@ select {
 
 .student-section-heading h3 {
   margin: 0.3rem 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.7rem;
   font-weight: 500;
 }
@@ -3764,7 +3764,7 @@ select {
 
 .student-exam-card > header h4 {
   margin: 0.25rem 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
   font-size: 1.3rem;
   font-weight: 500;
 }
@@ -3932,7 +3932,7 @@ select {
 }
 
 .alert-rules strong {
-  color: #183e31;
+  color: #17366f;
   font-size: 0.82rem;
 }
 
@@ -3949,7 +3949,7 @@ select {
   margin-bottom: 1rem;
   border-radius: 0.75rem;
   color: #f5fff9;
-  background: #173f32;
+  background: #17366f;
 }
 
 .alert-summary > div {
@@ -4034,7 +4034,7 @@ select {
 
 .alert-card-main h3 {
   margin: 0.1rem 0;
-  color: #142f26;
+  color: #152f63;
   font-size: 1rem;
 }
 
@@ -4121,5 +4121,664 @@ select {
   .alert-card-main time {
     max-width: none;
     text-align: left;
+  }
+}
+
+/* Mirai blue application theme */
+:root {
+  --display-font:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --mirai-navy: #0c2a6d;
+  --mirai-blue: #245cdb;
+  --mirai-blue-bright: #3774ed;
+  --mirai-blue-soft: #eef3ff;
+  --mirai-canvas: #f4f6fc;
+  --mirai-card: #ffffff;
+  --mirai-ink: #17233f;
+  --mirai-muted: #6f7890;
+  --mirai-line: #dfe4ef;
+  color: var(--mirai-ink);
+  background: var(--mirai-canvas);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+body {
+  color: var(--mirai-ink);
+  background: var(--mirai-canvas);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+input,
+select,
+textarea {
+  border-color: #d8dfec;
+  color: var(--mirai-ink);
+  background: #fff;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--mirai-blue);
+  box-shadow: 0 0 0 3px rgba(36, 92, 219, 0.12);
+  outline: none;
+}
+
+.eyebrow,
+.step-label {
+  color: #5471b2;
+  letter-spacing: 0.12em;
+}
+
+.auth-shell {
+  background: var(--mirai-canvas);
+}
+
+.brand-panel {
+  color: #fff;
+  background:
+    radial-gradient(
+      circle at 82% 12%,
+      rgba(255, 255, 255, 0.2),
+      transparent 24%
+    ),
+    linear-gradient(150deg, #0a286b 0%, #1544a7 58%, #3977ed 100%);
+}
+
+.brand-panel::before {
+  width: 7rem;
+  height: 0.45rem;
+  margin-bottom: 2rem;
+  border-radius: 999px;
+  background: #f0b839;
+  content: '';
+}
+
+.brand-panel .eyebrow {
+  color: #dbe7ff;
+}
+
+.brand-panel h1,
+.login-card h2,
+.access-section h2,
+.welcome-card h1,
+.workspace-heading h2,
+.progress-heading h2,
+.alert-center-heading h2 {
+  font-family: var(--display-font);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.login-panel {
+  background: #fff;
+}
+
+.login-card {
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+  border: 1px solid var(--mirai-line);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 1.5rem 4rem rgba(30, 52, 104, 0.1);
+}
+
+.auth-shell form button:not(.secondary-button),
+.dashboard-main form > button:not(.secondary-button),
+.setup-card > button,
+.preview-card > button {
+  background: var(--mirai-blue);
+}
+
+.auth-shell form button:not(.secondary-button):hover,
+.dashboard-main form > button:not(.secondary-button):hover,
+.setup-card > button:hover,
+.preview-card > button:hover {
+  background: #174bbf;
+  transform: translateY(-1px);
+}
+
+.demo-note {
+  border-color: var(--mirai-line);
+  color: var(--mirai-muted);
+  background: #f7f9fd;
+}
+
+.dashboard-shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100vh;
+  padding: 0;
+  background: var(--mirai-canvas);
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 620px;
+  padding: 1.5rem 1rem 1rem;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(
+      circle at 25% 92%,
+      rgba(112, 158, 255, 0.32),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #0b2868 0%, #1548b7 52%, #3775e8 100%);
+  box-shadow: 0.4rem 0 2rem rgba(20, 48, 112, 0.12);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.45rem 1.45rem;
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  text-decoration: none;
+}
+
+.sidebar-brand svg {
+  width: 2rem;
+  fill: #fff;
+  stroke: #fff;
+  stroke-width: 2.4;
+}
+
+.sidebar-navigation {
+  display: grid;
+  gap: 0.28rem;
+  padding-right: 0.2rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.sidebar-navigation a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3rem;
+  padding: 0.72rem 0.85rem;
+  border-radius: 0.78rem;
+  color: rgba(235, 241, 255, 0.76);
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.sidebar-navigation a:hover,
+.sidebar-navigation a:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.sidebar-navigation a.active {
+  color: var(--mirai-blue);
+  background: #fff;
+  box-shadow: 0 0.65rem 1.5rem rgba(5, 30, 91, 0.18);
+}
+
+.sidebar-icon {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.sidebar-account {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: auto;
+  padding: 1rem 0.5rem 0.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-avatar {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 0.75rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.sidebar-account > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.sidebar-account strong,
+.sidebar-account small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account strong {
+  font-size: 0.8rem;
+}
+
+.sidebar-account small {
+  margin-top: 0.15rem;
+  color: rgba(235, 241, 255, 0.7);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.dashboard-main {
+  min-width: 0;
+  background: var(--mirai-canvas);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  width: 100%;
+  max-width: none;
+  min-height: 4.8rem;
+  margin: 0;
+  padding: 0.85rem clamp(1.25rem, 3vw, 2.4rem);
+  border-bottom: 1px solid var(--mirai-line);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.topbar strong {
+  color: var(--mirai-ink);
+  font-size: 0.95rem;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar .role-list {
+  justify-content: flex-end;
+}
+
+.topbar .role-list span,
+.welcome-role {
+  border: 1px solid #d9e2f7;
+  color: #355692;
+  background: #f1f5ff;
+}
+
+.topbar .secondary-button {
+  flex: 0 0 auto;
+  border-color: #d7deec;
+  color: #284a91;
+  background: #fff;
+}
+
+.topbar .secondary-button:hover {
+  border-color: #b6c7eb;
+  background: #f3f6fc;
+}
+
+.dashboard-content {
+  width: min(1560px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.welcome-card,
+.access-section {
+  width: 100%;
+  max-width: none;
+}
+
+.welcome-card {
+  align-items: center;
+  padding: 0.5rem 0.25rem 1.5rem;
+  border-bottom: 0;
+}
+
+.welcome-card h1 {
+  margin: 0.45rem 0 0.25rem;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.08;
+}
+
+.welcome-card .lede {
+  margin-bottom: 0;
+  color: var(--mirai-muted);
+}
+
+.welcome-role {
+  padding: 0.65rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.access-section {
+  padding: clamp(1.1rem, 2.2vw, 1.6rem);
+  border: 1px solid var(--mirai-line);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.35rem 1.5rem rgba(30, 52, 104, 0.05);
+}
+
+.access-section h2 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.access-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.access-grid article {
+  min-height: 148px;
+  padding: 1rem;
+  border-color: #e0e6f2;
+  border-radius: 0.85rem;
+  background: linear-gradient(145deg, #f9fbff, #f1f5ff);
+}
+
+.access-grid article:hover {
+  border-color: #c2d1f1;
+  box-shadow: 0 0.8rem 1.7rem rgba(35, 72, 151, 0.08);
+  transform: translateY(-2px);
+}
+
+.feature-number {
+  color: #5272b8;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.access-grid h3 {
+  margin: 2.25rem 0 0.45rem;
+  color: #1c3470;
+}
+
+.access-grid p,
+.workspace-heading p,
+.progress-heading p:not(.step-label),
+.supporting-copy {
+  color: var(--mirai-muted);
+}
+
+.dashboard-anchor {
+  margin-top: 1.25rem;
+  scroll-margin-top: 5.8rem;
+}
+
+.dashboard-anchor > * {
+  width: 100%;
+  max-width: none;
+  margin-top: 0 !important;
+}
+
+.dashboard-anchor > .workspace-loading {
+  padding: 2rem;
+  border: 1px solid var(--mirai-line);
+  border-radius: 1rem;
+  color: var(--mirai-muted);
+  background: #fff;
+}
+
+.semester-workspace,
+.import-workspace,
+.timetable-workspace,
+.lesson-plan-workspace,
+.progress-dashboard,
+.exam-readiness,
+.student-overview,
+.alert-center,
+.export-center,
+.session-logging-workspace,
+.topic-schedule-workspace {
+  border-color: var(--mirai-line) !important;
+  border-radius: 1rem !important;
+  background: #fff !important;
+  box-shadow: 0 0.35rem 1.5rem rgba(30, 52, 104, 0.05) !important;
+}
+
+.semester-workspace {
+  padding: clamp(1rem, 2.5vw, 2rem);
+  border-top: 1px solid var(--mirai-line);
+}
+
+.workspace-heading {
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.workspace-heading h2,
+.progress-heading h2,
+.alert-center-heading h2 {
+  color: #182b59;
+  font-size: clamp(1.75rem, 3.5vw, 2.65rem);
+  line-height: 1.08;
+}
+
+.setup-card,
+.calendar-detail,
+.empty-state,
+.import-card,
+.import-history,
+.timetable-layout,
+.timetable-form,
+.weekly-slots,
+.session-preview,
+.lesson-plan-layout,
+.plan-upload-card,
+.plan-detail,
+.faculty-directory,
+.faculty-directory-list article,
+.alert-card {
+  border-color: var(--mirai-line) !important;
+  background: #fff !important;
+}
+
+.calendar-summary div,
+.timetable-summary div,
+.import-counts div,
+.selected-file {
+  background: #f2f5fb;
+}
+
+.semester-list button.selected,
+.offering-list > button.selected,
+.plan-offering-list > button.selected {
+  border-color: #87a7ea;
+  background: var(--mirai-blue-soft);
+  box-shadow: inset 3px 0 var(--mirai-blue);
+}
+
+.template-actions a,
+.import-history-row a,
+.text-button {
+  border-color: #c6d4ef;
+  color: #2455b6;
+  background: #f2f6ff;
+}
+
+.progress-overview,
+.alert-summary {
+  background: linear-gradient(135deg, #0d2d76, #2058c8);
+}
+
+.rollup-rule {
+  border-left-color: var(--mirai-blue);
+  color: #4c5f85;
+  background: #f1f5ff;
+}
+
+@media (max-width: 1180px) {
+  .access-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: sticky;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 0.7rem 0.9rem;
+    background: linear-gradient(90deg, #0b2868, #245cdb);
+  }
+
+  .sidebar-brand {
+    padding: 0;
+    font-size: 1.05rem;
+  }
+
+  .sidebar-brand svg {
+    width: 1.55rem;
+  }
+
+  .sidebar-navigation {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0;
+    overflow-x: auto;
+  }
+
+  .sidebar-navigation a {
+    min-height: 2.5rem;
+    padding: 0.55rem 0.65rem;
+    white-space: nowrap;
+  }
+
+  .sidebar-navigation a span:last-child {
+    display: none;
+  }
+
+  .sidebar-account {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .sidebar-account > span:last-child {
+    display: none;
+  }
+
+  .account-avatar {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .topbar {
+    top: 3.9rem;
+  }
+
+  .dashboard-anchor {
+    scroll-margin-top: 9.5rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    align-items: center;
+    min-height: 4.2rem;
+  }
+
+  .topbar .eyebrow,
+  .topbar .role-list {
+    display: none;
+  }
+
+  .dashboard-content {
+    padding: 1rem;
+  }
+
+  .welcome-card {
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .access-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .access-grid article {
+    min-height: 135px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar-brand span,
+  .welcome-role {
+    display: none;
+  }
+
+  .app-sidebar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .topbar {
+    top: 3.6rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .topbar .secondary-button {
+    padding: 0.55rem 0.75rem;
+  }
+
+  .dashboard-content {
+    padding: 0.8rem;
+  }
+
+  .welcome-card h1 {
+    font-size: 1.8rem;
+  }
+
+  .access-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .access-grid article {
+    min-height: 125px;
   }
 }
