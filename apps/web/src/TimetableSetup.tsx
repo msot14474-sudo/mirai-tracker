@@ -64,12 +64,7 @@ export function TimetableSetup() {
     <section className="timetable-workspace" aria-labelledby="timetable-title">
       <div className="workspace-heading">
         <div>
-          <p className="step-label">M06 · Teaching rhythm</p>
           <h2 id="timetable-title">Weekly timetable</h2>
-          <p>
-            Set the weekly pattern once. Working dates become traceable teaching
-            sessions with planned minutes calculated from each slot.
-          </p>
         </div>
         <div className="timetable-filters">
           <label>

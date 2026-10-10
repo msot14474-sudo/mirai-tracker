@@ -48,12 +48,7 @@ export function SemesterImport() {
     <section className="import-workspace" aria-labelledby="import-title">
       <div className="workspace-heading">
         <div>
-          <p className="step-label">M05 · Bulk setup</p>
           <h2 id="import-title">Semester import</h2>
-          <p>
-            Validate the complete file first, inspect every issue, then create
-            the semester records in one transaction.
-          </p>
         </div>
         <div className="template-actions" aria-label="Import templates">
           <a href={importApi.templateUrl('xlsx')}>Download Excel template</a>

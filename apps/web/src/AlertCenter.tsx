@@ -15,34 +15,7 @@ export function AlertCenter() {
       aria-labelledby="alert-center-title"
     >
       <div className="alert-center-heading">
-        <div>
-          <p className="step-label">M14 · Automated follow-up</p>
-          <h2 id="alert-center-title">Missed-log alerts</h2>
-          <p>
-            Faculty are reminded at campus end of day. Campus Managers are
-            notified only when the same class remains unlogged 48 hours after it
-            ended.
-          </p>
-        </div>
-        <span className="automation-badge">Worker monitored</span>
-      </div>
-
-      <div className="alert-rules" aria-label="Alert timing rules">
-        <article>
-          <span>01</span>
-          <strong>End of campus day</strong>
-          <p>One reminder goes to the assigned faculty member.</p>
-        </article>
-        <article>
-          <span>02</span>
-          <strong>48 hours after class</strong>
-          <p>One escalation goes to the Campus Manager if no log exists.</p>
-        </article>
-        <article>
-          <span>03</span>
-          <strong>Log received</strong>
-          <p>Pending delivery is cancelled and escalation stops.</p>
-        </article>
+        <h2 id="alert-center-title">Missed-log alerts</h2>
       </div>
 
       {feed.isLoading ? (
@@ -81,10 +54,7 @@ export function AlertCenter() {
             <div className="alert-empty">
               <span>✓</span>
               <div>
-                <strong>No missed-log alerts for you</strong>
-                <p>
-                  The worker will add an alert here only when a deadline passes.
-                </p>
+                <strong>No missed-log alerts</strong>
               </div>
             </div>
           )}

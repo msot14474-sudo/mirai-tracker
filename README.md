@@ -144,6 +144,10 @@ The verified public deployment is available at [mirai-tracker.vercel.app](https:
 
 M20 turns a warning into an explainable intervention plan. Managers and faculty can choose a TIGHT or ON TRACK target, see DANGER subjects first, calculate the minimum additional capacity in half-hour units, test proposed hours, then print or download a spreadsheet-safe CSV. The scenario is read-only and uses each subject's existing M10 thresholds. Run `pnpm verify:m20`; see [docs/m20-stretch-features.md](docs/m20-stretch-features.md) for formulas, safeguards and evidence.
 
+## Administrator UI redesign
+
+The first editable Figma administrator overview, interface content rules and implementation tracker are in [docs/admin-ui-redesign.md](docs/admin-ui-redesign.md).
+
 ## Workspace
 
 ```text

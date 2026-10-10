@@ -98,7 +98,12 @@ describe('App authentication', () => {
     expect(
       await screen.findByText('Welcome, Sample Faculty'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Daily session logging')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Daily logging' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Available workspaces' }),
+    ).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', {
         name: 'Lesson plans and exam scope',
@@ -135,11 +140,15 @@ describe('App authentication', () => {
     expect(
       await screen.findByRole('heading', { name: 'My course progress' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('My covered topics')).toBeInTheDocument();
-    expect(screen.getByText('Exam dates and scope')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'My course progress' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Available workspaces' }),
+    ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(
-        screen.queryByText('Daily session logging'),
+        screen.queryByRole('link', { name: 'Daily logging' }),
       ).not.toBeInTheDocument(),
     );
     expect(

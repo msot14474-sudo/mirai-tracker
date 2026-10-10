@@ -86,29 +86,6 @@ const roleLabels: Record<UserRole, string> = {
   STUDENT: 'Student',
 };
 
-const featureAccess: Record<UserRole, string[]> = {
-  ADMIN: [
-    'All campuses',
-    'Academic setup',
-    'Faculty access',
-    'Reports and exports',
-  ],
-  PROGRAM_MANAGER: [
-    'All campuses',
-    'Academic setup',
-    'Faculty access',
-    'Reports and exports',
-  ],
-  CAMPUS_MANAGER: ['Campus timetable', 'Faculty access', 'Campus alerts'],
-  FACULTY: [
-    'My lesson plans',
-    'Daily session logging',
-    'My subject progress',
-    'Missed-log reminders',
-  ],
-  STUDENT: ['My covered topics', 'Coming next', 'Exam dates and scope'],
-};
-
 const currentUserKey = ['current-user'] as const;
 
 type NavigationIconName =
@@ -371,7 +348,6 @@ function LoginScreen() {
 function Dashboard({ user }: { user: AuthenticatedUser }) {
   const queryClient = useQueryClient();
   const roles = user.roles.map((assignment) => assignment.role);
-  const features = [...new Set(roles.flatMap((role) => featureAccess[role]))];
   const canManageAcademicCalendar = roles.some(
     (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
   );
@@ -556,27 +532,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         <div className="dashboard-content">
           <section id="overview" className="welcome-card">
             <div>
-              <p className="step-label">Authenticated workspace</p>
               <h1>Welcome, {user.name}</h1>
               <p className="lede">{user.email}</p>
             </div>
             <span className="welcome-role">{primaryRoleLabel}</span>
-          </section>
-
-          <section className="access-section" aria-labelledby="access-title">
-            <div>
-              <p className="step-label">Your access</p>
-              <h2 id="access-title">Available workspaces</h2>
-            </div>
-            <div className="access-grid">
-              {features.map((feature, index) => (
-                <article key={feature}>
-                  <span className="feature-number">0{index + 1}</span>
-                  <h3>{feature}</h3>
-                  <p>Permission verified from your current role and scope.</p>
-                </article>
-              ))}
-            </div>
           </section>
 
           {canViewStudentOverview ? (

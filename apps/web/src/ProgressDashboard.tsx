@@ -42,13 +42,7 @@ export function ProgressDashboard({ scope }: { scope: 'faculty' | 'manager' }) {
     <section className="progress-dashboard" aria-labelledby="progress-title">
       <div className="progress-heading">
         <div>
-          <p className="step-label">M11 · Early-warning view</p>
           <h2 id="progress-title">Progress dashboard</h2>
-          <p>
-            {scope === 'faculty'
-              ? 'Your assigned subjects, calculated from the latest lesson plan and class capacity.'
-              : 'Every subject in your permitted campuses, rolled up by track and campus.'}
-          </p>
         </div>
         <div className="progress-date-control">
           <label htmlFor="progress-as-of">Position as of</label>
@@ -112,7 +106,6 @@ export function ProgressDashboard({ scope }: { scope: 'faculty' | 'manager' }) {
           >
             <div className="subject-progress-heading">
               <div>
-                <p className="step-label">Subject detail</p>
                 <h3 id="subjects-title">Subjects needing your attention</h3>
               </div>
               <div>

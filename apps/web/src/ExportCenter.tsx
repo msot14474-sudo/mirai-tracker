@@ -37,12 +37,7 @@ export function ExportCenter() {
     <section className="export-center" aria-labelledby="export-center-title">
       <div className="export-heading">
         <div>
-          <p className="step-label">M15 · Portable records</p>
           <h2 id="export-center-title">Reports and CSV exports</h2>
-          <p>
-            Download progress, finance and complete academic records for Excel,
-            Google Sheets or college review.
-          </p>
         </div>
         <span className="manager-only-badge">Manager only</span>
       </div>
@@ -129,7 +124,6 @@ export function ExportCenter() {
       >
         <div className="subheading-row">
           <div>
-            <p className="step-label">Audit trail</p>
             <h3 id="export-history-title">Recent exports</h3>
           </div>
           <span>{history.data?.length ?? 0} jobs</span>

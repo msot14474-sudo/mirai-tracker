@@ -32,12 +32,7 @@ export function ExamReadinessView() {
     >
       <div className="exam-readiness-heading">
         <div>
-          <p className="step-label">M12 · Syllabus checkpoints</p>
           <h2 id="exam-readiness-title">Exam readiness</h2>
-          <p>
-            See how much of each exam’s mapped syllabus is covered and the exact
-            teaching time still needed before it begins.
-          </p>
         </div>
         <div className="exam-date-control">
           <label htmlFor="exam-as-of">Readiness as of</label>
@@ -142,7 +137,6 @@ function ExamCard({ exam }: { exam: ExamReadinessExam }) {
       <section className="exam-subjects" aria-label={`${exam.name} subjects`}>
         <div className="exam-subjects-title">
           <div>
-            <p className="step-label">Subject scope</p>
             <h4>Readiness by subject</h4>
           </div>
           <span>{exam.subjects.length} mapped subjects</span>

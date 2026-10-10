@@ -25,12 +25,7 @@ export function TopicScheduleWorkspace() {
     >
       <div className="workspace-heading schedule-heading">
         <div>
-          <p className="step-label">M08 · Dynamic plan</p>
           <h2 id="topic-schedule-title">Planned topic dates</h2>
-          <p>
-            Fit every topic into real class time. Holidays disappear from the
-            timetable, while cancellations shift all affected dates forward.
-          </p>
         </div>
         <div className="engine-rule">
           <strong>Calculation rule</strong>
@@ -177,7 +172,6 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
         >
           <div className="subheading-row">
             <div>
-              <p className="step-label">Calculated sequence</p>
               <h3 id="topic-timeline-title">Topic timeline</h3>
             </div>
             <span>
@@ -238,7 +232,6 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
         >
           <div className="subheading-row">
             <div>
-              <p className="step-label">Capacity controls</p>
               <h3 id="session-capacity-title">Scheduled classes</h3>
             </div>
             <span>{detail.sessions.length}</span>

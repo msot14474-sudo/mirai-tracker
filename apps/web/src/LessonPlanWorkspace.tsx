@@ -30,12 +30,7 @@ export function LessonPlanWorkspace() {
     >
       <div className="workspace-heading">
         <div>
-          <p className="step-label">M07 · Syllabus structure</p>
           <h2 id="lesson-plan-title">Lesson plans and exam scope</h2>
-          <p>
-            Upload the teaching sequence, verify every planned hour and map
-            exact topics to each exam window.
-          </p>
         </div>
         <div className="template-actions" aria-label="Lesson plan templates">
           <a href={lessonPlanApi.templateUrl('xlsx')}>Excel template</a>
@@ -218,7 +213,6 @@ function PlanUpload({
   return (
     <div className="plan-upload-card">
       <div>
-        <p className="step-label">New version</p>
         <h3>Upload lesson plan</h3>
         <p>CSV or Excel · maximum 2 MB · planned time in whole minutes</p>
       </div>
@@ -428,7 +422,6 @@ function ExamScopeEditor({
     <section className="exam-scope-panel">
       <div className="subheading-row">
         <div>
-          <p className="step-label">Assessment map</p>
           <h3>Exam syllabus scope</h3>
         </div>
         <span>Topic-level selection</span>

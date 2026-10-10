@@ -45,12 +45,7 @@ export function SemesterSetup() {
     <section className="semester-workspace" aria-labelledby="semester-title">
       <div className="workspace-heading">
         <div>
-          <p className="step-label">M04 · Academic setup</p>
           <h2 id="semester-title">Semester calendar</h2>
-          <p>
-            Define teaching dates once. Timetables and topic plans will use this
-            calendar in the next milestones.
-          </p>
         </div>
         <label className="campus-picker">
           Campus

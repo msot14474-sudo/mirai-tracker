@@ -26,13 +26,14 @@ function renderCenter(response = feed()) {
 }
 
 describe('AlertCenter', () => {
-  it('explains both required timing rules', async () => {
+  it('keeps operational alerts without the workflow tutorial', async () => {
     renderCenter();
     expect(
       await screen.findByRole('heading', { name: 'Missed-log alerts' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('End of campus day')).toBeInTheDocument();
-    expect(screen.getByText('48 hours after class')).toBeInTheDocument();
+    expect(await screen.findByText('Data Structures')).toBeInTheDocument();
+    expect(screen.queryByText('End of campus day')).not.toBeInTheDocument();
+    expect(screen.queryByText('48 hours after class')).not.toBeInTheDocument();
   });
 
   it('shows a manager escalation and its delivery evidence', async () => {
@@ -54,7 +55,7 @@ describe('AlertCenter', () => {
       alerts: [],
     });
     expect(
-      await screen.findByText('No missed-log alerts for you'),
+      await screen.findByText('No missed-log alerts'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });

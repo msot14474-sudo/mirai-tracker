@@ -56,13 +56,7 @@ export function FacultyAccessWorkspace() {
     >
       <div className="workspace-heading">
         <div>
-          <p className="step-label">Access · Campus team</p>
           <h2 id="faculty-access-title">Faculty access</h2>
-          <p>
-            Create faculty accounts only inside your managed campus. Passwords
-            are hashed, OTPs go to the faculty mailbox and every creation is
-            audited.
-          </p>
         </div>
         <label className="campus-picker">
           Campus
@@ -93,7 +87,6 @@ export function FacultyAccessWorkspace() {
           onSubmit={submit}
         >
           <div>
-            <p className="step-label">New account</p>
             <h3>Add faculty member</h3>
           </div>
 
@@ -193,7 +186,6 @@ export function FacultyAccessWorkspace() {
         <div className="faculty-directory">
           <div className="subheading-row">
             <div>
-              <p className="step-label">Managed accounts</p>
               <h3>Campus faculty</h3>
             </div>
             <span>{detail.data?.faculty.length ?? 0} people</span>
