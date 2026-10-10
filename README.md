@@ -84,7 +84,7 @@ Program Managers can create campus semesters, choose the working-Saturday rule, 
 
 ## Semester import
 
-Admin and Program Manager users can download CSV or Excel templates, validate a complete semester before writing data, import the campus/semester/batch/subject graph atomically, inspect import history and download row-level error reports. The supplied fictional template demonstrates four campuses and 25 subjects. See [docs/m05-semester-import.md](docs/m05-semester-import.md) for columns, routes, validation and verification details.
+Admin and Program Manager users can download CSV or Excel templates, validate a complete semester before writing data, import the campus/semester/batch/subject graph atomically, inspect import history and download row-level error reports. The supplied fictional template demonstrates the three current campuses and 25 subjects. See [docs/m05-semester-import.md](docs/m05-semester-import.md) for columns, routes, validation and verification details.
 
 ## Timetable setup
 

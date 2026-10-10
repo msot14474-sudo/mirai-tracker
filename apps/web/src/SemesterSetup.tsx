@@ -8,13 +8,19 @@ const saturdayLabels: Record<SaturdayRule, string> = {
   SECOND_AND_FOURTH: 'Second and fourth',
 };
 
-export function SemesterSetup() {
+export function SemesterSetup({
+  initialCampusId = '',
+  campusLocked = false,
+}: {
+  initialCampusId?: string;
+  campusLocked?: boolean;
+}) {
   const queryClient = useQueryClient();
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
   });
-  const [campusId, setCampusId] = useState('');
+  const [campusId, setCampusId] = useState(initialCampusId);
   const [semesterId, setSemesterId] = useState('');
 
   useEffect(() => {
@@ -51,6 +57,7 @@ export function SemesterSetup() {
           Campus
           <select
             value={campusId}
+            disabled={campusLocked}
             onChange={(event) => {
               setCampusId(event.target.value);
               setSemesterId('');

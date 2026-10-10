@@ -14,7 +14,7 @@
 | ---: | -------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------- |
 | 0:00 | Opening                    | State the spreadsheet problem and desired early warning                        | One calendar-aware source of truth                |
 | 0:45 | Program Manager - Semester | Dates, holidays, events, Saturday rule and exams                               | Planning uses real working days                   |
-| 1:45 | Program Manager - Import   | Preview the four-campus/25-subject template and row feedback                   | Whole-semester setup is validated before commit   |
+| 1:45 | Program Manager - Import   | Preview the three-campus/25-subject template and row feedback                  | Whole-semester setup is validated before commit   |
 | 2:30 | Campus Manager             | Create campus-scoped faculty access, then show timetable allocation            | Branch managers control their own teaching team   |
 | 3:15 | Faculty - Lesson Plan      | Units, ordered topics, planned hours and exam scope                            | Syllabus scope is structured and versioned        |
 | 4:15 | Faculty - Planned Dates    | Show topic start/finish dates and capacity                                     | Holidays and cancellations shift later work       |

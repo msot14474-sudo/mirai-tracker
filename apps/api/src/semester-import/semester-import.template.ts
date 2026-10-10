@@ -3,9 +3,8 @@ import { calendarColumns, setupColumns } from './semester-import.types';
 
 const campuses = [
   { code: 'HI-TECH', name: 'HI-Tech Campus' },
-  { code: 'CITY', name: 'City Campus' },
-  { code: 'NORTH', name: 'North Campus' },
-  { code: 'SOUTH', name: 'South Campus' },
+  { code: 'RATHINAM', name: 'Rathinam Campus' },
+  { code: 'JAGGANNATH', name: 'Jaggannath Campus' },
 ] as const;
 
 const subjectNames = [
@@ -103,7 +102,7 @@ export async function buildSemesterImportWorkbook() {
       'Keep column names unchanged. Dates use YYYY-MM-DD. Codes use uppercase letters, numbers, hyphens or underscores.',
     ],
     [
-      'The supplied fictional data is valid and demonstrates four campuses and 25 subjects.',
+      'The supplied fictional data is valid and demonstrates three campuses and 25 subjects.',
     ],
     ['The whole workbook is validated before any academic record is written.'],
   ]);

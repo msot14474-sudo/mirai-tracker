@@ -11,7 +11,7 @@ import {
 import { calendarColumns, setupColumns } from './semester-import.types';
 
 describe('semester import parser', () => {
-  it('validates the ready-to-import CSV with four campuses and 25 subjects', async () => {
+  it('validates the ready-to-import CSV with three campuses and 25 subjects', async () => {
     const source = buildSemesterImportCsv();
     const preview = await parseAndValidateSemesterImport(
       uploaded('semester.csv', Buffer.from(source)),
@@ -20,9 +20,9 @@ describe('semester import parser', () => {
     expect(preview.valid).toBe(true);
     expect(preview.counts).toMatchObject({
       rows: 25,
-      campuses: 4,
-      semesters: 4,
-      batches: 4,
+      campuses: 3,
+      semesters: 3,
+      batches: 3,
       subjects: 25,
       offerings: 25,
     });
@@ -35,9 +35,9 @@ describe('semester import parser', () => {
     );
 
     expect(preview.valid).toBe(true);
-    expect(preview.counts.campuses).toBe(4);
+    expect(preview.counts.campuses).toBe(3);
     expect(preview.counts.subjects).toBe(25);
-    expect(preview.counts.calendarDays).toBe(8);
+    expect(preview.counts.calendarDays).toBe(6);
   });
 
   it('returns exact missing-column feedback', async () => {

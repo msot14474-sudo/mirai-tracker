@@ -18,12 +18,19 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Simplified the alert center while retaining all lecture and delivery details.
 - [x] Removed milestone and tutorial copy from administrator workspaces.
 - [x] Updated frontend tests for the concise interface.
-- [x] Verified all 44 frontend tests, TypeScript checks and the production build.
+- [x] Verified all 45 frontend tests, TypeScript checks and the production build.
 - [x] Checked the cleaned interface in a browser with a Campus Manager session.
+- [x] Designed the Admin campus-selection entry screen and selected-campus workspace in Figma.
+- [x] Added the personalized `Welcome back, {first name}` administrator greeting.
+- [x] Added the HI-Tech, Rathinam and Jaggannath campus choices.
+- [x] Required global Admin and Program Manager accounts to select a campus before the full workspace navigation appears.
+- [x] Added a visible active-campus switcher after entry.
+- [x] Preselected and locked campus scope in academic setup, faculty access and timetable setup.
+- [x] Updated the active Neon campus catalog to the same three campuses.
 
 ## Next implementation sequence
 
-- [ ] Implement the approved Figma administrator overview in React.
+- [ ] Connect campus-specific overview metrics and today's lecture table to live data.
 - [ ] Apply the same layout system to timetable setup.
 - [ ] Apply it to faculty access.
 - [ ] Apply it to lesson plans and planned topic dates.

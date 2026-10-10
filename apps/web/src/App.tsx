@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, lazy, Suspense, useState } from 'react';
+import { academicApi, Campus } from './academic';
 import {
   AuthenticatedUser,
   LoginChallenge,
@@ -87,6 +88,125 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 const currentUserKey = ['current-user'] as const;
+
+function AdminCampusGateway({
+  user,
+  campuses,
+  isLoading,
+  error,
+  onRetry,
+  onSelect,
+  onSignOut,
+  isSigningOut,
+  roleLabel,
+}: {
+  user: AuthenticatedUser;
+  campuses: Campus[];
+  isLoading: boolean;
+  error: Error | null;
+  onRetry: () => void;
+  onSelect: (campusId: string) => void;
+  onSignOut: () => void;
+  isSigningOut: boolean;
+  roleLabel: string;
+}) {
+  const firstName = user.name.trim().split(/\s+/)[0] || user.name;
+  const initials = user.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <main className="campus-gateway">
+      <aside className="campus-gateway-sidebar">
+        <span className="wordmark-frame campus-gateway-wordmark">
+          <img
+            src="/mirai-wordmark-light.png"
+            alt="Mirai School of Technology"
+          />
+        </span>
+        <div className="campus-gateway-account">
+          <span className="account-avatar">{initials}</span>
+          <span>
+            <strong>{user.name}</strong>
+            <small>{roleLabel}</small>
+          </span>
+        </div>
+      </aside>
+
+      <section className="campus-gateway-main">
+        <header className="campus-gateway-topbar">
+          <div>
+            <span>Mirai Tracker</span>
+            <strong>Choose campus</strong>
+          </div>
+          <div className="campus-gateway-actions">
+            <span>{roleLabel}</span>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onSignOut}
+              disabled={isSigningOut}
+            >
+              Sign out
+            </button>
+          </div>
+        </header>
+
+        <div className="campus-gateway-content">
+          <p className="campus-gateway-eyebrow">Administration</p>
+          <h1>Welcome back, {firstName}</h1>
+          <p className="campus-gateway-copy">
+            Choose a campus to open its complete management workspace.
+          </p>
+
+          <div className="campus-gateway-summary">
+            <strong>{campuses.length} active campuses</strong>
+            <span>Select one to continue</span>
+          </div>
+
+          {isLoading ? (
+            <p className="campus-gateway-state">Loading campuses…</p>
+          ) : error ? (
+            <div className="campus-gateway-state" role="alert">
+              <p>{error.message}</p>
+              <button type="button" onClick={onRetry}>
+                Try again
+              </button>
+            </div>
+          ) : campuses.length ? (
+            <div className="campus-choice-grid">
+              {campuses.map((campus) => (
+                <button
+                  type="button"
+                  className="campus-choice"
+                  key={campus.id}
+                  onClick={() => onSelect(campus.id)}
+                >
+                  <span className="campus-choice-topline">
+                    <small>{campus.code}</small>
+                    <span aria-hidden="true">→</span>
+                  </span>
+                  <strong>{campus.name}</strong>
+                  <span>{campus.timezone}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="campus-gateway-state">No active campuses found.</p>
+          )}
+
+          <p className="campus-gateway-security">
+            <span aria-hidden="true" />
+            Your global access remains active across every campus.
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
 
 type NavigationIconName =
   | 'home'
@@ -222,7 +342,10 @@ function LoginScreen() {
       <section className="brand-panel">
         <div className="auth-brand">
           <span className="wordmark-frame auth-wordmark-frame">
-            <img src="/mirai-wordmark-light.png" alt="Mirai School of Technology" />
+            <img
+              src="/mirai-wordmark-light.png"
+              alt="Mirai School of Technology"
+            />
           </span>
         </div>
         <p className="eyebrow">MSOT · Course Progression</p>
@@ -348,6 +471,21 @@ function LoginScreen() {
 function Dashboard({ user }: { user: AuthenticatedUser }) {
   const queryClient = useQueryClient();
   const roles = user.roles.map((assignment) => assignment.role);
+  const isGlobalAdministrator = roles.some(
+    (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
+  );
+  const globalRoleLabel = roles.includes('ADMIN')
+    ? roleLabels.ADMIN
+    : roleLabels.PROGRAM_MANAGER;
+  const [selectedCampusId, setSelectedCampusId] = useState('');
+  const campuses = useQuery({
+    queryKey: ['academic', 'campuses'],
+    queryFn: academicApi.campuses,
+    enabled: isGlobalAdministrator,
+  });
+  const selectedCampus = campuses.data?.find(
+    (campus) => campus.id === selectedCampusId,
+  );
   const canManageAcademicCalendar = roles.some(
     (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
   );
@@ -386,6 +524,22 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     mutationFn: logout,
     onSuccess: () => queryClient.setQueryData(currentUserKey, null),
   });
+
+  if (isGlobalAdministrator && !selectedCampus) {
+    return (
+      <AdminCampusGateway
+        user={user}
+        campuses={campuses.data ?? []}
+        isLoading={campuses.isPending}
+        error={campuses.error}
+        onRetry={() => campuses.refetch()}
+        onSelect={setSelectedCampusId}
+        onSignOut={() => logoutMutation.mutate()}
+        isSigningOut={logoutMutation.isPending}
+        roleLabel={globalRoleLabel}
+      />
+    );
+  }
 
   const navigation: Array<{
     href: string;
@@ -476,7 +630,11 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <span className="wordmark-frame sidebar-wordmark-frame">
             <img src="/mirai-wordmark-light.png" alt="" />
           </span>
-          <img className="sidebar-symbol" src="/mirai-symbol-light.png" alt="" />
+          <img
+            className="sidebar-symbol"
+            src="/mirai-symbol-light.png"
+            alt=""
+          />
         </a>
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
@@ -510,7 +668,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             <img className="topbar-brand-logo" src="/mirai-logo.jpg" alt="" />
             <div>
               <p className="eyebrow">Mirai Tracker</p>
-              <strong>Course progression</strong>
+              <strong>{selectedCampus?.name ?? 'Course progression'}</strong>
             </div>
           </div>
           <div className="topbar-actions">
@@ -519,6 +677,16 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                 <span key={role}>{roleLabels[role]}</span>
               ))}
             </div>
+            {selectedCampus ? (
+              <button
+                type="button"
+                className="campus-switcher"
+                onClick={() => setSelectedCampusId('')}
+              >
+                <span>{selectedCampus.name}</span>
+                <small>Change campus</small>
+              </button>
+            ) : null}
             <button
               className="secondary-button"
               onClick={() => logoutMutation.mutate()}
@@ -533,9 +701,15 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <section id="overview" className="welcome-card">
             <div>
               <h1>Welcome, {user.name}</h1>
-              <p className="lede">{user.email}</p>
+              <p className="lede">
+                {selectedCampus
+                  ? `${selectedCampus.name} · ${selectedCampus.code}`
+                  : user.email}
+              </p>
             </div>
-            <span className="welcome-role">{primaryRoleLabel}</span>
+            {!selectedCampus ? (
+              <span className="welcome-role">{primaryRoleLabel}</span>
+            ) : null}
           </section>
 
           {canViewStudentOverview ? (
@@ -597,7 +771,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                     <p className="workspace-loading">Loading academic setup…</p>
                   }
                 >
-                  <SemesterSetup />
+                  <SemesterSetup
+                    initialCampusId={selectedCampusId}
+                    campusLocked={Boolean(selectedCampus)}
+                  />
                 </Suspense>
               </div>
               <div id="semester-import" className="dashboard-anchor">
@@ -620,7 +797,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                   <p className="workspace-loading">Loading faculty access…</p>
                 }
               >
-                <FacultyAccessWorkspace />
+                <FacultyAccessWorkspace
+                  initialCampusId={selectedCampusId}
+                  campusLocked={Boolean(selectedCampus)}
+                />
               </Suspense>
             </div>
           ) : null}
@@ -631,7 +811,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                   <p className="workspace-loading">Loading timetable…</p>
                 }
               >
-                <TimetableSetup />
+                <TimetableSetup
+                  initialCampusId={selectedCampusId}
+                  campusLocked={Boolean(selectedCampus)}
+                />
               </Suspense>
             </div>
           ) : null}

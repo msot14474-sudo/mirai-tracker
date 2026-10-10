@@ -26,22 +26,24 @@ function renderApp() {
 }
 
 const userResponse = (
-  role: 'FACULTY' | 'STUDENT' | 'PROGRAM_MANAGER' | 'CAMPUS_MANAGER',
+  role: 'ADMIN' | 'FACULTY' | 'STUDENT' | 'PROGRAM_MANAGER' | 'CAMPUS_MANAGER',
 ) =>
   new Response(
     JSON.stringify({
       user: {
         id: 'user-a',
         name:
-          role === 'FACULTY'
-            ? 'Sample Faculty'
-            : role === 'STUDENT'
-              ? 'Sample Student'
-              : role === 'CAMPUS_MANAGER'
-                ? 'Campus Manager'
-                : 'Program Manager',
+          role === 'ADMIN'
+            ? 'Yatharth Vishnoi'
+            : role === 'FACULTY'
+              ? 'Sample Faculty'
+              : role === 'STUDENT'
+                ? 'Sample Student'
+                : role === 'CAMPUS_MANAGER'
+                  ? 'Campus Manager'
+                  : 'Program Manager',
         email: `${role.toLowerCase()}@mirai.local`,
-        roles: [{ role, campusId: 'campus-a' }],
+        roles: [{ role, campusId: role === 'ADMIN' ? null : 'campus-a' }],
         staffProfileId: role === 'FACULTY' ? 'faculty-a' : null,
         studentProfile:
           role === 'STUDENT' ? { id: 'student-a', batchId: 'batch-a' } : null,
@@ -203,6 +205,10 @@ describe('App authentication', () => {
     });
     renderApp();
 
+    fireEvent.click(
+      await screen.findByRole('button', { name: /HI-Tech/i }),
+    );
+
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
@@ -241,6 +247,79 @@ describe('App authentication', () => {
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('asks administrators to choose a campus before opening the full workspace', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/me')) return userResponse('ADMIN');
+      if (url.endsWith('/academic/campuses')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'campus-a',
+              code: 'HI-TECH',
+              name: 'HI-Tech Campus',
+              timezone: 'Asia/Kolkata',
+            },
+            {
+              id: 'campus-b',
+              code: 'RATHINAM',
+              name: 'Rathinam Campus',
+              timezone: 'Asia/Kolkata',
+            },
+            {
+              id: 'campus-c',
+              code: 'JAGGANNATH',
+              name: 'Jaggannath Campus',
+              timezone: 'Asia/Kolkata',
+            },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.includes('/faculty-access/campuses/')) {
+        return facultyAccessResponse();
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    renderApp();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Welcome back, Yatharth' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('3 active campuses')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Rathinam Campus/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Jaggannath Campus/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Academic setup' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /HI-Tech Campus/i }));
+
+    expect(
+      await screen.findByText('Welcome, Yatharth Vishnoi'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Change campus/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Academic setup' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Semester calendar' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Campus')).not.toHaveLength(0);
+    screen
+      .getAllByLabelText('Campus')
+      .forEach((campusSelect) => expect(campusSelect).toBeDisabled());
   });
 
   it('gives campus managers timetable access without global setup tools', async () => {

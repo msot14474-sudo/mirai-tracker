@@ -4723,6 +4723,337 @@ textarea:focus {
   }
 }
 
+/* Administrator campus entry */
+.campus-gateway {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+  color: var(--mirai-ink);
+  background: var(--mirai-canvas);
+}
+
+.campus-gateway-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 1.5rem 1rem 1rem;
+  color: #fff;
+  background: linear-gradient(180deg, #0b2868 0%, #12387f 100%);
+}
+
+.campus-gateway-wordmark {
+  width: 13.6rem;
+  height: 3.8rem;
+  background: transparent;
+}
+
+.campus-gateway-wordmark img {
+  top: 50%;
+  width: 13.5rem;
+  transform: translate(-50%, -50%);
+}
+
+.campus-gateway-account {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: auto;
+  padding: 1rem 0.5rem 0.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.campus-gateway-account > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.campus-gateway-account strong,
+.campus-gateway-account small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campus-gateway-account strong {
+  font-size: 0.8rem;
+}
+
+.campus-gateway-account small {
+  margin-top: 0.15rem;
+  color: rgba(235, 241, 255, 0.7);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.campus-gateway-main {
+  min-width: 0;
+}
+
+.campus-gateway-topbar {
+  display: flex;
+  min-height: 4.8rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem clamp(1.25rem, 3vw, 2.4rem);
+  border-bottom: 1px solid var(--mirai-line);
+  background: #fff;
+}
+
+.campus-gateway-topbar > div:first-child {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.campus-gateway-topbar > div:first-child span {
+  color: var(--mirai-blue);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.campus-gateway-topbar strong {
+  font-size: 0.95rem;
+}
+
+.campus-gateway-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.campus-gateway-actions > span {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #d9e2f7;
+  border-radius: 999px;
+  color: #355692;
+  background: #f1f5ff;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.campus-gateway-content {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+}
+
+.campus-gateway-eyebrow {
+  margin-bottom: 0.75rem;
+  color: var(--mirai-blue);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.campus-gateway-content h1 {
+  margin-bottom: 0.45rem;
+  font-family: var(--display-font);
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.campus-gateway-copy {
+  color: var(--mirai-muted);
+  font-size: 1rem;
+}
+
+.campus-gateway-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  border-radius: 0.85rem;
+  background: #f1f5ff;
+  font-size: 0.82rem;
+}
+
+.campus-gateway-summary span {
+  color: var(--mirai-muted);
+}
+
+.campus-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.campus-choice {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 155px;
+  padding: 1.4rem;
+  border: 1px solid var(--mirai-line);
+  border-radius: 1rem;
+  color: var(--mirai-ink);
+  background: #fff;
+  text-align: left;
+  box-shadow: 0 0.65rem 1.5rem rgba(30, 52, 104, 0.06);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.campus-choice:hover,
+.campus-choice:focus-visible {
+  border-color: var(--mirai-blue);
+  outline: none;
+  box-shadow: 0 1rem 2rem rgba(36, 92, 219, 0.12);
+  transform: translateY(-2px);
+}
+
+.campus-choice-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--mirai-blue);
+}
+
+.campus-choice-topline small {
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.campus-choice-topline > span {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.campus-choice > strong {
+  align-self: end;
+  font-size: 1.18rem;
+}
+
+.campus-choice > span:last-child {
+  color: var(--mirai-muted);
+  font-size: 0.8rem;
+}
+
+.campus-gateway-state {
+  padding: 2rem;
+  border: 1px solid var(--mirai-line);
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.campus-gateway-state button {
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: var(--mirai-blue);
+  font-weight: 750;
+}
+
+.campus-gateway-security {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin-top: 1.5rem;
+  color: var(--mirai-muted);
+  font-size: 0.8rem;
+}
+
+.campus-gateway-security span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #238a5a;
+}
+
+.campus-switcher {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.52rem 0.8rem;
+  border: 1px solid #b6c7eb;
+  border-radius: 0.75rem;
+  color: #1c3470;
+  background: #f7f9ff;
+  text-align: left;
+}
+
+.campus-switcher span {
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.campus-switcher small {
+  color: #5272b8;
+  font-size: 0.66rem;
+}
+
+@media (max-width: 900px) {
+  .campus-gateway {
+    grid-template-columns: 1fr;
+  }
+
+  .campus-gateway-sidebar {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    height: auto;
+    padding: 0.7rem 0.9rem;
+  }
+
+  .campus-gateway-wordmark {
+    width: 10rem;
+    height: 2.4rem;
+  }
+
+  .campus-gateway-account {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .campus-gateway-account > span:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .campus-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .campus-gateway-actions > span,
+  .campus-gateway-security {
+    display: none;
+  }
+
+  .campus-gateway-content {
+    padding-top: 2.5rem;
+  }
+
+  .campus-gateway-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .campus-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campus-choice {
+    min-height: 138px;
+  }
+
+  .campus-switcher {
+    max-width: 9rem;
+  }
+}
+
 /* Shared Mirai logo treatment */
 .auth-brand {
   display: flex;
@@ -4894,4 +5225,16 @@ textarea:focus {
   aspect-ratio: auto;
   object-fit: contain;
   background: transparent;
+}
+
+.wordmark-frame.campus-gateway-wordmark {
+  background: transparent;
+}
+
+.wordmark-frame.campus-gateway-wordmark img {
+  position: static;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: none;
 }

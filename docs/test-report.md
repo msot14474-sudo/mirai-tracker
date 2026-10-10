@@ -21,21 +21,21 @@ The production Docker smoke test, PostgreSQL integration suite and public Vercel
 
 ## 3. Mandatory evidence matrix
 
-| Requirement                                          | Status                           | Evidence                                                                                   |
-| ---------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------ |
-| Three hand-calculated subjects match to two decimals | Pass                             | M10 CSV and executable verifier; ON TRACK, TIGHT and DANGER all match                      |
-| Holiday shifts affected planned dates                | Pass                             | Calendar and topic-schedule engine tests                                                   |
-| Cancellation shifts affected planned dates           | Pass                             | Topic-schedule service and engine tests                                                    |
-| Second/fourth Saturdays across three months          | Pass                             | Academic calendar tests                                                                    |
-| Five-faculty median logging time under 60 seconds    | Pending external study           | M09 capture CSV and analyzer are ready; no volunteer times are invented                    |
-| Faculty reminder and 48-hour manager escalation      | Pass in automated boundary tests | M14 engine, service, worker and UI evidence                                                |
-| Faculty cannot edit another faculty member's subject | Pass                             | Access-policy and feature-service tests                                                    |
-| Students cannot edit                                 | Pass                             | Student-only GET controller, role guards and interface tests                               |
-| Mid-term and end-term readiness correct              | Pass                             | M12 calculation and UI tests                                                               |
-| Four-campus, 25+ subject import without manual fixes | Pass in parser/service tests     | Fictional template validates four campuses and 25 subjects; live PostgreSQL import pending |
-| Load at 50, 100 and 200 concurrent users             | Pass on local demo harness       | 2,100 requests, zero errors                                                                |
-| End-of-day logging p95 below one second              | Pass locally                     | Maximum recorded p95 29.99 ms                                                              |
-| Full dashboard below two seconds                     | Pass locally                     | Maximum recorded p95 78.73 ms                                                              |
+| Requirement                                           | Status                           | Evidence                                                                                                       |
+| ----------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Three hand-calculated subjects match to two decimals  | Pass                             | M10 CSV and executable verifier; ON TRACK, TIGHT and DANGER all match                                          |
+| Holiday shifts affected planned dates                 | Pass                             | Calendar and topic-schedule engine tests                                                                       |
+| Cancellation shifts affected planned dates            | Pass                             | Topic-schedule service and engine tests                                                                        |
+| Second/fourth Saturdays across three months           | Pass                             | Academic calendar tests                                                                                        |
+| Five-faculty median logging time under 60 seconds     | Pending external study           | M09 capture CSV and analyzer are ready; no volunteer times are invented                                        |
+| Faculty reminder and 48-hour manager escalation       | Pass in automated boundary tests | M14 engine, service, worker and UI evidence                                                                    |
+| Faculty cannot edit another faculty member's subject  | Pass                             | Access-policy and feature-service tests                                                                        |
+| Students cannot edit                                  | Pass                             | Student-only GET controller, role guards and interface tests                                                   |
+| Mid-term and end-term readiness correct               | Pass                             | M12 calculation and UI tests                                                                                   |
+| Three-campus, 25+ subject import without manual fixes | Pass in parser/service tests     | Fictional template validates HI-Tech, Rathinam and Jaggannath with 25 subjects; live PostgreSQL import pending |
+| Load at 50, 100 and 200 concurrent users              | Pass on local demo harness       | 2,100 requests, zero errors                                                                                    |
+| End-of-day logging p95 below one second               | Pass locally                     | Maximum recorded p95 29.99 ms                                                                                  |
+| Full dashboard below two seconds                      | Pass locally                     | Maximum recorded p95 78.73 ms                                                                                  |
 
 ## 4. Hand-calculation results
 

@@ -10,7 +10,7 @@ M05 turns the academic foundation from M02 and the calendar rules from M04 into 
 - Dates use `YYYY-MM-DD` and codes use uppercase letters, numbers, hyphens or underscores.
 - Excel formula cells and formula-like CSV values are rejected. Formula text is never evaluated.
 
-The generated CSV and Excel templates contain fictional, internally consistent demonstration data for four campuses, four semesters, four batches, 25 subjects, 25 offerings and eight calendar overrides. The Excel workbook includes an Instructions sheet and frozen, filterable headings.
+The generated CSV and Excel templates contain fictional, internally consistent demonstration data for HI-Tech, Rathinam and Jaggannath: three campuses, three semesters, three batches, 25 subjects, 25 offerings and six calendar overrides. The Excel workbook includes an Instructions sheet and frozen, filterable headings.
 
 ## Semester Setup columns
 
@@ -57,6 +57,6 @@ The 5 MB and 5,000-row bounds make the college acceptance file small enough to v
 
 ## Verification
 
-Automated coverage includes CSV quoting, CSV and Excel parsing, a valid four-campus/25-subject acceptance file, Calendar-sheet parsing, missing columns, conflicting repeated records, duplicate offerings, out-of-semester overrides, formula rejection, size limits, permission checks, invalid-job recording, one-transaction relationship upserts, the React validate/confirm flow and the import row-count database constraint.
+Automated coverage includes CSV quoting, CSV and Excel parsing, a valid three-campus/25-subject acceptance file, Calendar-sheet parsing, missing columns, conflicting repeated records, duplicate offerings, out-of-semester overrides, formula rejection, size limits, permission checks, invalid-job recording, one-transaction relationship upserts, the React validate/confirm flow and the import row-count database constraint.
 
 The parser, service and UI tests run without infrastructure. Applying the import to a real PostgreSQL database and running the database integration test remain part of the live Docker verification gate.

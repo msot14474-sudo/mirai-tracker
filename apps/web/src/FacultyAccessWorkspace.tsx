@@ -3,14 +3,20 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
 import { CreateFacultyInput, facultyAccessApi } from './facultyAccess';
 
-export function FacultyAccessWorkspace() {
+export function FacultyAccessWorkspace({
+  initialCampusId = '',
+  campusLocked = false,
+}: {
+  initialCampusId?: string;
+  campusLocked?: boolean;
+}) {
   const queryClient = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
   });
-  const [campusId, setCampusId] = useState('');
+  const [campusId, setCampusId] = useState(initialCampusId);
 
   useEffect(() => {
     if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
@@ -62,6 +68,7 @@ export function FacultyAccessWorkspace() {
           Campus
           <select
             value={campusId}
+            disabled={campusLocked}
             onChange={(event) => setCampusId(event.target.value)}
           >
             <option value="">Select campus</option>

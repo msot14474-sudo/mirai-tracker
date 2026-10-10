@@ -14,9 +14,15 @@ const weekdayLabels = [
   'Sunday',
 ];
 
-export function TimetableSetup() {
+export function TimetableSetup({
+  initialCampusId = '',
+  campusLocked = false,
+}: {
+  initialCampusId?: string;
+  campusLocked?: boolean;
+}) {
   const queryClient = useQueryClient();
-  const [campusId, setCampusId] = useState('');
+  const [campusId, setCampusId] = useState(initialCampusId);
   const [semesterId, setSemesterId] = useState('');
   const [offeringId, setOfferingId] = useState('');
   const campuses = useQuery({
@@ -71,6 +77,7 @@ export function TimetableSetup() {
             Campus
             <select
               value={campusId}
+              disabled={campusLocked}
               onChange={(event) => {
                 setCampusId(event.target.value);
                 setSemesterId('');

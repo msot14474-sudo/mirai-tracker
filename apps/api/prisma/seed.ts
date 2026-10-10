@@ -47,9 +47,22 @@ async function main() {
 
   const campus = await prisma.campus.upsert({
     where: { code: 'HI-TECH' },
-    update: {},
-    create: { code: 'HI-TECH', name: 'HI-Tech' },
+    update: { name: 'HI-Tech Campus', active: true },
+    create: { code: 'HI-TECH', name: 'HI-Tech Campus' },
   });
+
+  await Promise.all([
+    prisma.campus.upsert({
+      where: { code: 'RATHINAM' },
+      update: { name: 'Rathinam Campus', active: true },
+      create: { code: 'RATHINAM', name: 'Rathinam Campus' },
+    }),
+    prisma.campus.upsert({
+      where: { code: 'JAGGANNATH' },
+      update: { name: 'Jaggannath Campus', active: true },
+      create: { code: 'JAGGANNATH', name: 'Jaggannath Campus' },
+    }),
+  ]);
 
   const track = await prisma.track.upsert({
     where: { code: 'MIRAI' },
