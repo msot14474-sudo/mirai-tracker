@@ -243,6 +243,10 @@ function LoginScreen() {
   return (
     <main className="auth-shell">
       <section className="brand-panel">
+        <div className="auth-brand">
+          <img src="/mirai-logo.jpg" alt="Mirai" />
+          <strong>Mirai Tracker</strong>
+        </div>
         <p className="eyebrow">MSOT · Course Progression</p>
         <h1>One clear view of every teaching day.</h1>
         <p className="lede">
@@ -492,12 +496,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           href="#overview"
           aria-label="Mirai Tracker home"
         >
-          <svg viewBox="0 0 42 30" aria-hidden="true">
-            <circle cx="7" cy="15" r="5" />
-            <circle cx="21" cy="8" r="5" />
-            <circle cx="35" cy="15" r="5" />
-            <path d="M7 15 15 8M27 8l8 7M15 8l6 14 6-14" />
-          </svg>
+          <img src="/mirai-logo.jpg" alt="" />
           <span>Mirai</span>
         </a>
 
@@ -525,9 +524,12 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
       <div className="dashboard-main">
         <header className="topbar">
-          <div>
-            <p className="eyebrow">Mirai Tracker</p>
-            <strong>Course progression</strong>
+          <div className="topbar-title">
+            <img className="topbar-brand-logo" src="/mirai-logo.jpg" alt="" />
+            <div>
+              <p className="eyebrow">Mirai Tracker</p>
+              <strong>Course progression</strong>
+            </div>
           </div>
           <div className="topbar-actions">
             <div className="role-list" aria-label="Assigned roles">
@@ -717,6 +719,7 @@ export function App() {
   if (currentUser.isPending) {
     return (
       <main className="loading-shell" aria-live="polite">
+        <img className="loading-logo" src="/mirai-logo.jpg" alt="Mirai" />
         <span className="loader" />
         <p>Checking your session…</p>
       </main>
@@ -726,6 +729,7 @@ export function App() {
   if (currentUser.isError) {
     return (
       <main className="loading-shell">
+        <img className="loading-logo" src="/mirai-logo.jpg" alt="Mirai" />
         <p className="form-error">{currentUser.error.message}</p>
         <button onClick={() => currentUser.refetch()}>Try again</button>
       </main>
