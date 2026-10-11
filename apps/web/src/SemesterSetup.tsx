@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { academicApi, dateOnly, SaturdayRule } from './academic';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 const saturdayLabels: Record<SaturdayRule, string> = {
   ALL: 'All Saturdays',
@@ -113,7 +114,7 @@ export function SemesterSetup({
                 <p>Its calculated working-day summary will appear here.</p>
               </div>
             ) : calendar.isLoading ? (
-              <p>Calculating calendar…</p>
+              <LoadingSkeleton variant="panel" label="Calculating calendar" />
             ) : calendar.isError ? (
               <p className="form-error" role="alert">
                 {calendar.error.message}
@@ -285,7 +286,9 @@ function SubjectSetup() {
           <h3 id="subject-catalog-title">Subject catalog</h3>
           <span>{subjects.data?.length ?? 0} subjects</span>
         </div>
-        {subjects.isLoading ? <p>Loading subjects…</p> : null}
+        {subjects.isLoading ? (
+          <LoadingSkeleton variant="cards" label="Loading subjects" />
+        ) : null}
         {subjects.isError ? (
           <p className="form-error" role="alert">
             {subjects.error.message}

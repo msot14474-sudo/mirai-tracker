@@ -7,6 +7,7 @@ import {
   ExamReadinessTopic,
   examReadinessApi,
 } from './examReadiness';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 const examTypeLabels: Record<ExamReadinessExam['type'], string> = {
   SESSIONAL: 'Sessional',
@@ -54,7 +55,7 @@ export function ExamReadinessView() {
       </div>
 
       {readiness.isLoading ? (
-        <p className="workspace-loading">Checking upcoming exams…</p>
+        <LoadingSkeleton variant="cards" label="Checking upcoming exams" />
       ) : readiness.isError ? (
         <p className="form-error" role="alert">
           {readiness.error.message}

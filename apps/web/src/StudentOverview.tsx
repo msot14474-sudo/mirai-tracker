@@ -5,6 +5,7 @@ import {
   StudentTopic,
   studentViewApi,
 } from './studentView';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 const examTypeLabels: Record<StudentExam['type'], string> = {
   SESSIONAL: 'Sessional',
@@ -40,7 +41,7 @@ export function StudentOverview() {
       </div>
 
       {overview.isLoading ? (
-        <p className="workspace-loading">Loading your batch…</p>
+        <LoadingSkeleton variant="panel" label="Loading your batch" />
       ) : overview.isError ? (
         <p className="form-error" role="alert">
           {overview.error.message}

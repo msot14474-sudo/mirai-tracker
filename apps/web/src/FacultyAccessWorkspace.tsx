@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   CreateAccessAccountInput,
   CreateFacultyInput,
@@ -309,7 +310,7 @@ export function FacultyAccessWorkspace({
             </div>
 
             {detail.isLoading ? (
-              <p className="empty-copy">Loading faculty...</p>
+              <LoadingSkeleton variant="list" label="Loading faculty" />
             ) : null}
             <div className="faculty-directory-list">
               {detail.data?.faculty.map((faculty) => (

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useRef, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   FacultySession,
   SessionLogInput,
@@ -63,7 +64,7 @@ export function SessionLoggingWorkspace() {
       </div>
 
       {day.isLoading ? (
-        <p className="workspace-loading">Loading your timetable…</p>
+        <LoadingSkeleton variant="list" label="Loading your timetable" />
       ) : null}
       {day.isError ? (
         <p className="form-error" role="alert">

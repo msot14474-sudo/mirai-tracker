@@ -10,6 +10,7 @@ import {
   UserRole,
   verifyOtp,
 } from './auth';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 const SemesterSetup = lazy(() =>
   import('./SemesterSetup').then((module) => ({
@@ -140,11 +141,6 @@ function AdminCampusGateway({
       <section className="campus-gateway-main">
         <header className="campus-gateway-topbar">
           <div className="campus-gateway-page-identity">
-            <span className="campus-gateway-page-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 10h16M6 10v8m4-8v8m4-8v8m4-8v8M3 21h18M12 3l9 5H3l9-5Z" />
-              </svg>
-            </span>
             <div>
               <span>Mirai Tracker</span>
               <strong>Choose campus</strong>
@@ -174,22 +170,42 @@ function AdminCampusGateway({
 
           <section
             className="campus-gateway-selection"
-            aria-labelledby="campus-selection-title"
+            aria-label={isLoading ? 'Campuses' : undefined}
+            aria-labelledby={isLoading ? undefined : 'campus-selection-title'}
           >
             <div className="campus-gateway-summary">
-              <div>
-                <span className="campus-gateway-count" aria-hidden="true">
-                  {campuses.length.toString().padStart(2, '0')}
-                </span>
-                <strong id="campus-selection-title">
-                  {campuses.length} active campuses
-                </strong>
-              </div>
-              <span>Select one to continue</span>
+              {isLoading ? (
+                <>
+                  <div className="campus-summary-skeleton" aria-hidden="true">
+                    <span className="skeleton-block" />
+                    <span className="skeleton-block" />
+                  </div>
+                  <span
+                    className="skeleton-block campus-summary-helper-placeholder"
+                    aria-hidden="true"
+                  />
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span className="campus-gateway-count" aria-hidden="true">
+                      {campuses.length.toString().padStart(2, '0')}
+                    </span>
+                    <strong id="campus-selection-title">
+                      {campuses.length} active campuses
+                    </strong>
+                  </div>
+                  <span>Select one to continue</span>
+                </>
+              )}
             </div>
 
             {isLoading ? (
-              <p className="campus-gateway-state">Loading campuses…</p>
+              <LoadingSkeleton
+                variant="campus"
+                label="Loading campuses"
+                count={3}
+              />
             ) : error ? (
               <div className="campus-gateway-state" role="alert">
                 <p>{error.message}</p>
@@ -903,10 +919,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       <div className="dashboard-main">
         <header className="topbar">
           <div className="topbar-title">
-            <span className="wordmark-frame topbar-wordmark-frame">
-              <img src="/mirai-wordmark.webp" alt="" />
-            </span>
-            <img className="topbar-brand-logo" src="/mirai-logo.jpg" alt="" />
             <div>
               <p className="eyebrow">Mirai Tracker</p>
               <strong>
@@ -952,9 +964,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           >
             <Suspense
               fallback={
-                <p className="workspace-loading">
-                  Loading {activeNavigationItem.label.toLowerCase()}...
-                </p>
+                <LoadingSkeleton
+                  variant="panel"
+                  label={`Loading ${activeNavigationItem.label.toLowerCase()}`}
+                />
               }
             >
               {renderActiveView()}
@@ -974,19 +987,12 @@ export function App() {
   });
 
   if (currentUser.isPending) {
-    return (
-      <main className="loading-shell" aria-live="polite">
-        <img className="loading-logo" src="/mirai-logo.jpg" alt="Mirai" />
-        <span className="loader" />
-        <p>Checking your session…</p>
-      </main>
-    );
+    return <LoadingSkeleton variant="app" label="Checking your session" />;
   }
 
   if (currentUser.isError) {
     return (
       <main className="loading-shell">
-        <img className="loading-logo" src="/mirai-logo.jpg" alt="Mirai" />
         <p className="form-error">{currentUser.error.message}</p>
         <button onClick={() => currentUser.refetch()}>Try again</button>
       </main>

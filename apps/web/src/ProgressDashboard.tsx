@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { RecoveryPlanner } from './RecoveryPlanner';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   ProgressGroup,
   ProgressMetrics,
@@ -64,7 +65,7 @@ export function ProgressDashboard({ scope }: { scope: 'faculty' | 'manager' }) {
       </div>
 
       {dashboard.isLoading ? (
-        <p className="workspace-loading">Calculating progress…</p>
+        <LoadingSkeleton variant="panel" label="Calculating progress" />
       ) : dashboard.isError ? (
         <p className="form-error" role="alert">
           {dashboard.error.message}

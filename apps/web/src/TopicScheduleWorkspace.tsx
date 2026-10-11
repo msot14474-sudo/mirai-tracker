@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
 
 export function TopicScheduleWorkspace() {
@@ -69,7 +70,7 @@ export function TopicScheduleWorkspace() {
           <p>Its planned dates and usable class capacity will appear here.</p>
         </div>
       ) : detail.isLoading ? (
-        <p className="workspace-loading">Calculating live dates…</p>
+        <LoadingSkeleton variant="table" label="Calculating live dates" />
       ) : detail.isError ? (
         <p className="form-error" role="alert">
           {detail.error.message}

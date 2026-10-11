@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { alertApi, MissedLogAlert } from './alerts';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 export function AlertCenter() {
   const feed = useQuery({
@@ -19,7 +20,7 @@ export function AlertCenter() {
       </div>
 
       {feed.isLoading ? (
-        <p className="workspace-loading">Checking missed class logs…</p>
+        <LoadingSkeleton variant="cards" label="Checking missed class logs" />
       ) : feed.isError ? (
         <p className="form-error" role="alert">
           {feed.error.message}

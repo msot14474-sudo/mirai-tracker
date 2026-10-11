@@ -7,6 +7,7 @@ import {
   LessonPlanUnit,
   lessonPlanApi,
 } from './lessonPlans';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 export function LessonPlanWorkspace() {
   const [offeringId, setOfferingId] = useState('');
@@ -84,7 +85,7 @@ export function LessonPlanWorkspace() {
               </p>
             </div>
           ) : detail.isLoading ? (
-            <p>Loading lesson plan…</p>
+            <LoadingSkeleton variant="panel" label="Loading lesson plan" />
           ) : detail.isError ? (
             <p className="form-error" role="alert">
               {detail.error.message}

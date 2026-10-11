@@ -35,6 +35,8 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Expanded User access to create Faculty, Campus Manager and Administrator accounts with role-safe scope.
 - [x] Added a dedicated Subjects view in Academic setup with a shared subject catalog and creation form.
 - [x] Polished the campus-selection gateway with balanced cards, accessible focus states and responsive desktop, tablet and mobile layouts.
+- [x] Replaced plain data-loading messages with responsive content-shaped shimmer skeletons across the frontend.
+- [x] Removed decorative boxed header icons and kept page titles aligned without empty visual space.
 
 ## Next implementation sequence
 

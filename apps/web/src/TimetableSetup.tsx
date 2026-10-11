@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { academicApi } from './academic';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { OfferingTimetable, timetableApi } from './timetable';
 
 const weekdayLabels = [
@@ -157,7 +158,10 @@ export function TimetableSetup({
               <p>Its weekly hours and generated teaching dates appear here.</p>
             </div>
           ) : detail.isLoading ? (
-            <p>Building timetable summary…</p>
+            <LoadingSkeleton
+              variant="table"
+              label="Building timetable summary"
+            />
           ) : detail.isError ? (
             <p className="form-error" role="alert">
               {detail.error.message}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ExportRequest, exportApi, saveDownload } from './exports';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 const typeLabels: Record<ExportRequest['type'], string> = {
   FULL_DATA: 'Full data archive',
@@ -129,7 +130,7 @@ export function ExportCenter() {
           <span>{history.data?.length ?? 0} jobs</span>
         </div>
         {history.isLoading ? (
-          <p className="workspace-loading">Loading export history…</p>
+          <LoadingSkeleton variant="list" label="Loading export history" />
         ) : history.isError ? (
           <p className="form-error" role="alert">
             {history.error.message}
