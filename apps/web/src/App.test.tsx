@@ -142,6 +142,58 @@ describe('App authentication', () => {
     });
   });
 
+  it('explains why a short reset password cannot be submitted', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/forgot-password')) {
+        return new Response(
+          JSON.stringify({
+            challengeId: 'reset-challenge-identifier-long-enough',
+            expiresInSeconds: 600,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.endsWith('/auth/verify-reset-otp')) {
+        return new Response(
+          JSON.stringify({
+            resetToken: 'reset-approval-token-long-enough-to-be-valid',
+            expiresInSeconds: 600,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(null, { status: 401 });
+    });
+    renderApp();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Forgot password?' }),
+    );
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'faculty@mirai.local' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send reset code' }));
+    await screen.findByRole('heading', { name: 'Verify reset code' });
+    fireEvent.change(screen.getByLabelText('Reset code'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify code' }));
+    await screen.findByRole('heading', { name: 'Create password' });
+
+    fireEvent.change(screen.getByLabelText('New password'), {
+      target: { value: 'short-pass' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirm password'), {
+      target: { value: 'short-pass' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update password' }));
+
+    expect(
+      await screen.findByRole('alert'),
+    ).toHaveTextContent('Password must contain at least 12 characters.');
+  });
+
   it('opens account and help from the profile menu', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('FACULTY'));
     renderApp();

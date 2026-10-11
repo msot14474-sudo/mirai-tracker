@@ -54,6 +54,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Reworked portrait and zoomed sign-in layouts into a compact wordmark header with the login card immediately visible.
 - [x] Added a bounded authentication preloader fallback so hidden desktop assets cannot block the mobile sign-in screen.
 - [x] Kept the original split sign-in composition and added clear spacing between the faculty laptop and the `Course progression` label.
+- [x] Fixed password-reset submission feedback so the action stays usable and clearly explains the 12-character requirement instead of silently disabling the button.
 
 ## Next implementation sequence
 

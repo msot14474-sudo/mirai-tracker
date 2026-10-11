@@ -411,6 +411,9 @@ function LoginScreen() {
   });
   const resetPasswordMutation = useMutation({
     mutationFn: () => {
+      if (resetPasswordValue.length < 12) {
+        throw new Error('Password must contain at least 12 characters.');
+      }
       if (resetPasswordValue !== confirmPassword) {
         throw new Error('The two passwords do not match.');
       }
@@ -623,7 +626,7 @@ function LoginScreen() {
           ) : mode === 'forgot' ? (
             resetChallenge ? (
               resetApproval ? (
-                <form onSubmit={submitPasswordReset}>
+                <form onSubmit={submitPasswordReset} noValidate>
                   <label htmlFor="new-password">New password</label>
                   <input
                     id="new-password"
@@ -638,6 +641,9 @@ function LoginScreen() {
                     required
                     autoFocus
                   />
+                  <small className="auth-password-requirement">
+                    Use at least 12 characters. {resetPasswordValue.length}/12
+                  </small>
                   <label htmlFor="confirm-password">Confirm password</label>
                   <input
                     id="confirm-password"
@@ -656,10 +662,7 @@ function LoginScreen() {
                   ) : null}
                   <button
                     type="submit"
-                    disabled={
-                      resetPasswordMutation.isPending ||
-                      resetPasswordValue.length < 12
-                    }
+                    disabled={resetPasswordMutation.isPending}
                   >
                     {resetPasswordMutation.isPending
                       ? 'Updating…'

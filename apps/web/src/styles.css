@@ -7890,6 +7890,14 @@ textarea:focus {
   font-weight: 700;
 }
 
+.auth-password-requirement {
+  display: block;
+  margin: -0.35rem 0 0.2rem;
+  color: #73809a;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
 /* Keep authentication usable in portrait windows and at browser zoom. */
 .auth-shell {
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
