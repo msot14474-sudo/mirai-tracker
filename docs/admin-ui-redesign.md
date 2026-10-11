@@ -53,6 +53,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Replaced the full-screen blue workspace curtain with a short, subtle fade transition.
 - [x] Reworked portrait and zoomed sign-in layouts into a compact wordmark header with the login card immediately visible.
 - [x] Added a bounded authentication preloader fallback so hidden desktop assets cannot block the mobile sign-in screen.
+- [x] Removed the fragile split sign-in layout so the login form remains visible at every viewport, zoom level and device orientation.
 
 ## Next implementation sequence
 
