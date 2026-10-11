@@ -639,7 +639,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   );
   useEffect(() => {
     if (!pendingView) return;
-    const delay = prefersReducedMotion() ? 0 : 240;
+    const delay = prefersReducedMotion() ? 0 : 520;
     const timer = window.setTimeout(() => {
       setActiveView(pendingView);
       setPendingView(null);
@@ -926,6 +926,14 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       </aside>
 
       <div className="dashboard-main">
+        <div
+          className={`workspace-transition-curtain ${pendingView ? 'is-active' : ''}`}
+          aria-hidden="true"
+        >
+          {Array.from({ length: 6 }, (_, index) => (
+            <span key={index} />
+          ))}
+        </div>
         <header className="topbar">
           <div className="topbar-title">
             <div>

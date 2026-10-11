@@ -6622,7 +6622,7 @@ textarea:focus {
 /* Refined authentication entrance */
 .auth-shell {
   grid-template-columns: minmax(26rem, 0.92fr) minmax(28rem, 1.08fr);
-  background: #fff;
+  background: var(--mirai-canvas);
 }
 
 .auth-shell .brand-panel {
@@ -6633,8 +6633,12 @@ textarea:focus {
   padding: clamp(2.5rem, 5vw, 5.5rem);
   overflow: hidden;
   background:
-    radial-gradient(circle at 82% 14%, rgba(117, 165, 255, 0.34), transparent 28%),
-    linear-gradient(145deg, #081e57 0%, #123b91 55%, #2868df 100%);
+    radial-gradient(
+      circle at 25% 92%,
+      rgba(112, 158, 255, 0.32),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #0b2868 0%, #1548b7 52%, #3775e8 100%);
 }
 
 .auth-shell .brand-panel::after {
@@ -6657,12 +6661,13 @@ textarea:focus {
 }
 
 .auth-shell .auth-wordmark-frame {
-  width: min(19rem, 72vw);
-  height: 4.8rem;
+  width: min(22rem, 76vw);
+  height: 5.5rem;
+  margin-left: -1.25rem;
 }
 
 .auth-shell .auth-wordmark-frame img {
-  width: 19rem;
+  width: 22rem;
 }
 
 .brand-statement {
@@ -6687,21 +6692,22 @@ textarea:focus {
 }
 
 .brand-panel .brand-statement h1 span {
-  color: #8fb9ff;
+  color: #c8dcff;
 }
 
 .auth-shell .login-panel {
   min-height: 100vh;
   padding: clamp(2rem, 7vw, 7rem);
-  background: #fff;
+  background: var(--mirai-canvas);
 }
 
 .auth-shell .login-card {
   width: min(100%, 25rem);
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  padding: clamp(2rem, 4vw, 2.75rem);
+  border: 1px solid var(--mirai-line);
+  border-radius: 1.25rem;
+  background: var(--mirai-card);
+  box-shadow: 0 1.5rem 4rem rgba(30, 52, 104, 0.09);
 }
 
 .auth-shell .login-card h2 {
@@ -6731,7 +6737,7 @@ textarea:focus {
   padding: 0 1rem;
   border-color: #d7deeb;
   border-radius: 0.85rem;
-  background: #fbfcff;
+  background: #fff;
 }
 
 .auth-shell input::placeholder {
@@ -6755,6 +6761,16 @@ textarea:focus {
     padding: 2rem;
   }
 
+  .auth-shell .auth-wordmark-frame {
+    width: min(19rem, 78vw);
+    height: 4.8rem;
+    margin-left: -1rem;
+  }
+
+  .auth-shell .auth-wordmark-frame img {
+    width: 19rem;
+  }
+
   .auth-shell .brand-statement .eyebrow {
     display: none;
   }
@@ -6766,5 +6782,220 @@ textarea:focus {
   .auth-shell .login-panel {
     min-height: auto;
     padding: 3.5rem 1.5rem 5rem;
+  }
+}
+
+/* 21st.dev-inspired motion primitives, adapted to the Mirai design system */
+.dashboard-main {
+  position: relative;
+}
+
+.workspace-transition-curtain {
+  position: fixed;
+  inset: 0 0 0 264px;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.workspace-transition-curtain span {
+  transform: scaleY(0);
+  transform-origin: bottom;
+  background: linear-gradient(180deg, #0b2868, #245cdb 64%, #3774ed);
+}
+
+.workspace-transition-curtain.is-active {
+  visibility: visible;
+}
+
+.workspace-transition-curtain.is-active span {
+  animation: workspace-curtain-rise 600ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.workspace-transition-curtain.is-active span:nth-child(2) {
+  animation-delay: 25ms;
+}
+
+.workspace-transition-curtain.is-active span:nth-child(3) {
+  animation-delay: 50ms;
+}
+
+.workspace-transition-curtain.is-active span:nth-child(4) {
+  animation-delay: 75ms;
+}
+
+.workspace-transition-curtain.is-active span:nth-child(5) {
+  animation-delay: 100ms;
+}
+
+.workspace-transition-curtain.is-active span:nth-child(6) {
+  animation-delay: 125ms;
+}
+
+.sidebar-navigation button {
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.sidebar-navigation button:hover,
+.sidebar-navigation button:focus-visible {
+  transform: translateX(0.18rem);
+}
+
+.overview-shortcut-grid button {
+  animation: motion-card-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.overview-shortcut-grid button:nth-child(2) {
+  animation-delay: 55ms;
+}
+
+.overview-shortcut-grid button:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.overview-shortcut-grid button:nth-child(4) {
+  animation-delay: 165ms;
+}
+
+.overview-shortcut-grid button:nth-child(5) {
+  animation-delay: 220ms;
+}
+
+.overview-shortcut-grid button:nth-child(6) {
+  animation-delay: 275ms;
+}
+
+.overview-shortcut-grid button:hover,
+.overview-shortcut-grid button:focus-visible {
+  transform: translateY(-5px) scale(1.008);
+}
+
+.overview-shortcut-grid button:active {
+  transform: translateY(-1px) scale(0.988);
+}
+
+.auth-shell .auth-brand {
+  animation: auth-element-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.brand-statement {
+  animation: auth-element-enter 820ms 90ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.auth-shell .login-card {
+  animation: auth-card-enter 820ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-shell form button:not(.secondary-button) {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-shell form button:not(.secondary-button)::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 22%,
+    rgba(255, 255, 255, 0.28) 48%,
+    transparent 74%
+  );
+  content: '';
+  transform: translateX(-125%);
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-shell form button:not(.secondary-button):hover::after,
+.auth-shell form button:not(.secondary-button):focus-visible::after {
+  transform: translateX(125%);
+}
+
+.auth-shell form button:not(.secondary-button):active {
+  transform: translateY(0) scale(0.985);
+}
+
+@keyframes workspace-curtain-rise {
+  0% {
+    transform: scaleY(0);
+  }
+
+  62%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes motion-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes auth-element-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace-transition-curtain {
+    inset: 0;
+  }
+
+  .sidebar-navigation button:hover,
+  .sidebar-navigation button:focus-visible {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-transition-curtain {
+    display: none;
+  }
+
+  .auth-shell .auth-brand,
+  .brand-statement,
+  .auth-shell .login-card,
+  .overview-shortcut-grid button {
+    animation: none;
+  }
+
+  .auth-shell form button:not(.secondary-button)::after {
+    display: none;
   }
 }
