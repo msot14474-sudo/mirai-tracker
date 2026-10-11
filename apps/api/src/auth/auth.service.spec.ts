@@ -12,13 +12,27 @@ describe('AuthService', () => {
   const sendLoginOtp = jest.fn();
   const sendPasswordResetOtp = jest.fn();
   const upsertPassword = jest.fn();
+  const updateUser = jest.fn();
   const store = new Map<string, string>();
   const prisma = {
     user: { findUnique },
     passwordCredential: { upsert: upsertPassword },
     auditEvent: { create: createAuditEvent },
-    $transaction: jest.fn((operations: Array<Promise<unknown>>) =>
-      Promise.all(operations),
+    $transaction: jest.fn(
+      (
+        work:
+          | Array<Promise<unknown>>
+          | ((transaction: {
+              user: { update: typeof updateUser };
+              auditEvent: { create: typeof createAuditEvent };
+            }) => Promise<unknown>),
+      ) =>
+        typeof work === 'function'
+          ? work({
+              user: { update: updateUser },
+              auditEvent: { create: createAuditEvent },
+            })
+          : Promise.all(work),
     ),
   };
   const redis = {
@@ -258,18 +272,22 @@ describe('AuthService', () => {
     });
   });
 
-  it('emails and consumes a password reset code before hashing the new password', async () => {
+  it('verifies the emailed code before accepting a new password', async () => {
     const record = await activeUser();
     findUnique
       .mockResolvedValueOnce(record)
+      .mockResolvedValueOnce({ id: record.id, status: UserStatus.ACTIVE })
       .mockResolvedValueOnce({ id: record.id, status: UserStatus.ACTIVE });
     const auth = service();
     const challenge = await auth.requestPasswordReset(record.email);
     const resetCode = sendPasswordResetOtp.mock.calls[0][0].code as string;
+    const approval = await auth.verifyPasswordResetOtp(
+      challenge.challengeId,
+      resetCode,
+    );
 
     await auth.resetPassword({
-      challengeId: challenge.challengeId,
-      code: resetCode,
+      resetToken: approval.resetToken,
       password: 'a-new-secure-password',
     });
 
@@ -294,6 +312,76 @@ describe('AuthService', () => {
         entityType: 'PasswordCredential',
       }),
     });
+    await expect(
+      auth.resetPassword({
+        resetToken: approval.resetToken,
+        password: 'another-secure-password',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects an incorrect reset code before showing the password step', async () => {
+    const record = await activeUser();
+    findUnique.mockResolvedValueOnce(record);
+    const auth = service();
+    const challenge = await auth.requestPasswordReset(record.email);
+
+    await expect(
+      auth.verifyPasswordResetOtp(challenge.challengeId, '000000'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(upsertPassword).not.toHaveBeenCalled();
+  });
+
+  it('updates the signed-in user name and audits the change', async () => {
+    const record = await activeUser();
+    const updated = { ...record, name: 'Faculty Updated' };
+    findUnique.mockResolvedValueOnce(record);
+    updateUser.mockResolvedValueOnce(updated);
+
+    const result = await service().updateOwnAccount(
+      {
+        id: record.id,
+        name: record.name,
+        email: record.email,
+        notificationEmail: record.notificationEmail,
+        roles: record.roleAssignments,
+        staffProfileId: record.staffProfile.id,
+        studentProfile: null,
+      },
+      { name: 'Faculty Updated' },
+    );
+
+    expect(result.name).toBe('Faculty Updated');
+    expect(updateUser).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { name: 'Faculty Updated' } }),
+    );
+    expect(createAuditEvent).toHaveBeenCalledWith({
+      data: expect.objectContaining({ entityType: 'OwnAccount' }),
+    });
+  });
+
+  it('requires the current password before changing protected account fields', async () => {
+    const record = await activeUser();
+    findUnique.mockResolvedValueOnce(record);
+
+    await expect(
+      service().updateOwnAccount(
+        {
+          id: record.id,
+          name: record.name,
+          email: record.email,
+          notificationEmail: record.notificationEmail,
+          roles: record.roleAssignments,
+          staffProfileId: record.staffProfile.id,
+          studentProfile: null,
+        },
+        {
+          notificationEmail: 'new@example.edu',
+          currentPassword: 'wrong-password',
+        },
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(updateUser).not.toHaveBeenCalled();
   });
 
   it('returns a generic reset challenge for an unknown email', async () => {

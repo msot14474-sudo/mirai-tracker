@@ -8,10 +8,12 @@ import {
   login,
   logout,
   PasswordResetChallenge,
+  PasswordResetApproval,
   requestPasswordReset,
   resetPassword,
   UserRole,
   verifyOtp,
+  verifyPasswordResetOtp,
 } from './auth';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -80,6 +82,18 @@ const ExportCenter = lazy(() =>
 const FacultyAccessWorkspace = lazy(() =>
   import('./FacultyAccessWorkspace').then((module) => ({
     default: module.FacultyAccessWorkspace,
+  })),
+);
+
+const AccountWorkspace = lazy(() =>
+  import('./AccountWorkspace').then((module) => ({
+    default: module.AccountWorkspace,
+  })),
+);
+
+const HelpWorkspace = lazy(() =>
+  import('./HelpWorkspace').then((module) => ({
+    default: module.HelpWorkspace,
   })),
 );
 
@@ -371,6 +385,8 @@ function LoginScreen() {
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [resetChallenge, setResetChallenge] =
     useState<PasswordResetChallenge | null>(null);
+  const [resetApproval, setResetApproval] =
+    useState<PasswordResetApproval | null>(null);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetComplete, setResetComplete] = useState(false);
@@ -386,21 +402,25 @@ function LoginScreen() {
     mutationFn: () => requestPasswordReset(email),
     onSuccess: setResetChallenge,
   });
+  const verifyResetOtpMutation = useMutation({
+    mutationFn: () => verifyPasswordResetOtp(resetChallenge!.challengeId, code),
+    onSuccess: (approval) => {
+      setResetApproval(approval);
+      setCode('');
+    },
+  });
   const resetPasswordMutation = useMutation({
     mutationFn: () => {
       if (resetPasswordValue !== confirmPassword) {
         throw new Error('The two passwords do not match.');
       }
-      return resetPassword(
-        resetChallenge!.challengeId,
-        code,
-        resetPasswordValue,
-      );
+      return resetPassword(resetApproval!.resetToken, resetPasswordValue);
     },
     onSuccess: () => {
       setResetComplete(true);
       setMode('login');
       setResetChallenge(null);
+      setResetApproval(null);
       setCode('');
       setPassword('');
       setResetPasswordValue('');
@@ -462,9 +482,15 @@ function LoginScreen() {
     resetPasswordMutation.mutate();
   }
 
+  function submitResetOtp(event: FormEvent) {
+    event.preventDefault();
+    verifyResetOtpMutation.mutate();
+  }
+
   function restartLogin() {
     setChallenge(null);
     setResetChallenge(null);
+    setResetApproval(null);
     setMode('login');
     setCode('');
     setResetPasswordValue('');
@@ -472,6 +498,7 @@ function LoginScreen() {
     loginMutation.reset();
     otpMutation.reset();
     forgotPasswordMutation.reset();
+    verifyResetOtpMutation.reset();
     resetPasswordMutation.reset();
   }
 
@@ -479,14 +506,18 @@ function LoginScreen() {
     ? 'Check your email'
     : mode === 'forgot'
       ? resetChallenge
-        ? 'Create password'
+        ? resetApproval
+          ? 'Create password'
+          : 'Verify reset code'
         : 'Reset password'
       : 'Welcome back';
   const supportingCopy = challenge
     ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
     : mode === 'forgot'
       ? resetChallenge
-        ? 'Enter the six-digit email code and choose a new password.'
+        ? resetApproval
+          ? 'Choose a new password for your account.'
+          : 'Enter the six-digit code sent to your email.'
         : 'We will email a secure six-digit reset code.'
       : 'Sign in to continue.';
 
@@ -585,70 +616,98 @@ function LoginScreen() {
             </form>
           ) : mode === 'forgot' ? (
             resetChallenge ? (
-              <form onSubmit={submitPasswordReset}>
-                <label htmlFor="reset-code">Reset code</label>
-                <input
-                  id="reset-code"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={code}
-                  onChange={(event) =>
-                    setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
-                  }
-                  required
-                />
-                <label htmlFor="new-password">New password</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  maxLength={256}
-                  value={resetPasswordValue}
-                  onChange={(event) =>
-                    setResetPasswordValue(event.target.value)
-                  }
-                  required
-                />
-                <label htmlFor="confirm-password">Confirm password</label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  maxLength={256}
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  required
-                />
-                {resetPasswordMutation.error ? (
-                  <p className="form-error" role="alert">
-                    {resetPasswordMutation.error.message}
-                  </p>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={
-                    resetPasswordMutation.isPending ||
-                    code.length !== 6 ||
-                    resetPasswordValue.length < 12
-                  }
-                >
-                  {resetPasswordMutation.isPending
-                    ? 'Updating…'
-                    : 'Update password'}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button auth-back-button"
-                  onClick={restartLogin}
-                >
-                  Back to sign in
-                </button>
-              </form>
+              resetApproval ? (
+                <form onSubmit={submitPasswordReset}>
+                  <label htmlFor="new-password">New password</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={256}
+                    value={resetPasswordValue}
+                    onChange={(event) =>
+                      setResetPasswordValue(event.target.value)
+                    }
+                    required
+                    autoFocus
+                  />
+                  <label htmlFor="confirm-password">Confirm password</label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={256}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                  />
+                  {resetPasswordMutation.error ? (
+                    <p className="form-error" role="alert">
+                      {resetPasswordMutation.error.message}
+                    </p>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={
+                      resetPasswordMutation.isPending ||
+                      resetPasswordValue.length < 12
+                    }
+                  >
+                    {resetPasswordMutation.isPending
+                      ? 'Updating…'
+                      : 'Update password'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button auth-back-button"
+                    onClick={restartLogin}
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={submitResetOtp}>
+                  <label htmlFor="reset-code">Reset code</label>
+                  <input
+                    id="reset-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                    required
+                    autoFocus
+                  />
+                  {verifyResetOtpMutation.error ? (
+                    <p className="form-error" role="alert">
+                      {verifyResetOtpMutation.error.message}
+                    </p>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={
+                      verifyResetOtpMutation.isPending || code.length !== 6
+                    }
+                  >
+                    {verifyResetOtpMutation.isPending
+                      ? 'Verifying…'
+                      : 'Verify code'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button auth-back-button"
+                    onClick={restartLogin}
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              )
             ) : (
               <form onSubmit={submitForgotPassword}>
                 <label htmlFor="recovery-email">Email</label>
@@ -767,7 +826,9 @@ type DashboardView =
   | 'timetable'
   | 'lesson-plans'
   | 'planned-dates'
-  | 'daily-logging';
+  | 'daily-logging'
+  | 'account'
+  | 'help';
 
 type DashboardNavigationItem = {
   id: DashboardView;
@@ -880,6 +941,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [pendingView, setPendingView] = useState<DashboardView | null>(null);
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -1066,10 +1128,12 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
-  const activeNavigationItem =
-    navigation.find((item) => item.id === activeView) ?? navigation[0]!;
+  const activeViewLabel =
+    navigation.find((item) => item.id === activeView)?.label ??
+    (activeView === 'account' ? 'My account' : 'Help');
 
   function openView(view: DashboardView) {
+    setProfileMenuOpen(false);
     if (view === activeView && !pendingView) return;
     setPendingView(view);
   }
@@ -1117,6 +1181,17 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         return <TopicScheduleWorkspace />;
       case 'daily-logging':
         return <SessionLoggingWorkspace />;
+      case 'account':
+        return (
+          <AccountWorkspace
+            user={user}
+            onUserUpdate={(updated) =>
+              queryClient.setQueryData(currentUserKey, updated)
+            }
+          />
+        );
+      case 'help':
+        return <HelpWorkspace onOpenAccount={() => openView('account')} />;
       case 'overview':
       default:
         return (
@@ -1168,12 +1243,67 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           ))}
         </nav>
 
-        <div className="sidebar-account">
-          <span className="account-avatar">{initials}</span>
-          <span>
-            <strong>{user.name}</strong>
-            <small>{primaryRoleLabel}</small>
-          </span>
+        <div
+          className={`sidebar-account-wrap ${profileMenuOpen ? 'open' : ''}`}
+        >
+          <div className="sidebar-account-menu" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => openView('account')}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21a8 8 0 0 1 16 0" />
+              </svg>
+              <span>My account</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => openView('help')}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2.9-1.2 1.8M12 17h.01" />
+              </svg>
+              <span>Help</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9" />
+              </svg>
+              <span>
+                {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
+              </span>
+            </button>
+          </div>
+          <button
+            type="button"
+            className="sidebar-account"
+            aria-label={`Open account menu for ${user.name}`}
+            aria-haspopup="menu"
+            aria-expanded={profileMenuOpen}
+            onClick={() => setProfileMenuOpen((open) => !open)}
+          >
+            <span className="account-avatar">{initials}</span>
+            <span>
+              <strong>{user.name}</strong>
+              <small>{primaryRoleLabel}</small>
+            </span>
+            <svg
+              className="sidebar-account-chevron"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path d="m6 12 4-4 4 4" />
+            </svg>
+          </button>
         </div>
       </aside>
 
@@ -1192,7 +1322,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               <p className="eyebrow">Mirai Tracker</p>
               <strong>
                 {selectedCampus?.name ?? 'Course progression'} ·{' '}
-                {activeNavigationItem.label}
+                {activeViewLabel}
               </strong>
             </div>
           </div>
@@ -1228,13 +1358,13 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             key={activeView}
             id={activeView}
             className={`dashboard-view ${pendingView ? 'workspace-view-exit' : 'workspace-view-enter'}`}
-            aria-label={activeNavigationItem.label}
+            aria-label={activeViewLabel}
           >
             <Suspense
               fallback={
                 <LoadingSkeleton
                   variant="panel"
-                  label={`Loading ${activeNavigationItem.label.toLowerCase()}`}
+                  label={`Loading ${activeViewLabel.toLowerCase()}`}
                 />
               }
             >

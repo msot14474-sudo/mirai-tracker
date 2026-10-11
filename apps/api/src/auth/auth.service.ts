@@ -29,15 +29,22 @@ type OtpChallenge = {
 };
 
 type PasswordResetInput = {
-  challengeId: string;
-  code: string;
+  resetToken: string;
   password: string;
+};
+
+type UpdateOwnAccountInput = {
+  name?: string;
+  notificationEmail?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
 };
 
 type SessionUser = {
   id: string;
   name: string;
   email: string;
+  notificationEmail?: string | null;
   status: UserStatus;
   roleAssignments: Array<{
     role: AuthenticatedUser['roles'][number]['role'];
@@ -286,8 +293,8 @@ export class AuthService {
     return { challengeId, expiresInSeconds: OTP_TTL_SECONDS };
   }
 
-  async resetPassword(input: PasswordResetInput) {
-    const challengeKey = this.passwordResetChallengeKey(input.challengeId);
+  async verifyPasswordResetOtp(challengeId: string, code: string) {
+    const challengeKey = this.passwordResetChallengeKey(challengeId);
     const rawChallenge = await this.redis.get(challengeKey);
     if (!rawChallenge) {
       throw new UnauthorizedException('Invalid or expired reset code.');
@@ -301,7 +308,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired reset code.');
     }
 
-    const attemptsKey = this.passwordResetAttemptsKey(input.challengeId);
+    const attemptsKey = this.passwordResetAttemptsKey(challengeId);
     const attempts = await this.redis.incrementWithExpiry(
       attemptsKey,
       OTP_TTL_SECONDS,
@@ -317,7 +324,7 @@ export class AuthService {
       );
     }
 
-    const candidateDigest = this.otpCodeDigest(input.challengeId, input.code);
+    const candidateDigest = this.otpCodeDigest(challengeId, code);
     if (!sameSecret(challenge.codeDigest, candidateDigest)) {
       if (attempts === OTP_MAX_ATTEMPTS) await this.redis.delete(challengeKey);
       throw new UnauthorizedException('Invalid or expired reset code.');
@@ -339,6 +346,42 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired reset code.');
     }
 
+    const resetToken = randomBytes(32).toString('base64url');
+    await this.redis.setWithExpiry(
+      this.passwordResetAuthorizationKey(resetToken),
+      user.id,
+      OTP_TTL_SECONDS,
+    );
+    await this.redis.delete(attemptsKey);
+    return { resetToken, expiresInSeconds: OTP_TTL_SECONDS };
+  }
+
+  async resetPassword(input: PasswordResetInput) {
+    const authorizationKey = this.passwordResetAuthorizationKey(
+      input.resetToken,
+    );
+    const userId = await this.redis.get(authorizationKey);
+    if (!userId) {
+      throw new UnauthorizedException(
+        'Password reset approval is invalid or expired.',
+      );
+    }
+    const consumed = await this.redis.consumeIfValue(authorizationKey, userId);
+    if (!consumed) {
+      throw new UnauthorizedException(
+        'Password reset approval is invalid or expired.',
+      );
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, status: true },
+    });
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException(
+        'Password reset approval is invalid or expired.',
+      );
+    }
+
     const credential = await hashPassword(input.password);
     await this.prisma.$transaction([
       this.prisma.passwordCredential.upsert({
@@ -356,7 +399,90 @@ export class AuthService {
         },
       }),
     ]);
-    await this.redis.delete(attemptsKey);
+  }
+
+  async updateOwnAccount(
+    actor: AuthenticatedUser,
+    input: UpdateOwnAccountInput,
+  ) {
+    const current = await this.prisma.user.findUnique({
+      where: { id: actor.id },
+      include: {
+        passwordCredential: true,
+        roleAssignments: { select: { role: true, campusId: true } },
+        staffProfile: { select: { id: true } },
+        studentProfile: { select: { id: true, batchId: true } },
+      },
+    });
+    if (!current || current.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Your account is no longer active.');
+    }
+
+    const protectedChange =
+      input.notificationEmail !== undefined || Boolean(input.newPassword);
+    if (protectedChange) {
+      const validPassword =
+        current.passwordCredential && input.currentPassword
+          ? await verifyPassword(
+              input.currentPassword,
+              current.passwordCredential.passwordHash,
+              current.passwordCredential.passwordSalt,
+            )
+          : false;
+      if (!validPassword) {
+        throw new UnauthorizedException('The current password is incorrect.');
+      }
+    }
+
+    const credential = input.newPassword
+      ? await hashPassword(input.newPassword)
+      : null;
+    const updated = await this.prisma.$transaction(async (transaction) => {
+      const account = await transaction.user.update({
+        where: { id: actor.id },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.notificationEmail !== undefined
+            ? { notificationEmail: input.notificationEmail }
+            : {}),
+          ...(credential
+            ? {
+                passwordCredential: {
+                  upsert: { create: credential, update: credential },
+                },
+              }
+            : {}),
+        },
+        include: {
+          roleAssignments: { select: { role: true, campusId: true } },
+          staffProfile: { select: { id: true } },
+          studentProfile: { select: { id: true, batchId: true } },
+        },
+      });
+      await transaction.auditEvent.create({
+        data: {
+          actorId: actor.id,
+          campusId:
+            account.roleAssignments.find((assignment) => assignment.campusId)
+              ?.campusId ?? null,
+          action: AuditAction.UPDATE,
+          entityType: 'OwnAccount',
+          entityId: actor.id,
+          before: {
+            name: current.name,
+            notificationEmail: current.notificationEmail,
+          },
+          after: {
+            name: account.name,
+            notificationEmail: account.notificationEmail,
+            passwordChanged: Boolean(credential),
+          },
+        },
+      });
+      return account;
+    });
+
+    return this.toAuthenticatedUser(updated);
   }
 
   async userForSession(token: string): Promise<AuthenticatedUser | null> {
@@ -438,6 +564,10 @@ export class AuthService {
     return `auth:password-reset-attempts:${this.digest(challengeId)}`;
   }
 
+  private passwordResetAuthorizationKey(resetToken: string) {
+    return `auth:password-reset-authorization:${this.digest(resetToken)}`;
+  }
+
   private otpCodeDigest(challengeId: string, code: string) {
     return this.digest(`${challengeId}:${code}`);
   }
@@ -451,6 +581,7 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
+      notificationEmail: user.notificationEmail ?? null,
       roles: user.roleAssignments,
       staffProfileId: user.staffProfile?.id ?? null,
       studentProfile: user.studentProfile,

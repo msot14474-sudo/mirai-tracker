@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Patch,
   Post,
   Res,
 } from '@nestjs/common';
@@ -38,10 +39,35 @@ const forgotPasswordInputSchema = z.object({
 });
 
 const resetPasswordInputSchema = z.object({
-  challengeId: z.string().min(20).max(100),
-  code: z.string().regex(/^\d{6}$/),
+  resetToken: z.string().min(32).max(100),
   password: z.string().min(12).max(256),
 });
+
+const verifyPasswordResetOtpInputSchema = z.object({
+  challengeId: z.string().min(20).max(100),
+  code: z.string().regex(/^\d{6}$/),
+});
+
+const updateOwnAccountInputSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160).optional(),
+    notificationEmail: z
+      .string()
+      .trim()
+      .email()
+      .max(320)
+      .transform((value) => value.toLowerCase())
+      .nullable()
+      .optional(),
+    currentPassword: z.string().min(8).max(256).optional(),
+    newPassword: z.string().min(12).max(256).optional(),
+  })
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: 'Provide at least one account change.',
+  })
+  .refine((value) => !value.newPassword || Boolean(value.currentPassword), {
+    message: 'Enter the current password before choosing a new password.',
+  });
 
 type HeaderResponse = {
   setHeader(name: string, value: string): void;
@@ -97,13 +123,27 @@ export class AuthController {
   }
 
   @Public()
+  @Post('verify-reset-otp')
+  @HttpCode(200)
+  async verifyPasswordResetOtp(@Body() body: unknown) {
+    const parsed = verifyPasswordResetOtpInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException('Enter a valid six-digit reset code.');
+    }
+    return this.auth.verifyPasswordResetOtp(
+      parsed.data.challengeId,
+      parsed.data.code,
+    );
+  }
+
+  @Public()
   @Post('reset-password')
   @HttpCode(200)
   async resetPassword(@Body() body: unknown) {
     const parsed = resetPasswordInputSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException(
-        'Enter a valid code and a password with at least 12 characters.',
+        'Enter a valid reset approval and a password with at least 12 characters.',
       );
     }
     await this.auth.resetPassword(parsed.data);
@@ -113,6 +153,24 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser) {
     return { user };
+  }
+
+  @Patch('account')
+  async updateAccount(
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const parsed = updateOwnAccountInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Request validation failed.',
+        errors: parsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
+    }
+    return { user: await this.auth.updateOwnAccount(user, parsed.data) };
   }
 
   @Post('logout')

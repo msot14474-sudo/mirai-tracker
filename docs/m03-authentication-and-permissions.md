@@ -15,7 +15,7 @@ M03 establishes the security boundary for every later feature. Authentication id
 
 Password failures are limited to five attempts per fifteen minutes. A user can request three OTPs per ten minutes, and each challenge permits five verification attempts. A consumed, expired or exhausted challenge cannot create a session.
 
-Forgot-password recovery uses a separate ten-minute Redis challenge. The API always returns a generic challenge response, stores only the HMAC digest of the emailed code and accepts a replacement password only after a correct six-digit code. Reset requests and verification attempts are rate limited. The replacement is scrypt-hashed and the change is audit logged without plaintext.
+Forgot-password recovery uses a separate ten-minute Redis challenge. The API always returns a generic challenge response and stores only the HMAC digest of the emailed code. A correct code is verified in its own step and exchanged for a short-lived, single-use reset approval; only that approval can open the password-creation step. Reset requests and verification attempts are rate limited. The replacement is scrypt-hashed and the change is audit logged without plaintext.
 
 API routes are protected by default. Only routes explicitly decorated with `@Public()`, currently health checks, login, OTP verification and password recovery, bypass session authentication. Mutation-origin checks still apply to the public authentication routes.
 
@@ -50,8 +50,10 @@ All four use the value of `DEMO_USER_PASSWORD` at seed time. `DEMO_NOTIFICATION_
 | `POST /auth/login`                                 | Public         | Verifies the password and emails an OTP challenge                          |
 | `POST /auth/verify-otp`                            | Public         | Consumes the OTP and creates the server session cookie                     |
 | `POST /auth/forgot-password`                       | Public         | Emails a rate-limited password-reset code when the account exists          |
-| `POST /auth/reset-password`                        | Public         | Verifies the reset code and stores a new scrypt password hash              |
+| `POST /auth/verify-reset-otp`                      | Public         | Consumes the reset OTP and returns a short-lived, single-use approval      |
+| `POST /auth/reset-password`                        | Public         | Consumes the reset approval and stores a new scrypt password hash          |
 | `GET /auth/me`                                     | Authenticated  | Returns current identity, roles and scopes                                 |
+| `PATCH /auth/account`                              | Authenticated  | Updates the current profile and securely changes OTP email or password     |
 | `POST /auth/logout`                                | Authenticated  | Revokes the session and clears the cookie                                  |
 | `GET /faculty-access/campuses/:campusId`           | Manager        | Lists faculty and assignable subjects in an authorized campus              |
 | `POST /faculty-access/campuses/:campusId/faculty`  | Manager        | Creates a campus-scoped faculty login and optional subject assignments     |

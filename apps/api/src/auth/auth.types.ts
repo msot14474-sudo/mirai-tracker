@@ -9,6 +9,7 @@ export type AuthenticatedUser = {
   id: string;
   name: string;
   email: string;
+  notificationEmail?: string | null;
   roles: UserRoleAssignment[];
   staffProfileId: string | null;
   studentProfile: {

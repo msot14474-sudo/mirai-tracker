@@ -43,6 +43,7 @@ const userResponse = (
                   ? 'Campus Manager'
                   : 'Program Manager',
         email: `${role.toLowerCase()}@mirai.local`,
+        notificationEmail: `${role.toLowerCase()}@example.edu`,
         roles: [{ role, campusId: role === 'ADMIN' ? null : 'campus-a' }],
         staffProfileId: role === 'FACULTY' ? 'faculty-a' : null,
         studentProfile:
@@ -78,6 +79,15 @@ describe('App authentication', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
+      if (url.endsWith('/auth/verify-reset-otp')) {
+        return new Response(
+          JSON.stringify({
+            resetToken: 'reset-approval-token-long-enough-to-be-valid',
+            expiresInSeconds: 600,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
       if (url.endsWith('/auth/reset-password')) {
         return new Response(JSON.stringify({ changed: true }), {
           status: 200,
@@ -97,11 +107,16 @@ describe('App authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send reset code' }));
 
     expect(
-      await screen.findByRole('heading', { name: 'Create password' }),
+      await screen.findByRole('heading', { name: 'Verify reset code' }),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Reset code'), {
       target: { value: '123456' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify code' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Create password' }),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('New password'), {
       target: { value: 'a-new-secure-password' },
     });
@@ -121,10 +136,38 @@ describe('App authentication', () => {
     const resetRequest = requests.find((request) =>
       request.url.endsWith('/auth/reset-password'),
     );
-    expect(JSON.parse(resetRequest!.body!)).toMatchObject({
-      code: '123456',
+    expect(JSON.parse(resetRequest!.body!)).toEqual({
+      resetToken: 'reset-approval-token-long-enough-to-be-valid',
       password: 'a-new-secure-password',
     });
+  });
+
+  it('opens account and help from the profile menu', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('FACULTY'));
+    renderApp();
+
+    const accountMenuButton = await screen.findByRole('button', {
+      name: 'Open account menu for Sample Faculty',
+    });
+    fireEvent.click(accountMenuButton);
+    expect(
+      screen.getByRole('menuitem', { name: 'My account' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Help' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Help' }));
+    expect(
+      await screen.findByRole('heading', { name: 'How can we help?' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(accountMenuButton);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My account' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Account settings' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Login email/ })).toHaveValue(
+      'faculty@mirai.local',
+    );
   });
 
   it('verifies an email code before displaying role-aware faculty access', async () => {

@@ -5,9 +5,17 @@ export type AuthenticatedUser = {
   id: string;
   name: string;
   email: string;
+  notificationEmail?: string | null;
   roles: Array<{ role: UserRole; campusId: string | null }>;
   staffProfileId: string | null;
   studentProfile: { id: string; batchId: string } | null;
+};
+
+export type UpdateOwnAccountInput = {
+  name?: string;
+  notificationEmail?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
 };
 
 export type LoginChallenge = {
@@ -18,6 +26,11 @@ export type LoginChallenge = {
 
 export type PasswordResetChallenge = {
   challengeId: string;
+  expiresInSeconds: number;
+};
+
+export type PasswordResetApproval = {
+  resetToken: string;
   expiresInSeconds: number;
 };
 
@@ -36,6 +49,18 @@ export async function loadCurrentUser(): Promise<AuthenticatedUser | null> {
     credentials: 'include',
   });
   if (response.status === 401) return null;
+  if (!response.ok) throw new Error(await messageFrom(response));
+  const body = (await response.json()) as { user: AuthenticatedUser };
+  return body.user;
+}
+
+export async function updateOwnAccount(input: UpdateOwnAccountInput) {
+  const response = await fetch(`${apiUrl}/auth/account`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
   if (!response.ok) throw new Error(await messageFrom(response));
   const body = (await response.json()) as { user: AuthenticatedUser };
   return body.user;
@@ -75,16 +100,26 @@ export async function requestPasswordReset(email: string) {
   return response.json() as Promise<PasswordResetChallenge>;
 }
 
-export async function resetPassword(
+export async function verifyPasswordResetOtp(
   challengeId: string,
   code: string,
-  password: string,
 ) {
+  const response = await fetch(`${apiUrl}/auth/verify-reset-otp`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, code }),
+  });
+  if (!response.ok) throw new Error(await messageFrom(response));
+  return response.json() as Promise<PasswordResetApproval>;
+}
+
+export async function resetPassword(resetToken: string, password: string) {
   const response = await fetch(`${apiUrl}/auth/reset-password`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ challengeId, code, password }),
+    body: JSON.stringify({ resetToken, password }),
   });
   if (!response.ok) throw new Error(await messageFrom(response));
 }

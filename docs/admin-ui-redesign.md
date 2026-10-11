@@ -47,6 +47,9 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Replaced the soft login wordmark with a higher-resolution source, aligned the brand composition to one grid and synchronized asset loading before entrance motion.
 - [x] Added a polished branded sign-in heading, inline forgot-password recovery and sharper high-resolution wordmarks throughout the authenticated app.
 - [x] Added a role-scoped managed-account directory for names, login and OTP emails, status and secure password replacement.
+- [x] Turned the sidebar identity into an account menu with dedicated My account and Help workspaces.
+- [x] Added secure self-service profile, OTP-email and password controls with audit logging.
+- [x] Split forgot-password recovery into email, OTP verification and password-creation screens.
 
 ## Next implementation sequence
 
@@ -58,4 +61,4 @@ This document tracks the administrator interface redesign. The editable design s
 - [ ] Apply it to exports and alerts.
 - [x] Design and verify responsive tablet and mobile layouts for the campus-selection gateway.
 
-The campus entry, animated Overview and single-view workspace navigation are implemented in the web app. The next UI phase applies the same layout system inside each operational workspace.
+The campus entry, animated Overview, single-view navigation, account settings and contextual help are implemented in the web app. The next UI phase applies the same layout system inside each remaining operational workspace.
