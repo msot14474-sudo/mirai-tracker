@@ -7474,7 +7474,7 @@ textarea:focus {
   left: 50%;
   z-index: 1;
   display: grid;
-  width: min(28rem, 76%);
+  width: min(30rem, 80%);
   height: min(55vh, 34rem);
   place-items: center;
   pointer-events: none;

@@ -62,6 +62,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Enlarged the replacement portrait and corrected its preload so the complete sign-in composition reveals together.
 - [x] Lifted the desktop wordmark into the available top space to keep a clear gap above the enlarged faculty portrait.
 - [x] Shifted the portrait into the space above the campaign label while preserving clear separation from the wordmark.
+- [x] Increased the full-height desktop portrait while retaining the collision-safe compact-height sizing.
 
 ## Next implementation sequence
 
