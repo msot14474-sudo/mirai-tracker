@@ -50,6 +50,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Turned the sidebar identity into an account menu with dedicated My account and Help workspaces.
 - [x] Added secure self-service profile, OTP-email and password controls with audit logging.
 - [x] Split forgot-password recovery into email, OTP verification and password-creation screens.
+- [x] Replaced the full-screen blue workspace curtain with a short, subtle fade transition.
 
 ## Next implementation sequence
 

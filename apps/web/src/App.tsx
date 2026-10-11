@@ -952,7 +952,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   );
   useEffect(() => {
     if (!pendingView) return;
-    const delay = prefersReducedMotion() ? 0 : 520;
+    const delay = prefersReducedMotion() ? 0 : 140;
     const timer = window.setTimeout(() => {
       setActiveView(pendingView);
       setPendingView(null);
@@ -961,7 +961,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   }, [pendingView]);
   useEffect(() => {
     if (!isLeavingDashboard) return;
-    const delay = prefersReducedMotion() ? 0 : 280;
+    const delay = prefersReducedMotion() ? 0 : 180;
     const timer = window.setTimeout(() => {
       setSelectedCampusId('');
       setActiveView('overview');
@@ -1311,11 +1311,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         <div
           className={`workspace-transition-curtain ${pendingView ? 'is-active' : ''}`}
           aria-hidden="true"
-        >
-          {Array.from({ length: 6 }, (_, index) => (
-            <span key={index} />
-          ))}
-        </div>
+        />
         <header className="topbar">
           <div className="topbar-title">
             <div>
