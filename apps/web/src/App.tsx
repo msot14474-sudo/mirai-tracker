@@ -430,6 +430,10 @@ function LoginScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    const reveal = () => {
+      if (!cancelled) setAssetsReady(true);
+    };
+    const fallbackTimer = window.setTimeout(reveal, 1_000);
     const sources = [
       '/mirai-wordmark-light-hd.png',
       '/mirai-faculty-hero.png',
@@ -453,11 +457,13 @@ function LoginScreen() {
       });
 
     void Promise.all(sources.map(decodeImage)).then(() => {
-      if (!cancelled) setAssetsReady(true);
+      window.clearTimeout(fallbackTimer);
+      reveal();
     });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(fallbackTimer);
     };
   }, []);
 
