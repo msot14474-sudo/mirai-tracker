@@ -64,13 +64,22 @@ export function SemesterImport() {
             Maximum 5 MB. Use the supplied column names and YYYY-MM-DD dates.
           </p>
           <label className="file-picker">
-            CSV or Excel file
-            <input
-              type="file"
-              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              onChange={chooseFile}
-              required
-            />
+            <span className="file-picker-label">CSV or Excel file</span>
+            <span className="file-picker-control">
+              <input
+                type="file"
+                aria-label="CSV or Excel file"
+                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={chooseFile}
+                required
+              />
+              <span className="file-picker-button" aria-hidden="true">
+                Choose file
+              </span>
+              <span className="file-picker-name" title={file?.name}>
+                {file?.name ?? 'No file chosen'}
+              </span>
+            </span>
           </label>
           {file ? (
             <div className="selected-file">

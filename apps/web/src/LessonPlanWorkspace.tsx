@@ -218,15 +218,24 @@ function PlanUpload({
         <p>CSV or Excel · maximum 2 MB · planned time in whole minutes</p>
       </div>
       <label className="file-picker compact-picker">
-        Lesson-plan file
-        <input
-          type="file"
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-            setPreview(null);
-          }}
-        />
+        <span className="file-picker-label">Lesson-plan file</span>
+        <span className="file-picker-control">
+          <input
+            type="file"
+            aria-label="Lesson-plan file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              setFile(event.target.files?.[0] ?? null);
+              setPreview(null);
+            }}
+          />
+          <span className="file-picker-button" aria-hidden="true">
+            Choose file
+          </span>
+          <span className="file-picker-name" title={file?.name}>
+            {file?.name ?? 'No file chosen'}
+          </span>
+        </span>
       </label>
       <div className="upload-actions">
         <button

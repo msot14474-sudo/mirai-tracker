@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FormEvent, lazy, Suspense, useState } from 'react';
+import { FormEvent, lazy, Suspense, useEffect, useState } from 'react';
 import { academicApi, Campus } from './academic';
 import {
   AuthenticatedUser,
@@ -644,6 +644,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     : roleLabels.PROGRAM_MANAGER;
   const [selectedCampusId, setSelectedCampusId] = useState('');
   const [activeView, setActiveView] = useState<DashboardView>('overview');
+  const [pendingView, setPendingView] = useState<DashboardView | null>(null);
+  const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -652,6 +654,25 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const selectedCampus = campuses.data?.find(
     (campus) => campus.id === selectedCampusId,
   );
+  useEffect(() => {
+    if (!pendingView) return;
+    const delay = prefersReducedMotion() ? 0 : 240;
+    const timer = window.setTimeout(() => {
+      setActiveView(pendingView);
+      setPendingView(null);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [pendingView]);
+  useEffect(() => {
+    if (!isLeavingDashboard) return;
+    const delay = prefersReducedMotion() ? 0 : 280;
+    const timer = window.setTimeout(() => {
+      setSelectedCampusId('');
+      setActiveView('overview');
+      setPendingView(null);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [isLeavingDashboard]);
   const canManageAcademicCalendar = roles.some(
     (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
   );
@@ -700,6 +721,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         error={campuses.error}
         onRetry={() => campuses.refetch()}
         onSelect={(campusId) => {
+          setIsLeavingDashboard(false);
           setSelectedCampusId(campusId);
           setActiveView('overview');
         }}
@@ -814,7 +836,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     navigation.find((item) => item.id === activeView) ?? navigation[0]!;
 
   function openView(view: DashboardView) {
-    setActiveView(view);
+    if (view === activeView && !pendingView) return;
+    setPendingView(view);
   }
 
   function renderActiveView() {
@@ -874,7 +897,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   }
 
   return (
-    <main className="dashboard-shell route-surface-enter">
+    <main
+      className={`dashboard-shell ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
+    >
       <aside className="app-sidebar">
         <button
           type="button"
@@ -898,6 +923,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               type="button"
               key={item.id}
               className={item.id === activeView ? 'active' : undefined}
+              aria-label={item.label}
               aria-current={item.id === activeView ? 'page' : undefined}
               onClick={() => openView(item.id)}
             >
@@ -937,10 +963,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               <button
                 type="button"
                 className="campus-switcher"
-                onClick={() => {
-                  setSelectedCampusId('');
-                  setActiveView('overview');
-                }}
+                onClick={() => setIsLeavingDashboard(true)}
+                disabled={isLeavingDashboard}
               >
                 <span>{selectedCampus.name}</span>
                 <small>Change campus</small>
@@ -960,7 +984,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <section
             key={activeView}
             id={activeView}
-            className="dashboard-view workspace-view-enter"
+            className={`dashboard-view ${pendingView ? 'workspace-view-exit' : 'workspace-view-enter'}`}
             aria-label={activeNavigationItem.label}
           >
             <Suspense
@@ -977,6 +1001,13 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         </div>
       </div>
     </main>
+  );
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 }
 
