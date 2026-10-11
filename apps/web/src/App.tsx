@@ -400,6 +400,9 @@ function LoginScreen() {
             />
           </span>
         </div>
+        <div className="auth-portrait" aria-hidden="true">
+          <img src="/mirai-faculty-hero.png" alt="" />
+        </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>
           <h1>

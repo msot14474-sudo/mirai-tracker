@@ -43,6 +43,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Replaced premature selection prompts with content-shaped loading states across timetable, semesters, lesson plans and planned dates.
 - [x] Refined the sign-in screen into a minimal Mirai-branded layout and removed demo credentials, technical notes and promotional filler.
 - [x] Added 21st.dev-inspired staggered workspace transitions, staged screen entrances and restrained card and button interaction motion.
+- [x] Added an enhanced transparent Mirai faculty portrait to the sign-in brand panel with responsive placement and subtle depth.
 
 ## Next implementation sequence
 
