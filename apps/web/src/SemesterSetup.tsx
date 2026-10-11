@@ -22,6 +22,9 @@ export function SemesterSetup({
   });
   const [campusId, setCampusId] = useState(initialCampusId);
   const [semesterId, setSemesterId] = useState('');
+  const [setupView, setSetupView] = useState<'semesters' | 'subjects'>(
+    'semesters',
+  );
 
   useEffect(() => {
     if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
@@ -51,153 +54,295 @@ export function SemesterSetup({
     <section className="semester-workspace" aria-labelledby="semester-title">
       <div className="workspace-heading">
         <div>
-          <h2 id="semester-title">Semester calendar</h2>
+          <h2 id="semester-title">
+            {setupView === 'semesters' ? 'Semester calendar' : 'Subjects'}
+          </h2>
         </div>
-        <label className="campus-picker">
-          Campus
-          <select
-            value={campusId}
-            disabled={campusLocked}
-            onChange={(event) => {
-              setCampusId(event.target.value);
-              setSemesterId('');
-            }}
-          >
-            <option value="">Select campus</option>
-            {campuses.data?.map((campus) => (
-              <option key={campus.id} value={campus.id}>
-                {campus.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {setupView === 'semesters' ? (
+          <label className="campus-picker">
+            Campus
+            <select
+              value={campusId}
+              disabled={campusLocked}
+              onChange={(event) => {
+                setCampusId(event.target.value);
+                setSemesterId('');
+              }}
+            >
+              <option value="">Select campus</option>
+              {campuses.data?.map((campus) => (
+                <option key={campus.id} value={campus.id}>
+                  {campus.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
 
-      {campuses.isError ? (
+      <div className="access-type-tabs academic-setup-tabs" role="group">
+        <button
+          type="button"
+          aria-pressed={setupView === 'semesters'}
+          onClick={() => setSetupView('semesters')}
+        >
+          Semesters
+        </button>
+        <button
+          type="button"
+          aria-pressed={setupView === 'subjects'}
+          onClick={() => setSetupView('subjects')}
+        >
+          Subjects
+        </button>
+      </div>
+
+      {setupView === 'semesters' && campuses.isError ? (
         <p className="form-error" role="alert">
           {campuses.error.message}
         </p>
       ) : null}
 
-      <div className="semester-layout">
-        <div>
-          <CreateSemesterForm
-            campusId={campusId}
-            onCreated={(createdId) => {
-              setSemesterId(createdId);
-              void queryClient.invalidateQueries({
-                queryKey: ['academic', 'semesters', campusId],
-              });
-            }}
-          />
+      {setupView === 'subjects' ? (
+        <SubjectSetup />
+      ) : (
+        <div className="semester-layout">
+          <div>
+            <CreateSemesterForm
+              campusId={campusId}
+              onCreated={(createdId) => {
+                setSemesterId(createdId);
+                void queryClient.invalidateQueries({
+                  queryKey: ['academic', 'semesters', campusId],
+                });
+              }}
+            />
 
-          <div className="semester-list" aria-label="Semesters">
-            {semesters.data?.map((semester) => (
-              <button
-                key={semester.id}
-                className={semester.id === semesterId ? 'selected' : ''}
-                onClick={() => setSemesterId(semester.id)}
-              >
-                <strong>{semester.name}</strong>
-                <span>
-                  {dateOnly(semester.startDate)} → {dateOnly(semester.endDate)}
-                </span>
-                <small>{saturdayLabels[semester.workingSaturdayRule]}</small>
-              </button>
-            ))}
-            {campusId && semesters.data?.length === 0 ? (
-              <p className="empty-copy">No semester created for this campus.</p>
+            <div className="semester-list" aria-label="Semesters">
+              {semesters.data?.map((semester) => (
+                <button
+                  key={semester.id}
+                  className={semester.id === semesterId ? 'selected' : ''}
+                  onClick={() => setSemesterId(semester.id)}
+                >
+                  <strong>{semester.name}</strong>
+                  <span>
+                    {dateOnly(semester.startDate)} →{' '}
+                    {dateOnly(semester.endDate)}
+                  </span>
+                  <small>{saturdayLabels[semester.workingSaturdayRule]}</small>
+                </button>
+              ))}
+              {campusId && semesters.data?.length === 0 ? (
+                <p className="empty-copy">
+                  No semester created for this campus.
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="calendar-detail">
+            {!semesterId ? (
+              <div className="empty-state">
+                <span>01</span>
+                <h3>Select or create a semester</h3>
+                <p>Its calculated working-day summary will appear here.</p>
+              </div>
+            ) : calendar.isLoading ? (
+              <p>Calculating calendar…</p>
+            ) : calendar.isError ? (
+              <p className="form-error" role="alert">
+                {calendar.error.message}
+              </p>
+            ) : calendar.data ? (
+              <>
+                <div className="calendar-summary">
+                  <div>
+                    <span>Total dates</span>
+                    <strong>{calendar.data.summary.totalDays}</strong>
+                  </div>
+                  <div>
+                    <span>Teaching days</span>
+                    <strong>{calendar.data.summary.workingDays}</strong>
+                  </div>
+                  <div>
+                    <span>Non-teaching</span>
+                    <strong>{calendar.data.summary.nonWorkingDays}</strong>
+                  </div>
+                </div>
+
+                <div className="calendar-preview">
+                  <div className="subheading-row">
+                    <h3>Upcoming calendar decisions</h3>
+                    <span>
+                      {calendar.data.semester.workingSaturdayRule.replaceAll(
+                        '_',
+                        ' ',
+                      )}
+                    </span>
+                  </div>
+                  {calendar.data.days
+                    .filter((day) => day.override || day.weekday === 'SATURDAY')
+                    .slice(0, 8)
+                    .map((day) => (
+                      <div className="calendar-row" key={day.date}>
+                        <time>{day.date}</time>
+                        <span>
+                          {day.override?.title ??
+                            day.reason.replaceAll('_', ' ')}
+                        </span>
+                        <b className={day.working ? 'working' : 'closed'}>
+                          {day.working ? 'Teaching' : 'Closed'}
+                        </b>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="setup-forms">
+                  <CalendarDayForm
+                    semesterId={semesterId}
+                    onSaved={refreshCalendar}
+                  />
+                  <ExamWindowForm
+                    semesterId={semesterId}
+                    onSaved={refreshCalendar}
+                  />
+                </div>
+
+                <div className="exam-list">
+                  <h3>Exam windows</h3>
+                  {calendar.data.exams.length ? (
+                    calendar.data.exams.map((exam) => (
+                      <div key={exam.id}>
+                        <strong>{exam.name}</strong>
+                        <span>
+                          {dateOnly(exam.startDate)} → {dateOnly(exam.endDate)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-copy">No exam windows yet.</p>
+                  )}
+                </div>
+              </>
             ) : null}
           </div>
         </div>
-
-        <div className="calendar-detail">
-          {!semesterId ? (
-            <div className="empty-state">
-              <span>01</span>
-              <h3>Select or create a semester</h3>
-              <p>Its calculated working-day summary will appear here.</p>
-            </div>
-          ) : calendar.isLoading ? (
-            <p>Calculating calendar…</p>
-          ) : calendar.isError ? (
-            <p className="form-error" role="alert">
-              {calendar.error.message}
-            </p>
-          ) : calendar.data ? (
-            <>
-              <div className="calendar-summary">
-                <div>
-                  <span>Total dates</span>
-                  <strong>{calendar.data.summary.totalDays}</strong>
-                </div>
-                <div>
-                  <span>Teaching days</span>
-                  <strong>{calendar.data.summary.workingDays}</strong>
-                </div>
-                <div>
-                  <span>Non-teaching</span>
-                  <strong>{calendar.data.summary.nonWorkingDays}</strong>
-                </div>
-              </div>
-
-              <div className="calendar-preview">
-                <div className="subheading-row">
-                  <h3>Upcoming calendar decisions</h3>
-                  <span>
-                    {calendar.data.semester.workingSaturdayRule.replaceAll(
-                      '_',
-                      ' ',
-                    )}
-                  </span>
-                </div>
-                {calendar.data.days
-                  .filter((day) => day.override || day.weekday === 'SATURDAY')
-                  .slice(0, 8)
-                  .map((day) => (
-                    <div className="calendar-row" key={day.date}>
-                      <time>{day.date}</time>
-                      <span>
-                        {day.override?.title ?? day.reason.replaceAll('_', ' ')}
-                      </span>
-                      <b className={day.working ? 'working' : 'closed'}>
-                        {day.working ? 'Teaching' : 'Closed'}
-                      </b>
-                    </div>
-                  ))}
-              </div>
-
-              <div className="setup-forms">
-                <CalendarDayForm
-                  semesterId={semesterId}
-                  onSaved={refreshCalendar}
-                />
-                <ExamWindowForm
-                  semesterId={semesterId}
-                  onSaved={refreshCalendar}
-                />
-              </div>
-
-              <div className="exam-list">
-                <h3>Exam windows</h3>
-                {calendar.data.exams.length ? (
-                  calendar.data.exams.map((exam) => (
-                    <div key={exam.id}>
-                      <strong>{exam.name}</strong>
-                      <span>
-                        {dateOnly(exam.startDate)} → {dateOnly(exam.endDate)}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty-copy">No exam windows yet.</p>
-                )}
-              </div>
-            </>
-          ) : null}
-        </div>
-      </div>
+      )}
     </section>
+  );
+}
+
+function SubjectSetup() {
+  const queryClient = useQueryClient();
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [savedSubject, setSavedSubject] = useState('');
+  const subjects = useQuery({
+    queryKey: ['academic', 'subjects'],
+    queryFn: academicApi.subjects,
+  });
+  const mutation = useMutation({
+    mutationFn: () =>
+      academicApi.createSubject({
+        code,
+        name,
+        description: description.trim() || null,
+      }),
+    onSuccess: async (subject) => {
+      setCode('');
+      setName('');
+      setDescription('');
+      setSavedSubject(subject.name);
+      await queryClient.invalidateQueries({
+        queryKey: ['academic', 'subjects'],
+      });
+    },
+  });
+
+  return (
+    <div className="subject-setup-layout">
+      <form
+        className="setup-card subject-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSavedSubject('');
+          mutation.mutate();
+        }}
+      >
+        <h3>Add subject</h3>
+        <label>
+          Subject code
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="CS-DSA"
+            required
+          />
+        </label>
+        <label>
+          Subject name
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Data Structures and Algorithms"
+            required
+          />
+        </label>
+        <label>
+          Description <span className="optional-label">Optional</span>
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+          />
+        </label>
+        {mutation.error ? (
+          <p className="form-error" role="alert">
+            {mutation.error.message}
+          </p>
+        ) : null}
+        {savedSubject ? (
+          <p className="form-success" role="status">
+            {savedSubject} added.
+          </p>
+        ) : null}
+        <button disabled={mutation.isPending}>
+          {mutation.isPending ? 'Adding…' : 'Add subject'}
+        </button>
+      </form>
+
+      <section
+        className="subject-catalog"
+        aria-labelledby="subject-catalog-title"
+      >
+        <div className="subheading-row">
+          <h3 id="subject-catalog-title">Subject catalog</h3>
+          <span>{subjects.data?.length ?? 0} subjects</span>
+        </div>
+        {subjects.isLoading ? <p>Loading subjects…</p> : null}
+        {subjects.isError ? (
+          <p className="form-error" role="alert">
+            {subjects.error.message}
+          </p>
+        ) : null}
+        <div className="subject-list">
+          {subjects.data?.map((subject) => (
+            <article key={subject.id}>
+              <span>{subject.code}</span>
+              <div>
+                <strong>{subject.name}</strong>
+                {subject.description ? <p>{subject.description}</p> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+        {!subjects.isLoading && subjects.data?.length === 0 ? (
+          <p className="empty-copy">No subjects added yet.</p>
+        ) : null}
+      </section>
+    </div>
   );
 }
 

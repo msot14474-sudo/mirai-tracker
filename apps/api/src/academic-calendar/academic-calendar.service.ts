@@ -1,7 +1,4 @@
-import {
-  CalendarDayType,
-  Prisma,
-} from '@prisma/client';
+import { CalendarDayType, Prisma } from '@prisma/client';
 import {
   BadRequestException,
   ConflictException,
@@ -15,6 +12,7 @@ import {
   CreateCalendarDayInput,
   CreateExamWindowInput,
   CreateSemesterInput,
+  CreateSubjectInput,
   UpdateCalendarDayInput,
   UpdateExamWindowInput,
   UpdateSemesterInput,
@@ -55,6 +53,46 @@ export class AcademicCalendarService {
       select: { id: true, code: true, name: true, timezone: true },
       orderBy: { name: 'asc' },
     });
+  }
+
+  listSubjects(user: AuthenticatedUser) {
+    this.access.assertGlobalManager(user);
+    return this.prisma.subject.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        description: true,
+        active: true,
+      },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  async createSubject(input: CreateSubjectInput, user: AuthenticatedUser) {
+    this.access.assertGlobalManager(user);
+    try {
+      return await this.prisma.subject.create({
+        data: {
+          code: input.code,
+          name: input.name,
+          description: input.description,
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          description: true,
+          active: true,
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        throw new ConflictException('A subject with this code already exists.');
+      }
+      throw error;
+    }
   }
 
   async listSemesters(campusId: string, user: AuthenticatedUser) {

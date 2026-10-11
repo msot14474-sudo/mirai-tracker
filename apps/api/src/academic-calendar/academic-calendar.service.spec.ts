@@ -59,6 +59,7 @@ describe('AcademicCalendarService', () => {
       update: jest.fn(),
       deleteMany: jest.fn(),
     },
+    subject: { findMany: jest.fn(), create: jest.fn() },
   };
   const access = {
     isGlobalManager: jest.fn().mockReturnValue(true),
@@ -92,6 +93,56 @@ describe('AcademicCalendarService', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.semester.create).not.toHaveBeenCalled();
+  });
+
+  it('lists active subjects for a global manager', async () => {
+    prisma.subject.findMany.mockResolvedValueOnce([
+      {
+        id: 'subject-a',
+        code: 'CS-DSA',
+        name: 'Data Structures and Algorithms',
+        description: null,
+        active: true,
+      },
+    ]);
+
+    await expect(service.listSubjects(programManager)).resolves.toHaveLength(1);
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(prisma.subject.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { active: true } }),
+    );
+  });
+
+  it('creates a subject in the shared catalog', async () => {
+    const created = {
+      id: 'subject-a',
+      code: 'CS-DSA',
+      name: 'Data Structures and Algorithms',
+      description: 'Core subject',
+      active: true,
+    };
+    prisma.subject.create.mockResolvedValueOnce(created);
+
+    await expect(
+      service.createSubject(
+        {
+          code: created.code,
+          name: created.name,
+          description: created.description,
+        },
+        programManager,
+      ),
+    ).resolves.toEqual(created);
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(prisma.subject.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          code: created.code,
+          name: created.name,
+          description: created.description,
+        },
+      }),
+    );
   });
 
   it('normalizes an extra working day to teaching allowed', async () => {

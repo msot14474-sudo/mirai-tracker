@@ -83,9 +83,32 @@ export const createExamWindowSchema = z.object({
 
 export const updateExamWindowSchema = createExamWindowSchema.partial();
 
+export const createSubjectSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(64)
+    .regex(
+      /^[A-Za-z0-9._/-]+$/,
+      'Use letters, numbers, dots, slashes, underscores or hyphens.',
+    )
+    .transform((value) => value.toUpperCase()),
+  name: z.string().trim().min(2).max(200),
+  description: z
+    .string()
+    .trim()
+    .max(2000)
+    .nullable()
+    .optional()
+    .default(null)
+    .transform((value) => value || null),
+});
+
 export type CreateSemesterInput = z.infer<typeof createSemesterSchema>;
 export type UpdateSemesterInput = z.infer<typeof updateSemesterSchema>;
 export type CreateCalendarDayInput = z.infer<typeof createCalendarDaySchema>;
 export type UpdateCalendarDayInput = z.infer<typeof updateCalendarDaySchema>;
 export type CreateExamWindowInput = z.infer<typeof createExamWindowSchema>;
 export type UpdateExamWindowInput = z.infer<typeof updateExamWindowSchema>;
+export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;

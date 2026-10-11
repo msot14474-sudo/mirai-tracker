@@ -364,6 +364,79 @@ select {
   align-items: start;
 }
 
+.academic-setup-tabs {
+  margin-top: -0.5rem;
+}
+
+.subject-setup-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.6fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.subject-form {
+  position: sticky;
+  top: 6rem;
+}
+
+.optional-label {
+  color: #77839b;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.subject-catalog {
+  min-height: 360px;
+  padding: 1.2rem;
+  border: 1px solid #d2d5cb;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.subject-catalog .subheading-row {
+  margin-bottom: 0.8rem;
+}
+
+.subject-catalog h3 {
+  margin: 0;
+}
+
+.subject-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.subject-list article {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.25fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  padding: 1rem;
+  border: 1px solid #dbe2ef;
+  border-radius: 0.8rem;
+  background: #f7f9fd;
+}
+
+.subject-list article > span {
+  color: #2455b6;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.subject-list article > div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.subject-list p {
+  margin: 0;
+  color: #6e7a91;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
 .setup-card,
 .calendar-detail,
 .empty-state {
@@ -2059,6 +2132,7 @@ select {
   }
 
   .semester-layout,
+  .subject-setup-layout,
   .faculty-access-layout,
   .setup-forms,
   .import-layout,
@@ -2068,6 +2142,10 @@ select {
   .plan-upload-card,
   .schedule-columns {
     grid-template-columns: 1fr;
+  }
+
+  .subject-form {
+    position: static;
   }
 
   .schedule-metrics {

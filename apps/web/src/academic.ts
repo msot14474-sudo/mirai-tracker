@@ -7,6 +7,14 @@ export type Campus = {
 
 export type SaturdayRule = 'ALL' | 'NONE' | 'SECOND_AND_FOURTH';
 
+export type Subject = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+};
+
 export type Semester = {
   id: string;
   campusId: string;
@@ -78,6 +86,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const academicApi = {
   campuses: () => api<Campus[]>('/academic/campuses'),
+  subjects: () => api<Subject[]>('/academic/subjects'),
+  createSubject: (input: {
+    code: string;
+    name: string;
+    description: string | null;
+  }) =>
+    api<Subject>('/academic/subjects', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   semesters: (campusId: string) =>
     api<Semester[]>(`/academic/campuses/${campusId}/semesters`),
   createSemester: (

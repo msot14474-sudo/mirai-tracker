@@ -18,6 +18,7 @@ import {
   createCalendarDaySchema,
   createExamWindowSchema,
   createSemesterSchema,
+  createSubjectSchema,
   updateCalendarDaySchema,
   updateExamWindowSchema,
   updateSemesterSchema,
@@ -48,6 +49,16 @@ export class AcademicCalendarController {
   @Get('campuses')
   campuses(@CurrentUser() user: AuthenticatedUser) {
     return this.calendar.listAccessibleCampuses(user);
+  }
+
+  @Get('subjects')
+  subjects(@CurrentUser() user: AuthenticatedUser) {
+    return this.calendar.listSubjects(user);
+  }
+
+  @Post('subjects')
+  createSubject(@Body() body: unknown, @CurrentUser() user: AuthenticatedUser) {
+    return this.calendar.createSubject(parse(createSubjectSchema, body), user);
   }
 
   @Get('campuses/:campusId/semesters')

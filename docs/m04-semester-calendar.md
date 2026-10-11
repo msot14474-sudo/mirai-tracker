@@ -22,6 +22,8 @@ All routes require an authenticated M03 session.
 | Method and route                                     | Purpose                                      |
 | ---------------------------------------------------- | -------------------------------------------- |
 | `GET /academic/campuses`                             | List campuses visible to the current user    |
+| `GET /academic/subjects`                             | List the shared active subject catalog       |
+| `POST /academic/subjects`                            | Add a subject to the shared catalog          |
 | `GET /academic/campuses/:campusId/semesters`         | List campus semesters                        |
 | `POST /academic/campuses/:campusId/semesters`        | Create a semester                            |
 | `GET /academic/semesters/:semesterId`                | Read setup, overrides and exams              |
@@ -42,7 +44,7 @@ All calendar math uses UTC accessors over date-only values. This prevents an `As
 
 ## Interface
 
-The Program Manager workspace provides campus selection, semester creation, Saturday-rule selection, calculated teaching/non-teaching totals, a preview of Saturdays and overrides, holiday/event/extra-day creation, exam-window creation and an exam summary. It collapses to a single-column flow on phones.
+Academic setup has separate Semesters and Subjects views. The Semesters view provides campus selection, semester creation, Saturday-rule selection, calculated teaching/non-teaching totals, a preview of Saturdays and overrides, holiday/event/extra-day creation, exam-window creation and an exam summary. The Subjects view lets Admin and Program Manager users add a code, name and optional description to the shared catalog and review all active subjects. Both views collapse to a single-column flow on phones.
 
 ## Fictional sample
 
@@ -50,4 +52,4 @@ The idempotent seed adds four sample calendar decisions to the HI-Tech semesterâ
 
 ## Verification
 
-Unit tests cover all/none/second-and-fourth Saturdays across January through March 2026, the fifth-Saturday edge case, holiday precedence, a working Sunday, events with and without teaching, range enforcement, semester validation, override boundaries, exam deadlines, exam overlap and permission enforcement. A separate PostgreSQL integration test proves the database's one-override-per-date constraint when infrastructure is available.
+Unit tests cover all/none/second-and-fourth Saturdays across January through March 2026, the fifth-Saturday edge case, holiday precedence, a working Sunday, events with and without teaching, range enforcement, semester validation, override boundaries, exam deadlines, exam overlap, subject listing and creation, and permission enforcement. A frontend test verifies the complete add-subject flow. A separate PostgreSQL integration test proves the database's one-override-per-date constraint when infrastructure is available.
