@@ -60,6 +60,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Enlarged the centered sign-in wordmark, faculty portrait and campaign headline as one aligned composition.
 - [x] Replaced the sign-in portrait with a clearer transparent cutout from the provided faculty photograph.
 - [x] Enlarged the replacement portrait and corrected its preload so the complete sign-in composition reveals together.
+- [x] Lifted the desktop wordmark into the available top space to keep a clear gap above the enlarged faculty portrait.
 
 ## Next implementation sequence
 

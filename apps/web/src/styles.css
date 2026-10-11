@@ -7157,6 +7157,7 @@ textarea:focus {
   width: min(24rem, 78vw);
   height: 6.15rem;
   margin-inline: auto;
+  transform: translateY(-1.5rem);
 }
 
 .auth-shell .auth-wordmark-frame img {
@@ -7939,6 +7940,7 @@ textarea:focus {
     width: min(17rem, 72vw);
     height: 4.5rem;
     margin: 0;
+    transform: none;
   }
 
   .auth-shell .auth-wordmark-frame img {
