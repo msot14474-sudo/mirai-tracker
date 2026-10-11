@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
@@ -9,17 +9,16 @@ export function TopicScheduleWorkspace() {
   const offerings = useQuery({
     queryKey: ['topic-schedules', 'offerings'],
     queryFn: topicScheduleApi.offerings,
+    staleTime: 60_000,
   });
+  const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
   const detail = useQuery({
-    queryKey: ['topic-schedules', 'offering', offeringId],
-    queryFn: () => topicScheduleApi.offering(offeringId),
-    enabled: Boolean(offeringId),
+    queryKey: ['topic-schedules', 'offering', selectedOfferingId],
+    queryFn: () => topicScheduleApi.offering(selectedOfferingId),
+    enabled: Boolean(selectedOfferingId),
+    staleTime: 60_000,
   });
-  useEffect(() => {
-    if (!offeringId && offerings.data?.[0]) setOfferingId(offerings.data[0].id);
-  }, [offeringId, offerings.data]);
-  const selectionIsLoading =
-    offerings.isLoading || (!offeringId && Boolean(offerings.data?.length));
+  const selectionIsLoading = offerings.isLoading;
 
   return (
     <section
@@ -56,7 +55,9 @@ export function TopicScheduleWorkspace() {
           offerings.data?.map((offering) => (
             <button
               key={offering.id}
-              className={offering.id === offeringId ? 'selected' : ''}
+              className={
+                offering.id === selectedOfferingId ? 'selected' : ''
+              }
               onClick={() => setOfferingId(offering.id)}
             >
               <strong>{offering.subject.name}</strong>
@@ -75,7 +76,7 @@ export function TopicScheduleWorkspace() {
 
       {selectionIsLoading ? (
         <LoadingSkeleton variant="table" label="Loading planned dates" />
-      ) : !offeringId ? (
+      ) : !selectedOfferingId ? (
         <div className="empty-state compact-empty">
           <span>01</span>
           <h3>No subject offerings</h3>

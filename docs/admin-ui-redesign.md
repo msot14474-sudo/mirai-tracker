@@ -55,6 +55,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added a bounded authentication preloader fallback so hidden desktop assets cannot block the mobile sign-in screen.
 - [x] Kept the original split sign-in composition and added clear spacing between the faculty laptop and the `Course progression` label.
 - [x] Fixed password-reset submission feedback so the action stays usable and clearly explains the 12-character requirement instead of silently disabling the button.
+- [x] Removed the forced workspace-navigation pause, preloaded lazy workspace bundles and warmed Subject Planner offerings and first-detail queries for faster page changes.
 
 ## Next implementation sequence
 

@@ -14,17 +14,16 @@ export function LessonPlanWorkspace() {
   const offerings = useQuery({
     queryKey: ['lesson-plans', 'offerings'],
     queryFn: lessonPlanApi.offerings,
+    staleTime: 60_000,
   });
+  const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
   const detail = useQuery({
-    queryKey: ['lesson-plans', 'offering', offeringId],
-    queryFn: () => lessonPlanApi.offering(offeringId),
-    enabled: Boolean(offeringId),
+    queryKey: ['lesson-plans', 'offering', selectedOfferingId],
+    queryFn: () => lessonPlanApi.offering(selectedOfferingId),
+    enabled: Boolean(selectedOfferingId),
+    staleTime: 60_000,
   });
-  useEffect(() => {
-    if (!offeringId && offerings.data?.[0]) setOfferingId(offerings.data[0].id);
-  }, [offeringId, offerings.data]);
-  const selectionIsLoading =
-    offerings.isLoading || (!offeringId && Boolean(offerings.data?.length));
+  const selectionIsLoading = offerings.isLoading;
 
   return (
     <section
@@ -65,7 +64,9 @@ export function LessonPlanWorkspace() {
             offerings.data?.map((offering) => (
               <button
                 key={offering.id}
-                className={offering.id === offeringId ? 'selected' : ''}
+                className={
+                  offering.id === selectedOfferingId ? 'selected' : ''
+                }
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>
@@ -90,7 +91,7 @@ export function LessonPlanWorkspace() {
         <div className="plan-detail">
           {selectionIsLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />
-          ) : !offeringId ? (
+          ) : !selectedOfferingId ? (
             <div className="empty-state">
               <span>01</span>
               <h3>No subject offerings</h3>

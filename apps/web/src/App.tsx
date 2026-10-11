@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { FormEvent, lazy, Suspense, useEffect, useState } from 'react';
 import { academicApi, Campus } from './academic';
 import {
@@ -948,7 +953,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     : roleLabels.PROGRAM_MANAGER;
   const [selectedCampusId, setSelectedCampusId] = useState('');
   const [activeView, setActiveView] = useState<DashboardView>('overview');
-  const [pendingView, setPendingView] = useState<DashboardView | null>(null);
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const campuses = useQuery({
@@ -960,21 +964,11 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     (campus) => campus.id === selectedCampusId,
   );
   useEffect(() => {
-    if (!pendingView) return;
-    const delay = prefersReducedMotion() ? 0 : 140;
-    const timer = window.setTimeout(() => {
-      setActiveView(pendingView);
-      setPendingView(null);
-    }, delay);
-    return () => window.clearTimeout(timer);
-  }, [pendingView]);
-  useEffect(() => {
     if (!isLeavingDashboard) return;
     const delay = prefersReducedMotion() ? 0 : 180;
     const timer = window.setTimeout(() => {
       setSelectedCampusId('');
       setActiveView('overview');
-      setPendingView(null);
     }, delay);
     return () => window.clearTimeout(timer);
   }, [isLeavingDashboard]);
@@ -1016,6 +1010,31 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     mutationFn: logout,
     onSuccess: () => queryClient.setQueryData(currentUserKey, null),
   });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void Promise.allSettled([
+        import('./SemesterSetup'),
+        import('./SemesterImport'),
+        import('./TimetableSetup'),
+        import('./LessonPlanWorkspace'),
+        import('./TopicScheduleWorkspace'),
+        import('./SessionLoggingWorkspace'),
+        import('./ProgressDashboard'),
+        import('./ExamReadinessView'),
+        import('./StudentOverview'),
+        import('./AlertCenter'),
+        import('./ExportCenter'),
+        import('./FacultyAccessWorkspace'),
+      ]);
+
+      if (canManageLessonPlans) {
+        void warmLessonPlanWorkspace(queryClient);
+        void warmTopicScheduleWorkspace(queryClient);
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [canManageLessonPlans, queryClient]);
 
   if (isGlobalAdministrator && !selectedCampus) {
     return (
@@ -1143,8 +1162,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
   function openView(view: DashboardView) {
     setProfileMenuOpen(false);
-    if (view === activeView && !pendingView) return;
-    setPendingView(view);
+    if (view === activeView) return;
+    if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient);
+    if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient);
+    setActiveView(view);
   }
 
   function renderActiveView() {
@@ -1317,10 +1338,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       </aside>
 
       <div className="dashboard-main">
-        <div
-          className={`workspace-transition-curtain ${pendingView ? 'is-active' : ''}`}
-          aria-hidden="true"
-        />
         <header className="topbar">
           <div className="topbar-title">
             <div>
@@ -1362,7 +1379,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <section
             key={activeView}
             id={activeView}
-            className={`dashboard-view ${pendingView ? 'workspace-view-exit' : 'workspace-view-enter'}`}
+            className="dashboard-view workspace-view-enter"
             aria-label={activeViewLabel}
           >
             <Suspense
@@ -1387,6 +1404,48 @@ function prefersReducedMotion() {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+}
+
+async function warmLessonPlanWorkspace(queryClient: QueryClient) {
+  try {
+    const { lessonPlanApi } = await import('./lessonPlans');
+    const offerings = await queryClient.fetchQuery({
+      queryKey: ['lesson-plans', 'offerings'],
+      queryFn: lessonPlanApi.offerings,
+      staleTime: 60_000,
+    });
+    const firstOffering = offerings[0];
+    if (firstOffering) {
+      await queryClient.prefetchQuery({
+        queryKey: ['lesson-plans', 'offering', firstOffering.id],
+        queryFn: () => lessonPlanApi.offering(firstOffering.id),
+        staleTime: 60_000,
+      });
+    }
+  } catch {
+    // The workspace itself presents a retryable error if background warming fails.
+  }
+}
+
+async function warmTopicScheduleWorkspace(queryClient: QueryClient) {
+  try {
+    const { topicScheduleApi } = await import('./topicSchedules');
+    const offerings = await queryClient.fetchQuery({
+      queryKey: ['topic-schedules', 'offerings'],
+      queryFn: topicScheduleApi.offerings,
+      staleTime: 60_000,
+    });
+    const firstOffering = offerings[0];
+    if (firstOffering) {
+      await queryClient.prefetchQuery({
+        queryKey: ['topic-schedules', 'offering', firstOffering.id],
+        queryFn: () => topicScheduleApi.offering(firstOffering.id),
+        staleTime: 60_000,
+      });
+    }
+  } catch {
+    // The workspace itself presents a retryable error if background warming fails.
+  }
 }
 
 export function App() {
