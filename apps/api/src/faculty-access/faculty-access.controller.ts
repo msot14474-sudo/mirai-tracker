@@ -11,7 +11,10 @@ import { z } from 'zod';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
 import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
-import { createFacultySchema } from './faculty-access.schemas';
+import {
+  createAccessAccountSchema,
+  createFacultySchema,
+} from './faculty-access.schemas';
 import { FacultyAccessService } from './faculty-access.service';
 
 const managers = [
@@ -34,7 +37,7 @@ export class FacultyAccessController {
   }
 
   @Post('campuses/:campusId/faculty')
-  create(
+  createFaculty(
     @Param('campusId') campusId: string,
     @Body() body: unknown,
     @CurrentUser() user: AuthenticatedUser,
@@ -42,6 +45,32 @@ export class FacultyAccessController {
     return this.facultyAccess.createFaculty(
       parse(uuidSchema, campusId),
       parse(createFacultySchema, body),
+      user,
+    );
+  }
+
+  @Post('campuses/:campusId/managers')
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
+  createCampusManager(
+    @Param('campusId') campusId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.facultyAccess.createCampusManager(
+      parse(uuidSchema, campusId),
+      parse(createAccessAccountSchema, body),
+      user,
+    );
+  }
+
+  @Post('administrators')
+  @Roles(UserRole.ADMIN)
+  createAdministrator(
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.facultyAccess.createAdministrator(
+      parse(createAccessAccountSchema, body),
       user,
     );
   }

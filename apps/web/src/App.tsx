@@ -687,7 +687,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       ? [
           {
             id: 'faculty-access' as const,
-            label: 'Faculty access',
+            label: 'User access',
             icon: 'faculty' as const,
           },
         ]
@@ -791,6 +791,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <FacultyAccessWorkspace
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
+            canCreateCampusManagers={roles.some(
+              (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
+            )}
+            canCreateAdministrators={roles.includes('ADMIN')}
           />
         );
       case 'timetable':

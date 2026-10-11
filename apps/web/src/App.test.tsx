@@ -375,7 +375,7 @@ describe('App authentication', () => {
       await screen.findByRole('heading', { name: 'Welcome back, Campus' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Faculty access' }),
+      screen.getByRole('button', { name: 'User access' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Timetable' }),
@@ -390,10 +390,10 @@ describe('App authentication', () => {
       screen.queryByRole('heading', { name: 'Semester import' }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Faculty access' }));
+    fireEvent.click(screen.getByRole('button', { name: 'User access' }));
     expect(
       await screen.findByRole('heading', {
-        name: 'Faculty access',
+        name: 'User access',
         level: 2,
       }),
     ).toBeInTheDocument();
@@ -406,7 +406,7 @@ describe('App authentication', () => {
       await screen.findByRole('heading', { name: 'Weekly timetable' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: 'Faculty access', level: 2 }),
+      screen.queryByRole('heading', { name: 'User access', level: 2 }),
     ).not.toBeInTheDocument();
   });
 });

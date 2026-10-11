@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { StaffType, UserRole, UserStatus } from '@prisma/client';
 import { FacultyAccessService } from './faculty-access.service';
 
@@ -12,6 +12,18 @@ const actor = {
   roles: [{ role: UserRole.CAMPUS_MANAGER, campusId }],
   staffProfileId: null,
   studentProfile: null,
+};
+
+const programManager = {
+  ...actor,
+  id: 'program-manager-a',
+  roles: [{ role: UserRole.PROGRAM_MANAGER, campusId: null }],
+};
+
+const administrator = {
+  ...actor,
+  id: 'admin-a',
+  roles: [{ role: UserRole.ADMIN, campusId: null }],
 };
 
 describe('FacultyAccessService', () => {
@@ -33,7 +45,10 @@ describe('FacultyAccessService', () => {
       work(transaction),
     ),
   };
-  const access = { assertCanManageCampus: jest.fn() };
+  const access = {
+    assertCanManageCampus: jest.fn(),
+    assertGlobalManager: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -140,6 +155,92 @@ describe('FacultyAccessService', () => {
         actor,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(userCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a campus-scoped Campus Manager account for a global manager', async () => {
+    userCreate.mockResolvedValue({
+      id: 'campus-manager-user-a',
+      name: 'New Campus Manager',
+      email: 'campus.manager@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+    });
+
+    const result = await service().createCampusManager(
+      campusId,
+      {
+        name: 'New Campus Manager',
+        email: 'campus.manager@example.edu',
+        notificationEmail: null,
+        password: 'a-strong-temporary-password',
+      },
+      programManager,
+    );
+
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(userCreate.mock.calls[0][0].data.roleAssignments.create).toEqual({
+      role: UserRole.CAMPUS_MANAGER,
+      campusId,
+      scopeKey: campusId,
+    });
+    expect(result).toMatchObject({
+      role: UserRole.CAMPUS_MANAGER,
+      campusId,
+      passwordStoredAsHash: true,
+    });
+  });
+
+  it('creates a global Administrator account only for an Administrator', async () => {
+    userCreate.mockResolvedValue({
+      id: 'admin-user-b',
+      name: 'New Administrator',
+      email: 'new.admin@example.edu',
+      notificationEmail: 'otp@example.edu',
+      status: UserStatus.ACTIVE,
+    });
+
+    const result = await service().createAdministrator(
+      {
+        name: 'New Administrator',
+        email: 'new.admin@example.edu',
+        notificationEmail: 'otp@example.edu',
+        password: 'a-strong-temporary-password',
+      },
+      administrator,
+    );
+
+    expect(userCreate.mock.calls[0][0].data.roleAssignments.create).toEqual({
+      role: UserRole.ADMIN,
+      campusId: null,
+      scopeKey: 'GLOBAL',
+    });
+    expect(auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: administrator.id,
+        campusId: null,
+        entityType: 'UserAccess',
+        after: expect.objectContaining({ role: UserRole.ADMIN }),
+      }),
+    });
+    expect(JSON.stringify(auditCreate.mock.calls[0][0])).not.toContain(
+      'a-strong-temporary-password',
+    );
+    expect(result).toMatchObject({ role: UserRole.ADMIN, campusId: null });
+  });
+
+  it('rejects Administrator creation by a Program Manager', async () => {
+    await expect(
+      service().createAdministrator(
+        {
+          name: 'New Administrator',
+          email: 'new.admin@example.edu',
+          notificationEmail: null,
+          password: 'a-strong-temporary-password',
+        },
+        programManager,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userCreate).not.toHaveBeenCalled();
   });
 });

@@ -50,6 +50,11 @@ export type CreateFacultyInput = {
   offeringIds: string[];
 };
 
+export type CreateAccessAccountInput = Pick<
+  CreateFacultyInput,
+  'name' | 'email' | 'notificationEmail' | 'password'
+>;
+
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -84,4 +89,14 @@ export const facultyAccessApi = {
       `/faculty-access/campuses/${campusId}/faculty`,
       { method: 'POST', body: JSON.stringify(input) },
     ),
+  createCampusManager: (campusId: string, input: CreateAccessAccountInput) =>
+    api<{ role: 'CAMPUS_MANAGER'; campusId: string }>(
+      `/faculty-access/campuses/${campusId}/managers`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+  createAdministrator: (input: CreateAccessAccountInput) =>
+    api<{ role: 'ADMIN'; campusId: null }>('/faculty-access/administrators', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 };

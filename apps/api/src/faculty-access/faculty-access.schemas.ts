@@ -2,7 +2,7 @@ import { StaffType } from '@prisma/client';
 import { z } from 'zod';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
 
-export const createFacultySchema = z.object({
+const accessAccountFields = {
   name: z.string().trim().min(2).max(160),
   email: z
     .string()
@@ -19,6 +19,13 @@ export const createFacultySchema = z.object({
     .nullable()
     .optional()
     .default(null),
+  password: z.string().min(12).max(256),
+};
+
+export const createAccessAccountSchema = z.object(accessAccountFields);
+
+export const createFacultySchema = z.object({
+  ...accessAccountFields,
   employeeCode: z
     .string()
     .trim()
@@ -27,7 +34,6 @@ export const createFacultySchema = z.object({
     .regex(/^[A-Za-z0-9._/-]+$/)
     .transform((value) => value.toUpperCase()),
   staffType: z.nativeEnum(StaffType),
-  password: z.string().min(12).max(256),
   offeringIds: z
     .array(uuidSchema)
     .max(50)
@@ -37,4 +43,7 @@ export const createFacultySchema = z.object({
     .default([]),
 });
 
+export type CreateAccessAccountInput = z.infer<
+  typeof createAccessAccountSchema
+>;
 export type CreateFacultyInput = z.infer<typeof createFacultySchema>;

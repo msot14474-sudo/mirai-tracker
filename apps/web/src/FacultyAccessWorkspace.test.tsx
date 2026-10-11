@@ -21,13 +21,18 @@ function response(value: unknown) {
   });
 }
 
-function renderWorkspace() {
+function renderWorkspace(
+  props: {
+    canCreateCampusManagers?: boolean;
+    canCreateAdministrators?: boolean;
+  } = {},
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <FacultyAccessWorkspace />
+      <FacultyAccessWorkspace {...props} />
     </QueryClientProvider>,
   );
 }
@@ -79,7 +84,7 @@ describe('FacultyAccessWorkspace', () => {
 
     renderWorkspace();
     expect(
-      await screen.findByRole('heading', { name: 'Faculty access' }),
+      await screen.findByRole('heading', { name: 'User access' }),
     ).toBeInTheDocument();
     const offering = await screen.findByLabelText(/CS-DSA/);
     fireEvent.change(screen.getByLabelText('Full name'), {
@@ -110,6 +115,100 @@ describe('FacultyAccessWorkspace', () => {
         email: 'asha@example.edu',
         employeeCode: 'FAC-101',
         offeringIds: ['offering-a'],
+      });
+    });
+  });
+
+  it('lets an administrator create campus managers and administrators', async () => {
+    const requests: Array<{
+      url: string;
+      method?: string;
+      body?: string;
+    }> = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      requests.push({
+        url,
+        method: init?.method,
+        body: init?.body?.toString(),
+      });
+      if (url.endsWith('/academic/campuses')) {
+        return response([
+          {
+            id: 'campus-a',
+            code: 'HI-TECH',
+            name: 'HI-Tech',
+            timezone: 'Asia/Kolkata',
+          },
+        ]);
+      }
+      if (init?.method === 'POST')
+        return response({ account: { id: 'user-b' } });
+      return response({
+        campus: {
+          id: 'campus-a',
+          code: 'HI-TECH',
+          name: 'HI-Tech',
+          timezone: 'Asia/Kolkata',
+          active: true,
+        },
+        faculty: [],
+        offerings: [],
+      });
+    });
+
+    renderWorkspace({
+      canCreateCampusManagers: true,
+      canCreateAdministrators: true,
+    });
+    await screen.findByRole('heading', { name: 'User access' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Campus Manager' }));
+    fireEvent.change(screen.getByLabelText('Full name'), {
+      target: { value: 'New Campus Manager' },
+    });
+    fireEvent.change(screen.getByLabelText('Login email'), {
+      target: { value: 'campus.manager@example.edu' },
+    });
+    fireEvent.change(screen.getByLabelText(/Account password/), {
+      target: { value: 'a-strong-temporary-password' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Create campus manager' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Campus Manager access created',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Administrator' }));
+    fireEvent.change(screen.getByLabelText('Full name'), {
+      target: { value: 'New Administrator' },
+    });
+    fireEvent.change(screen.getByLabelText('Login email'), {
+      target: { value: 'new.admin@example.edu' },
+    });
+    fireEvent.change(screen.getByLabelText(/Account password/), {
+      target: { value: 'another-strong-password' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Create administrator' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Administrator access created',
+    );
+
+    await waitFor(() => {
+      const posts = requests.filter((request) => request.method === 'POST');
+      expect(posts).toHaveLength(2);
+      expect(posts[0]?.url).toContain('/campuses/campus-a/managers');
+      expect(posts[1]?.url).toContain('/faculty-access/administrators');
+      expect(JSON.parse(posts[0]!.body!)).toMatchObject({
+        name: 'New Campus Manager',
+        email: 'campus.manager@example.edu',
+      });
+      expect(JSON.parse(posts[1]!.body!)).toMatchObject({
+        name: 'New Administrator',
+        email: 'new.admin@example.edu',
       });
     });
   });

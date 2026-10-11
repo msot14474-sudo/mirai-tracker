@@ -43,14 +43,16 @@ All four use the value of `DEMO_USER_PASSWORD` at seed time. `DEMO_NOTIFICATION_
 
 ## API surface
 
-| Endpoint                                          | Access        | Result                                                                 |
-| ------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
-| `POST /auth/login`                                | Public        | Verifies the password and emails an OTP challenge                      |
-| `POST /auth/verify-otp`                           | Public        | Consumes the OTP and creates the server session cookie                 |
-| `GET /auth/me`                                    | Authenticated | Returns current identity, roles and scopes                             |
-| `POST /auth/logout`                               | Authenticated | Revokes the session and clears the cookie                              |
-| `GET /faculty-access/campuses/:campusId`          | Manager       | Lists faculty and assignable subjects in an authorized campus          |
-| `POST /faculty-access/campuses/:campusId/faculty` | Manager       | Creates a campus-scoped faculty login and optional subject assignments |
+| Endpoint                                           | Access         | Result                                                                 |
+| -------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
+| `POST /auth/login`                                 | Public         | Verifies the password and emails an OTP challenge                      |
+| `POST /auth/verify-otp`                            | Public         | Consumes the OTP and creates the server session cookie                 |
+| `GET /auth/me`                                     | Authenticated  | Returns current identity, roles and scopes                             |
+| `POST /auth/logout`                                | Authenticated  | Revokes the session and clears the cookie                              |
+| `GET /faculty-access/campuses/:campusId`           | Manager        | Lists faculty and assignable subjects in an authorized campus          |
+| `POST /faculty-access/campuses/:campusId/faculty`  | Manager        | Creates a campus-scoped faculty login and optional subject assignments |
+| `POST /faculty-access/campuses/:campusId/managers` | Global manager | Creates a Campus Manager scoped to the selected campus                 |
+| `POST /faculty-access/administrators`              | Administrator  | Creates another global Administrator account                           |
 
 The React client restores the session through `/auth/me`, shows the login form when no session exists, and displays workspaces based on the returned role. These interface choices help users navigate; the API remains the source of enforcement.
 

@@ -11,6 +11,7 @@ import {
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,7 +20,10 @@ import { AccessPolicyService } from '../auth/access-policy.service';
 import { hashPassword } from '../auth/password';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
-import { CreateFacultyInput } from './faculty-access.schemas';
+import {
+  CreateAccessAccountInput,
+  CreateFacultyInput,
+} from './faculty-access.schemas';
 
 @Injectable()
 export class FacultyAccessService {
@@ -253,6 +257,103 @@ export class FacultyAccessService {
       ) {
         throw new ConflictException(
           'A faculty account with this email or employee code already exists.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  async createCampusManager(
+    campusId: string,
+    input: CreateAccessAccountInput,
+    actor: AuthenticatedUser,
+  ) {
+    await this.requireCampus(campusId);
+    this.access.assertGlobalManager(actor);
+    return this.createRoleAccount(
+      input,
+      actor,
+      UserRole.CAMPUS_MANAGER,
+      campusId,
+    );
+  }
+
+  async createAdministrator(
+    input: CreateAccessAccountInput,
+    actor: AuthenticatedUser,
+  ) {
+    if (!actor.roles.some((assignment) => assignment.role === UserRole.ADMIN)) {
+      throw new ForbiddenException(
+        'Only an existing Administrator can create another Administrator.',
+      );
+    }
+    return this.createRoleAccount(input, actor, UserRole.ADMIN, null);
+  }
+
+  private async createRoleAccount(
+    input: CreateAccessAccountInput,
+    actor: AuthenticatedUser,
+    role: UserRole,
+    campusId: string | null,
+  ) {
+    const credential = await hashPassword(input.password);
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const created = await transaction.user.create({
+          data: {
+            name: input.name,
+            email: input.email,
+            notificationEmail: input.notificationEmail,
+            status: UserStatus.ACTIVE,
+            passwordCredential: { create: credential },
+            roleAssignments: {
+              create: {
+                role,
+                campusId,
+                scopeKey: campusId ?? 'GLOBAL',
+              },
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            notificationEmail: true,
+            status: true,
+          },
+        });
+
+        await transaction.auditEvent.create({
+          data: {
+            actorId: actor.id,
+            campusId,
+            action: AuditAction.CREATE,
+            entityType: 'UserAccess',
+            entityId: created.id,
+            after: {
+              name: created.name,
+              email: created.email,
+              notificationEmail: created.notificationEmail,
+              role,
+              scopeKey: campusId ?? 'GLOBAL',
+            },
+          },
+        });
+
+        return {
+          account: created,
+          role,
+          campusId,
+          passwordStoredAsHash: true,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'An account with this login email already exists.',
         );
       }
       throw error;

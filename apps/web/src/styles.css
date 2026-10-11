@@ -1784,6 +1784,48 @@ select {
   align-items: start;
 }
 
+.faculty-access-layout.single-column {
+  grid-template-columns: minmax(0, 720px);
+}
+
+.access-type-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  padding: 0.3rem;
+  border: 1px solid var(--mirai-line);
+  border-radius: 0.85rem;
+  background: #f3f6fc;
+}
+
+.access-type-tabs button {
+  padding: 0.65rem 0.9rem;
+  border: 0;
+  border-radius: 0.65rem;
+  color: #5d6b85;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.access-type-tabs button[aria-pressed='true'] {
+  color: var(--mirai-blue);
+  background: #fff;
+  box-shadow: 0 0.35rem 1rem rgba(36, 92, 219, 0.12);
+}
+
+.access-type-tabs button:focus-visible {
+  outline: 2px solid #7ba0ee;
+  outline-offset: 2px;
+}
+
+.access-scope-copy {
+  margin: 0.3rem 0 0;
+  color: var(--mirai-muted);
+  font-size: 0.78rem;
+}
+
 .faculty-access-form {
   gap: 0.8rem;
 }

@@ -18,7 +18,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Simplified the alert center while retaining all lecture and delivery details.
 - [x] Removed milestone and tutorial copy from administrator workspaces.
 - [x] Updated frontend tests for the concise interface.
-- [x] Verified all 45 frontend tests, TypeScript checks and the production build.
+- [x] Verified all 46 frontend tests, TypeScript checks and the production build.
 - [x] Checked the cleaned interface in a browser with a Campus Manager session.
 - [x] Designed the Admin campus-selection entry screen and selected-campus workspace in Figma.
 - [x] Added the personalized `Welcome back, {first name}` administrator greeting.
@@ -32,12 +32,13 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added a personalized campus welcome, real campus context and role-aware quick actions.
 - [x] Added subtle Mirai orbit motion with reduced-motion support.
 - [x] Split semester import, exam readiness and planned dates into their own sidebar views.
+- [x] Expanded User access to create Faculty, Campus Manager and Administrator accounts with role-safe scope.
 
 ## Next implementation sequence
 
 - [ ] Connect campus-specific overview metrics and today's lecture table to live data.
 - [ ] Apply the same layout system to timetable setup.
-- [ ] Apply it to faculty access.
+- [x] Apply it to user access.
 - [ ] Apply it to lesson plans and planned topic dates.
 - [ ] Apply it to progress dashboards and exam readiness.
 - [ ] Apply it to exports and alerts.
