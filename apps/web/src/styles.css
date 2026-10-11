@@ -7148,13 +7148,15 @@ textarea:focus {
 }
 
 .auth-shell .auth-brand {
+  width: 100%;
   margin: 0;
+  justify-content: center;
 }
 
 .auth-shell .auth-wordmark-frame {
   width: min(22rem, 76vw);
   height: 5.5rem;
-  margin-left: 0;
+  margin-inline: auto;
 }
 
 .auth-shell .auth-wordmark-frame img {
@@ -7166,7 +7168,10 @@ textarea:focus {
 .brand-statement {
   position: relative;
   z-index: 1;
+  width: min(100%, 36rem);
   max-width: 36rem;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .brand-panel .brand-statement .eyebrow {
@@ -7464,13 +7469,14 @@ textarea:focus {
 .auth-portrait {
   position: absolute;
   top: 14%;
-  left: var(--auth-panel-space);
+  left: 50%;
   z-index: 1;
   display: grid;
   width: min(20rem, 61%);
   height: min(46vh, 27rem);
   place-items: center;
   pointer-events: none;
+  translate: -50% 0;
   transform: none;
   animation: auth-portrait-enter 920ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
