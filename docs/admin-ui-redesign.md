@@ -38,6 +38,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Replaced plain data-loading messages with responsive content-shaped shimmer skeletons across the frontend.
 - [x] Removed decorative boxed header icons and kept page titles aligned without empty visual space.
 - [x] Normalized workspace spacing, control heights and disabled-action contrast across the administrator interface.
+- [x] Added smooth campus and workspace navigation transitions with reduced-motion support.
 
 ## Next implementation sequence
 

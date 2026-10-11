@@ -4613,6 +4613,37 @@ textarea:focus {
   min-width: 0;
 }
 
+.route-surface-enter {
+  animation: route-surface-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.workspace-view-enter {
+  transform-origin: top center;
+  animation: workspace-view-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes route-surface-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes workspace-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.65rem) scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .dashboard-view > * {
   width: 100%;
   max-width: none;
@@ -5293,6 +5324,7 @@ textarea:focus {
   min-height: 100vh;
   color: var(--mirai-ink);
   background: #f3f6fc;
+  animation: route-surface-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .campus-gateway-sidebar {
@@ -5869,8 +5901,12 @@ textarea:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .route-surface-enter,
+  .workspace-view-enter,
+  .campus-gateway,
   .campus-choice,
   .campus-choice-arrow {
+    animation: none;
     transition: none;
   }
 

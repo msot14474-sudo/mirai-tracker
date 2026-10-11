@@ -874,7 +874,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   }
 
   return (
-    <main className="dashboard-shell">
+    <main className="dashboard-shell route-surface-enter">
       <aside className="app-sidebar">
         <button
           type="button"
@@ -958,8 +958,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
         <div className="dashboard-content" aria-live="polite">
           <section
+            key={activeView}
             id={activeView}
-            className="dashboard-view"
+            className="dashboard-view workspace-view-enter"
             aria-label={activeNavigationItem.label}
           >
             <Suspense
