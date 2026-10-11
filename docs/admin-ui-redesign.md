@@ -59,6 +59,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Centered the complete sign-in hero composition across the blue panel while preserving laptop-to-label spacing.
 - [x] Enlarged the centered sign-in wordmark, faculty portrait and campaign headline as one aligned composition.
 - [x] Replaced the sign-in portrait with a clearer transparent cutout from the provided faculty photograph.
+- [x] Enlarged the replacement portrait and corrected its preload so the complete sign-in composition reveals together.
 
 ## Next implementation sequence
 

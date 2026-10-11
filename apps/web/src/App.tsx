@@ -441,7 +441,7 @@ function LoginScreen() {
     const reveal = () => {
       if (!cancelled) setAssetsReady(true);
     };
-    const fallbackTimer = window.setTimeout(reveal, 1_000);
+    const fallbackTimer = window.setTimeout(reveal, 5_000);
     const sources = [
       '/mirai-wordmark-light-hd.png',
       '/mirai-faculty-hero-v2.png',
@@ -559,7 +559,12 @@ function LoginScreen() {
           </span>
         </div>
         <div className="auth-portrait" aria-hidden="true">
-          <img src="/mirai-faculty-hero-v2.png" alt="" fetchPriority="high" />
+          <img
+            src="/mirai-faculty-hero-v2.png"
+            alt=""
+            decoding="sync"
+            fetchPriority="high"
+          />
         </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>
