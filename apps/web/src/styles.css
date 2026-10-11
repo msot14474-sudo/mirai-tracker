@@ -7154,13 +7154,13 @@ textarea:focus {
 }
 
 .auth-shell .auth-wordmark-frame {
-  width: min(22rem, 76vw);
-  height: 5.5rem;
+  width: min(24rem, 78vw);
+  height: 6.15rem;
   margin-inline: auto;
 }
 
 .auth-shell .auth-wordmark-frame img {
-  width: 22rem;
+  width: 24rem;
   filter: none;
   mix-blend-mode: normal;
 }
@@ -7168,8 +7168,8 @@ textarea:focus {
 .brand-statement {
   position: relative;
   z-index: 1;
-  width: min(100%, 36rem);
-  max-width: 36rem;
+  width: min(100%, 40rem);
+  max-width: 40rem;
   margin-inline: auto;
   text-align: center;
 }
@@ -7177,13 +7177,14 @@ textarea:focus {
 .brand-panel .brand-statement .eyebrow {
   margin-bottom: 1.25rem;
   color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
   letter-spacing: 0.18em;
 }
 
 .brand-panel .brand-statement h1 {
   max-width: none;
   margin: 0;
-  font-size: clamp(3.8rem, 6.2vw, 7.2rem);
+  font-size: clamp(4.2rem, 6.6vw, 7.8rem);
   font-weight: 680;
   line-height: 0.9;
   letter-spacing: -0.07em;
@@ -7468,12 +7469,12 @@ textarea:focus {
 
 .auth-portrait {
   position: absolute;
-  top: 14%;
+  top: 12%;
   left: 50%;
   z-index: 1;
   display: grid;
-  width: min(20rem, 61%);
-  height: min(46vh, 27rem);
+  width: min(22rem, 66%);
+  height: min(49vh, 29rem);
   place-items: center;
   pointer-events: none;
   translate: -50% 0;
@@ -7518,8 +7519,8 @@ textarea:focus {
 
 @media (min-width: 821px) and (max-height: 720px) {
   .auth-portrait {
-    top: 18%;
-    width: min(18rem, 58%);
+    top: 16%;
+    width: min(19.25rem, 61%);
     height: 48vh;
   }
 }
