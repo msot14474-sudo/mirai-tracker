@@ -44,6 +44,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Refined the sign-in screen into a minimal Mirai-branded layout and removed demo credentials, technical notes and promotional filler.
 - [x] Added 21st.dev-inspired staggered workspace transitions, staged screen entrances and restrained card and button interaction motion.
 - [x] Added an enhanced transparent Mirai faculty portrait to the sign-in brand panel with responsive placement and subtle depth.
+- [x] Replaced the soft login wordmark with a higher-resolution source, aligned the brand composition to one grid and synchronized asset loading before entrance motion.
 
 ## Next implementation sequence
 

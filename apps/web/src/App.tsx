@@ -359,6 +359,8 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
 
 function LoginScreen() {
   const queryClient = useQueryClient();
+  const [assetsReady, setAssetsReady] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -371,6 +373,38 @@ function LoginScreen() {
     mutationFn: () => verifyOtp(challenge!.challengeId, code),
     onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    const sources = [
+      '/mirai-wordmark-light-hd.png',
+      '/mirai-faculty-hero.png',
+    ];
+    const decodeImage = (source: string) =>
+      new Promise<void>((resolve) => {
+        const image = new Image();
+        const finish = () => resolve();
+        image.src = source;
+        if (image.complete) {
+          if (typeof image.decode === 'function') {
+            image.decode().then(finish).catch(finish);
+          } else {
+            finish();
+          }
+          return;
+        }
+        image.addEventListener('load', finish, { once: true });
+        image.addEventListener('error', finish, { once: true });
+      });
+
+    void Promise.all(sources.map(decodeImage)).then(() => {
+      if (!cancelled) setAssetsReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function submitCredentials(event: FormEvent) {
     event.preventDefault();
@@ -390,18 +424,30 @@ function LoginScreen() {
   }
 
   return (
-    <main className="auth-shell">
+    <main
+      className={`auth-shell ${assetsReady ? 'auth-assets-ready' : 'auth-assets-loading'}`}
+    >
+      <div className="auth-preloader" role="status" aria-label="Loading sign in">
+        <span />
+        <span />
+        <span />
+      </div>
       <section className="brand-panel">
         <div className="auth-brand">
           <span className="wordmark-frame auth-wordmark-frame">
             <img
-              src="/mirai-wordmark-light.png"
+              src="/mirai-wordmark-light-hd.png"
               alt="Mirai School of Technology"
+              fetchPriority="high"
             />
           </span>
         </div>
         <div className="auth-portrait" aria-hidden="true">
-          <img src="/mirai-faculty-hero.png" alt="" />
+          <img
+            src="/mirai-faculty-hero.png"
+            alt=""
+            fetchPriority="high"
+          />
         </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>
@@ -478,16 +524,26 @@ function LoginScreen() {
               />
 
               <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
-                required
-              />
+              <div className="password-field">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={8}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle secondary-button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
 
               {loginMutation.error ? (
                 <p className="form-error" role="alert">
@@ -496,7 +552,12 @@ function LoginScreen() {
               ) : null}
 
               <button type="submit" disabled={loginMutation.isPending}>
-                {loginMutation.isPending ? 'Please wait…' : 'Continue'}
+                <span>
+                  {loginMutation.isPending ? 'Please wait…' : 'Continue'}
+                </span>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4 10h11M11 6l4 4-4 4" />
+                </svg>
               </button>
             </form>
           )}
