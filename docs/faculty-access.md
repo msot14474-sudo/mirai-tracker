@@ -1,6 +1,6 @@
 # User access management
 
-The User access workspace creates Faculty, Campus Manager and Administrator accounts. Campus Managers can create faculty accounts only inside their assigned campus. Program Managers can also create campus-scoped Campus Managers. Administrators can create all three account types, including other global Administrators.
+The User access workspace creates Faculty, Campus Manager and Administrator accounts. Campus Managers can create faculty accounts only inside their assigned campus. Program Manager is the application's administrator role: it can create campus-scoped Campus Managers and other global Administrators. Accounts carrying the legacy `ADMIN` role have the same global access.
 
 ## Manager workflow
 
@@ -21,7 +21,7 @@ The faculty member signs in with the initial password, receives a six-digit OTP 
 - The service verifies campus scope again before reading or writing records.
 - A Campus Manager cannot submit another campus ID or attach an offering from another campus.
 - Only Admin and Program Manager roles can create a Campus Manager.
-- Only an existing Administrator can create another Administrator.
+- Program Manager/Administrator accounts can create another global Administrator.
 - Inactive campuses, archived semesters and archived subject offerings cannot receive new faculty access.
 - User, password credential, staff profile, Faculty role, subject assignments and audit evidence are created in one database transaction.
 - Passwords use scrypt with an individual random salt. Plaintext passwords are neither returned nor written to audit metadata.
@@ -34,10 +34,10 @@ The faculty member signs in with the initial password, receives a six-digit OTP 
 | `GET`  | `/faculty-access/campuses/:campusId`          | List scoped faculty and assignable subject offerings                 |
 | `POST` | `/faculty-access/campuses/:campusId/faculty`  | Create a faculty login, staff profile, role and optional assignments |
 | `POST` | `/faculty-access/campuses/:campusId/managers` | Create a Campus Manager scoped to the selected campus                |
-| `POST` | `/faculty-access/administrators`              | Create a global Administrator; Administrator role required           |
+| `POST` | `/faculty-access/administrators`              | Create a global Administrator; global manager role required          |
 
 The creation body contains `name`, `email`, optional `notificationEmail`, `employeeCode`, `staffType`, `password` and `offeringIds`.
 
 ## Verification
 
-Focused API tests prove campus authorization is invoked, credentials are hashed, role scope is correct, Administrator creation rejects Program Managers and audit records contain no password. React tests submit all three account types. The complete workspace test suite and production builds run through `pnpm check`.
+Focused API tests prove campus authorization is invoked, credentials are hashed, role scope is correct, Program Managers can create Administrators, non-global roles are rejected and audit records contain no password. React tests submit all three account types. The complete workspace test suite and production builds run through `pnpm check`.

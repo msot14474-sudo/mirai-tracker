@@ -21,7 +21,7 @@ API routes are protected by default. Only routes explicitly decorated with `@Pub
 
 | Role                    | Scope             | Manage                                         | View                                                     |
 | ----------------------- | ----------------- | ---------------------------------------------- | -------------------------------------------------------- |
-| Admin / Program Manager | Global            | All campuses and offerings                     | All data                                                 |
+| Program Manager / Admin | Global            | All campuses, users and offerings              | All data                                                 |
 | Campus Manager          | Assigned campus   | Faculty access, campus timetable and offerings | Campus dashboards and alerts                             |
 | Faculty                 | Assigned offering | Their lesson plans and session logs            | Their subject dashboard                                  |
 | Student                 | Enrolled batch    | Nothing                                        | Covered/next topics and exam information for their batch |
@@ -52,7 +52,7 @@ All four use the value of `DEMO_USER_PASSWORD` at seed time. `DEMO_NOTIFICATION_
 | `GET /faculty-access/campuses/:campusId`           | Manager        | Lists faculty and assignable subjects in an authorized campus          |
 | `POST /faculty-access/campuses/:campusId/faculty`  | Manager        | Creates a campus-scoped faculty login and optional subject assignments |
 | `POST /faculty-access/campuses/:campusId/managers` | Global manager | Creates a Campus Manager scoped to the selected campus                 |
-| `POST /faculty-access/administrators`              | Administrator  | Creates another global Administrator account                           |
+| `POST /faculty-access/administrators`              | Global manager | Creates another global Administrator account                           |
 
 The React client restores the session through `/auth/me`, shows the login form when no session exists, and displays workspaces based on the returned role. These interface choices help users navigate; the API remains the source of enforcement.
 

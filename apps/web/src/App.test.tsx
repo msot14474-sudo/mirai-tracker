@@ -250,6 +250,11 @@ describe('App authentication', () => {
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'User access' }));
+    expect(
+      await screen.findByRole('button', { name: 'Administrator' }),
+    ).toBeInTheDocument();
   });
 
   it('asks administrators to choose a campus before opening the full workspace', async () => {

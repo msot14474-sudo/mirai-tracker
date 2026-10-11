@@ -11,7 +11,6 @@ import {
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -282,11 +281,7 @@ export class FacultyAccessService {
     input: CreateAccessAccountInput,
     actor: AuthenticatedUser,
   ) {
-    if (!actor.roles.some((assignment) => assignment.role === UserRole.ADMIN)) {
-      throw new ForbiddenException(
-        'Only an existing Administrator can create another Administrator.',
-      );
-    }
+    this.access.assertGlobalManager(actor);
     return this.createRoleAccount(input, actor, UserRole.ADMIN, null);
   }
 

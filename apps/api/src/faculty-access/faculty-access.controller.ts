@@ -64,7 +64,7 @@ export class FacultyAccessController {
   }
 
   @Post('administrators')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
   createAdministrator(
     @Body() body: unknown,
     @CurrentUser() user: AuthenticatedUser,

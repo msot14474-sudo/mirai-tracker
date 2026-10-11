@@ -20,12 +20,6 @@ const programManager = {
   roles: [{ role: UserRole.PROGRAM_MANAGER, campusId: null }],
 };
 
-const administrator = {
-  ...actor,
-  id: 'admin-a',
-  roles: [{ role: UserRole.ADMIN, campusId: null }],
-};
-
 describe('FacultyAccessService', () => {
   const campusFindUnique = jest.fn();
   const offeringFindMany = jest.fn();
@@ -191,7 +185,7 @@ describe('FacultyAccessService', () => {
     });
   });
 
-  it('creates a global Administrator account only for an Administrator', async () => {
+  it('creates a global Administrator account for a Program Manager', async () => {
     userCreate.mockResolvedValue({
       id: 'admin-user-b',
       name: 'New Administrator',
@@ -207,9 +201,10 @@ describe('FacultyAccessService', () => {
         notificationEmail: 'otp@example.edu',
         password: 'a-strong-temporary-password',
       },
-      administrator,
+      programManager,
     );
 
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
     expect(userCreate.mock.calls[0][0].data.roleAssignments.create).toEqual({
       role: UserRole.ADMIN,
       campusId: null,
@@ -217,7 +212,7 @@ describe('FacultyAccessService', () => {
     });
     expect(auditCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        actorId: administrator.id,
+        actorId: programManager.id,
         campusId: null,
         entityType: 'UserAccess',
         after: expect.objectContaining({ role: UserRole.ADMIN }),
@@ -229,7 +224,11 @@ describe('FacultyAccessService', () => {
     expect(result).toMatchObject({ role: UserRole.ADMIN, campusId: null });
   });
 
-  it('rejects Administrator creation by a Program Manager', async () => {
+  it('rejects Administrator creation outside the global manager role', async () => {
+    access.assertGlobalManager.mockImplementationOnce(() => {
+      throw new ForbiddenException();
+    });
+
     await expect(
       service().createAdministrator(
         {
@@ -238,7 +237,7 @@ describe('FacultyAccessService', () => {
           notificationEmail: null,
           password: 'a-strong-temporary-password',
         },
-        programManager,
+        actor,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userCreate).not.toHaveBeenCalled();

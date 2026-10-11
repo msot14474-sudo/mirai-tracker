@@ -81,7 +81,7 @@ const FacultyAccessWorkspace = lazy(() =>
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Administrator',
-  PROGRAM_MANAGER: 'Program Manager',
+  PROGRAM_MANAGER: 'Administrator',
   CAMPUS_MANAGER: 'Campus Manager',
   FACULTY: 'Faculty',
   STUDENT: 'Student',
@@ -794,7 +794,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             canCreateCampusManagers={roles.some(
               (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
             )}
-            canCreateAdministrators={roles.includes('ADMIN')}
+            canCreateAdministrators={roles.some(
+              (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
+            )}
           />
         );
       case 'timetable':
