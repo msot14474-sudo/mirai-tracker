@@ -16,6 +16,11 @@ export type LoginChallenge = {
   destination: string;
 };
 
+export type PasswordResetChallenge = {
+  challengeId: string;
+  expiresInSeconds: number;
+};
+
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function messageFrom(response: Response) {
@@ -57,6 +62,31 @@ export async function verifyOtp(challengeId: string, code: string) {
   if (!response.ok) throw new Error(await messageFrom(response));
   const body = (await response.json()) as { user: AuthenticatedUser };
   return body.user;
+}
+
+export async function requestPasswordReset(email: string) {
+  const response = await fetch(`${apiUrl}/auth/forgot-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new Error(await messageFrom(response));
+  return response.json() as Promise<PasswordResetChallenge>;
+}
+
+export async function resetPassword(
+  challengeId: string,
+  code: string,
+  password: string,
+) {
+  const response = await fetch(`${apiUrl}/auth/reset-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, code, password }),
+  });
+  if (!response.ok) throw new Error(await messageFrom(response));
 }
 
 export async function logout() {

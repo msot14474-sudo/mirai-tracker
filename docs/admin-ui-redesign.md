@@ -18,7 +18,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Simplified the alert center while retaining all lecture and delivery details.
 - [x] Removed milestone and tutorial copy from administrator workspaces.
 - [x] Updated frontend tests for the concise interface.
-- [x] Verified all 47 frontend tests, TypeScript checks and the production build.
+- [x] Verified all 50 frontend tests, TypeScript checks and the production build.
 - [x] Checked the cleaned interface in a browser with a Campus Manager session.
 - [x] Designed the Admin campus-selection entry screen and selected-campus workspace in Figma.
 - [x] Added the personalized `Welcome back, {first name}` administrator greeting.
@@ -45,6 +45,8 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added 21st.dev-inspired staggered workspace transitions, staged screen entrances and restrained card and button interaction motion.
 - [x] Added an enhanced transparent Mirai faculty portrait to the sign-in brand panel with responsive placement and subtle depth.
 - [x] Replaced the soft login wordmark with a higher-resolution source, aligned the brand composition to one grid and synchronized asset loading before entrance motion.
+- [x] Added a polished branded sign-in heading, inline forgot-password recovery and sharper high-resolution wordmarks throughout the authenticated app.
+- [x] Added a role-scoped managed-account directory for names, login and OTP emails, status and secure password replacement.
 
 ## Next implementation sequence
 

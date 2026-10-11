@@ -10,10 +10,16 @@ describe('AuthService', () => {
   const findUnique = jest.fn();
   const createAuditEvent = jest.fn();
   const sendLoginOtp = jest.fn();
+  const sendPasswordResetOtp = jest.fn();
+  const upsertPassword = jest.fn();
   const store = new Map<string, string>();
   const prisma = {
     user: { findUnique },
+    passwordCredential: { upsert: upsertPassword },
     auditEvent: { create: createAuditEvent },
+    $transaction: jest.fn((operations: Array<Promise<unknown>>) =>
+      Promise.all(operations),
+    ),
   };
   const redis = {
     get: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
@@ -32,7 +38,7 @@ describe('AuthService', () => {
     }),
     incrementWithExpiry: jest.fn().mockResolvedValue(1),
   };
-  const email = { sendLoginOtp };
+  const email = { sendLoginOtp, sendPasswordResetOtp };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -51,6 +57,8 @@ describe('AuthService', () => {
     );
     createAuditEvent.mockResolvedValue({ id: 'audit-login' });
     sendLoginOtp.mockResolvedValue({ messageId: 'otp-message' });
+    sendPasswordResetOtp.mockResolvedValue({ messageId: 'reset-message' });
+    upsertPassword.mockResolvedValue({ id: 'credential-a' });
   });
 
   async function activeUser(status: UserStatus = UserStatus.ACTIVE) {
@@ -248,6 +256,56 @@ describe('AuthService', () => {
       id: 'user-a',
       staffProfileId: 'faculty-a',
     });
+  });
+
+  it('emails and consumes a password reset code before hashing the new password', async () => {
+    const record = await activeUser();
+    findUnique
+      .mockResolvedValueOnce(record)
+      .mockResolvedValueOnce({ id: record.id, status: UserStatus.ACTIVE });
+    const auth = service();
+    const challenge = await auth.requestPasswordReset(record.email);
+    const resetCode = sendPasswordResetOtp.mock.calls[0][0].code as string;
+
+    await auth.resetPassword({
+      challengeId: challenge.challengeId,
+      code: resetCode,
+      password: 'a-new-secure-password',
+    });
+
+    expect(sendPasswordResetOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientEmail: 'faculty@example.edu',
+        code: expect.stringMatching(/^\d{6}$/),
+      }),
+    );
+    expect(upsertPassword).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: record.id },
+        update: expect.objectContaining({
+          passwordHash: expect.not.stringContaining('a-new-secure-password'),
+          passwordSalt: expect.any(String),
+        }),
+      }),
+    );
+    expect(createAuditEvent).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: record.id,
+        entityType: 'PasswordCredential',
+      }),
+    });
+  });
+
+  it('returns a generic reset challenge for an unknown email', async () => {
+    findUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      service().requestPasswordReset('unknown@example.edu'),
+    ).resolves.toMatchObject({
+      challengeId: expect.any(String),
+      expiresInSeconds: 600,
+    });
+    expect(sendPasswordResetOtp).not.toHaveBeenCalled();
   });
 
   it('deletes the server-side session on logout', async () => {

@@ -7,6 +7,9 @@ import {
   loadCurrentUser,
   login,
   logout,
+  PasswordResetChallenge,
+  requestPasswordReset,
+  resetPassword,
   UserRole,
   verifyOtp,
 } from './auth';
@@ -124,7 +127,7 @@ function AdminCampusGateway({
       <aside className="campus-gateway-sidebar">
         <span className="wordmark-frame campus-gateway-wordmark">
           <img
-            src="/mirai-wordmark-light.png"
+            src="/mirai-wordmark-light-hd.png"
             alt="Mirai School of Technology"
           />
         </span>
@@ -361,10 +364,16 @@ function LoginScreen() {
   const queryClient = useQueryClient();
   const [assetsReady, setAssetsReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
+  const [resetChallenge, setResetChallenge] =
+    useState<PasswordResetChallenge | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetComplete, setResetComplete] = useState(false);
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
     onSuccess: setChallenge,
@@ -373,12 +382,38 @@ function LoginScreen() {
     mutationFn: () => verifyOtp(challenge!.challengeId, code),
     onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
   });
+  const forgotPasswordMutation = useMutation({
+    mutationFn: () => requestPasswordReset(email),
+    onSuccess: setResetChallenge,
+  });
+  const resetPasswordMutation = useMutation({
+    mutationFn: () => {
+      if (resetPasswordValue !== confirmPassword) {
+        throw new Error('The two passwords do not match.');
+      }
+      return resetPassword(
+        resetChallenge!.challengeId,
+        code,
+        resetPasswordValue,
+      );
+    },
+    onSuccess: () => {
+      setResetComplete(true);
+      setMode('login');
+      setResetChallenge(null);
+      setCode('');
+      setPassword('');
+      setResetPasswordValue('');
+      setConfirmPassword('');
+    },
+  });
 
   useEffect(() => {
     let cancelled = false;
     const sources = [
       '/mirai-wordmark-light-hd.png',
       '/mirai-faculty-hero.png',
+      '/mirai-symbol-light.png',
     ];
     const decodeImage = (source: string) =>
       new Promise<void>((resolve) => {
@@ -408,6 +443,7 @@ function LoginScreen() {
 
   function submitCredentials(event: FormEvent) {
     event.preventDefault();
+    setResetComplete(false);
     loginMutation.mutate();
   }
 
@@ -416,18 +452,53 @@ function LoginScreen() {
     otpMutation.mutate();
   }
 
+  function submitForgotPassword(event: FormEvent) {
+    event.preventDefault();
+    forgotPasswordMutation.mutate();
+  }
+
+  function submitPasswordReset(event: FormEvent) {
+    event.preventDefault();
+    resetPasswordMutation.mutate();
+  }
+
   function restartLogin() {
     setChallenge(null);
+    setResetChallenge(null);
+    setMode('login');
     setCode('');
+    setResetPasswordValue('');
+    setConfirmPassword('');
     loginMutation.reset();
     otpMutation.reset();
+    forgotPasswordMutation.reset();
+    resetPasswordMutation.reset();
   }
+
+  const title = challenge
+    ? 'Check your email'
+    : mode === 'forgot'
+      ? resetChallenge
+        ? 'Create password'
+        : 'Reset password'
+      : 'Welcome back';
+  const supportingCopy = challenge
+    ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
+    : mode === 'forgot'
+      ? resetChallenge
+        ? 'Enter the six-digit email code and choose a new password.'
+        : 'We will email a secure six-digit reset code.'
+      : 'Sign in to continue.';
 
   return (
     <main
       className={`auth-shell ${assetsReady ? 'auth-assets-ready' : 'auth-assets-loading'}`}
     >
-      <div className="auth-preloader" role="status" aria-label="Loading sign in">
+      <div
+        className="auth-preloader"
+        role="status"
+        aria-label="Loading sign in"
+      >
         <span />
         <span />
         <span />
@@ -443,11 +514,7 @@ function LoginScreen() {
           </span>
         </div>
         <div className="auth-portrait" aria-hidden="true">
-          <img
-            src="/mirai-faculty-hero.png"
-            alt=""
-            fetchPriority="high"
-          />
+          <img src="/mirai-faculty-hero.png" alt="" fetchPriority="high" />
         </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>
@@ -461,14 +528,21 @@ function LoginScreen() {
 
       <section className="login-panel" aria-labelledby="login-title">
         <div className="login-card">
-          <h2 id="login-title">
-            {challenge ? 'Check your email' : 'Welcome back'}
-          </h2>
-          <p className="supporting-copy">
-            {challenge
-              ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
-              : 'Sign in to continue.'}
-          </p>
+          <div className="auth-card-heading">
+            <div>
+              <h2 id="login-title">{title}</h2>
+              <p className="supporting-copy">{supportingCopy}</p>
+            </div>
+            <span className="auth-card-mark" aria-hidden="true">
+              <img src="/mirai-symbol-light.png" alt="" />
+            </span>
+          </div>
+
+          {resetComplete ? (
+            <p className="auth-success-banner" role="status">
+              Password updated. Sign in with your new password.
+            </p>
+          ) : null}
 
           {challenge ? (
             <form onSubmit={submitOtp}>
@@ -503,12 +577,112 @@ function LoginScreen() {
               </button>
               <button
                 type="button"
-                className="secondary-button"
+                className="secondary-button auth-back-button"
                 onClick={restartLogin}
               >
                 Use a different account
               </button>
             </form>
+          ) : mode === 'forgot' ? (
+            resetChallenge ? (
+              <form onSubmit={submitPasswordReset}>
+                <label htmlFor="reset-code">Reset code</label>
+                <input
+                  id="reset-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(event) =>
+                    setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                  }
+                  required
+                />
+                <label htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={256}
+                  value={resetPasswordValue}
+                  onChange={(event) =>
+                    setResetPasswordValue(event.target.value)
+                  }
+                  required
+                />
+                <label htmlFor="confirm-password">Confirm password</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={256}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                />
+                {resetPasswordMutation.error ? (
+                  <p className="form-error" role="alert">
+                    {resetPasswordMutation.error.message}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={
+                    resetPasswordMutation.isPending ||
+                    code.length !== 6 ||
+                    resetPasswordValue.length < 12
+                  }
+                >
+                  {resetPasswordMutation.isPending
+                    ? 'Updating…'
+                    : 'Update password'}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button auth-back-button"
+                  onClick={restartLogin}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submitForgotPassword}>
+                <label htmlFor="recovery-email">Email</label>
+                <input
+                  id="recovery-email"
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="name@mirai.edu"
+                  required
+                />
+                {forgotPasswordMutation.error ? (
+                  <p className="form-error" role="alert">
+                    {forgotPasswordMutation.error.message}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={forgotPasswordMutation.isPending}
+                >
+                  {forgotPasswordMutation.isPending
+                    ? 'Sending…'
+                    : 'Send reset code'}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button auth-back-button"
+                  onClick={restartLogin}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={submitCredentials}>
               <label htmlFor="email">Email</label>
@@ -523,7 +697,20 @@ function LoginScreen() {
                 required
               />
 
-              <label htmlFor="password">Password</label>
+              <div className="auth-password-label">
+                <label htmlFor="password">Password</label>
+                <button
+                  type="button"
+                  className="secondary-button auth-forgot-button"
+                  onClick={() => {
+                    setMode('forgot');
+                    setResetComplete(false);
+                    loginMutation.reset();
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="password-field">
                 <input
                   id="password"
@@ -908,6 +1095,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           <FacultyAccessWorkspace
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
+            currentUserId={user.id}
             canCreateCampusManagers={roles.some(
               (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
             )}
@@ -955,7 +1143,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           onClick={() => openView('overview')}
         >
           <span className="wordmark-frame sidebar-wordmark-frame">
-            <img src="/mirai-wordmark-light.png" alt="" />
+            <img src="/mirai-wordmark-light-hd.png" alt="" />
           </span>
           <img
             className="sidebar-symbol"

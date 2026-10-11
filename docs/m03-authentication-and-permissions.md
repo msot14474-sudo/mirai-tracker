@@ -15,16 +15,18 @@ M03 establishes the security boundary for every later feature. Authentication id
 
 Password failures are limited to five attempts per fifteen minutes. A user can request three OTPs per ten minutes, and each challenge permits five verification attempts. A consumed, expired or exhausted challenge cannot create a session.
 
-API routes are protected by default. Only routes explicitly decorated with `@Public()`, currently health checks, login and OTP verification, bypass session authentication. Mutation-origin checks still apply to the public authentication routes.
+Forgot-password recovery uses a separate ten-minute Redis challenge. The API always returns a generic challenge response, stores only the HMAC digest of the emailed code and accepts a replacement password only after a correct six-digit code. Reset requests and verification attempts are rate limited. The replacement is scrypt-hashed and the change is audit logged without plaintext.
+
+API routes are protected by default. Only routes explicitly decorated with `@Public()`, currently health checks, login, OTP verification and password recovery, bypass session authentication. Mutation-origin checks still apply to the public authentication routes.
 
 ## Permission model
 
-| Role                    | Scope             | Manage                                         | View                                                     |
-| ----------------------- | ----------------- | ---------------------------------------------- | -------------------------------------------------------- |
-| Program Manager / Admin | Global            | All campuses, users and offerings              | All data                                                 |
-| Campus Manager          | Assigned campus   | Faculty access, campus timetable and offerings | Campus dashboards and alerts                             |
-| Faculty                 | Assigned offering | Their lesson plans and session logs            | Their subject dashboard                                  |
-| Student                 | Enrolled batch    | Nothing                                        | Covered/next topics and exam information for their batch |
+| Role                    | Scope             | Manage                                                       | View                                                     |
+| ----------------------- | ----------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
+| Program Manager / Admin | Global            | All campuses, users and offerings                            | All data                                                 |
+| Campus Manager          | Assigned campus   | Faculty and Student accounts, campus timetable and offerings | Campus dashboards and alerts                             |
+| Faculty                 | Assigned offering | Their lesson plans and session logs                          | Their subject dashboard                                  |
+| Student                 | Enrolled batch    | Nothing                                                      | Covered/next topics and exam information for their batch |
 
 `AccessPolicyService` resolves offering ownership through its batch, semester, campus and active faculty assignments. Controllers for M04 onward will call its assertion methods before reading or changing scoped records. The global `RolesGuard` handles endpoints whose rule depends only on role.
 
@@ -43,16 +45,20 @@ All four use the value of `DEMO_USER_PASSWORD` at seed time. `DEMO_NOTIFICATION_
 
 ## API surface
 
-| Endpoint                                           | Access         | Result                                                                 |
-| -------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
-| `POST /auth/login`                                 | Public         | Verifies the password and emails an OTP challenge                      |
-| `POST /auth/verify-otp`                            | Public         | Consumes the OTP and creates the server session cookie                 |
-| `GET /auth/me`                                     | Authenticated  | Returns current identity, roles and scopes                             |
-| `POST /auth/logout`                                | Authenticated  | Revokes the session and clears the cookie                              |
-| `GET /faculty-access/campuses/:campusId`           | Manager        | Lists faculty and assignable subjects in an authorized campus          |
-| `POST /faculty-access/campuses/:campusId/faculty`  | Manager        | Creates a campus-scoped faculty login and optional subject assignments |
-| `POST /faculty-access/campuses/:campusId/managers` | Global manager | Creates a Campus Manager scoped to the selected campus                 |
-| `POST /faculty-access/administrators`              | Global manager | Creates another global Administrator account                           |
+| Endpoint                                           | Access         | Result                                                                     |
+| -------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| `POST /auth/login`                                 | Public         | Verifies the password and emails an OTP challenge                          |
+| `POST /auth/verify-otp`                            | Public         | Consumes the OTP and creates the server session cookie                     |
+| `POST /auth/forgot-password`                       | Public         | Emails a rate-limited password-reset code when the account exists          |
+| `POST /auth/reset-password`                        | Public         | Verifies the reset code and stores a new scrypt password hash              |
+| `GET /auth/me`                                     | Authenticated  | Returns current identity, roles and scopes                                 |
+| `POST /auth/logout`                                | Authenticated  | Revokes the session and clears the cookie                                  |
+| `GET /faculty-access/campuses/:campusId`           | Manager        | Lists faculty and assignable subjects in an authorized campus              |
+| `POST /faculty-access/campuses/:campusId/faculty`  | Manager        | Creates a campus-scoped faculty login and optional subject assignments     |
+| `POST /faculty-access/campuses/:campusId/managers` | Global manager | Creates a Campus Manager scoped to the selected campus                     |
+| `POST /faculty-access/administrators`              | Global manager | Creates another global Administrator account                               |
+| `GET /faculty-access/campuses/:campusId/accounts`  | Manager        | Lists accounts the current manager may maintain                            |
+| `PATCH /faculty-access/accounts/:userId`           | Manager        | Updates allowed identity details, status and optional replacement password |
 
 The React client restores the session through `/auth/me`, shows the login form when no session exists, and displays workspaces based on the returned role. These interface choices help users navigate; the API remains the source of enforcement.
 

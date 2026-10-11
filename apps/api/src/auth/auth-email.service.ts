@@ -37,4 +37,25 @@ export class AuthEmailService {
       ].join('\n'),
     });
   }
+
+  async sendPasswordResetOtp(input: {
+    recipientEmail: string;
+    recipientName: string;
+    code: string;
+    expiresInMinutes: number;
+  }) {
+    return this.transporter.sendMail({
+      from: process.env.SMTP_FROM ?? 'notifications@mirai.local',
+      to: input.recipientEmail,
+      subject: 'Reset your Mirai Tracker password',
+      text: [
+        `Hello ${input.recipientName},`,
+        '',
+        `Your password reset code is ${input.code}.`,
+        `It expires in ${input.expiresInMinutes} minutes.`,
+        '',
+        'If you did not request this change, you can ignore this message.',
+      ].join('\n'),
+    });
+  }
 }

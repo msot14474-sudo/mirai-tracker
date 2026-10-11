@@ -55,6 +55,38 @@ export type CreateAccessAccountInput = Pick<
   'name' | 'email' | 'notificationEmail' | 'password'
 >;
 
+export type ManagedAccount = {
+  id: string;
+  name: string;
+  email: string;
+  notificationEmail: string | null;
+  status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+  roleAssignments: Array<{
+    role:
+      'ADMIN' | 'PROGRAM_MANAGER' | 'CAMPUS_MANAGER' | 'FACULTY' | 'STUDENT';
+    campusId: string | null;
+    campus: { name: string } | null;
+  }>;
+  staffProfile: {
+    employeeCode: string;
+    staffType: 'REGULAR' | 'VISITING';
+    active: boolean;
+  } | null;
+  studentProfile: {
+    studentCode: string;
+    enrollmentStatus: string;
+    batch: { code: string; name: string };
+  } | null;
+};
+
+export type UpdateManagedAccountInput = {
+  name?: string;
+  email?: string;
+  notificationEmail?: string | null;
+  status?: 'ACTIVE' | 'SUSPENDED';
+  password?: string;
+};
+
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -99,4 +131,13 @@ export const facultyAccessApi = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+  accounts: (campusId: string) =>
+    api<{ accounts: ManagedAccount[] }>(
+      `/faculty-access/campuses/${campusId}/accounts`,
+    ),
+  updateAccount: (userId: string, input: UpdateManagedAccountInput) =>
+    api<{ account: ManagedAccount; passwordChanged: boolean }>(
+      `/faculty-access/accounts/${userId}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    ),
 };

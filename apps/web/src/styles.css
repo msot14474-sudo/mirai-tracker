@@ -6892,8 +6892,7 @@ textarea:focus {
 }
 
 .brand-statement {
-  animation: auth-element-enter 820ms 90ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: auth-element-enter 820ms 90ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-shell .login-card {
@@ -7020,8 +7019,7 @@ textarea:focus {
   place-items: center;
   pointer-events: none;
   transform: none;
-  animation: auth-portrait-enter 920ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: auth-portrait-enter 920ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-portrait::before {
@@ -7177,7 +7175,7 @@ textarea:focus {
 .auth-shell .login-card {
   position: relative;
   isolation: isolate;
-  width: min(100%, 27rem);
+  width: min(100%, 29rem);
   padding: clamp(2.25rem, 4vw, 3rem);
   overflow: hidden;
   border: 1px solid transparent;
@@ -7225,7 +7223,7 @@ textarea:focus {
 .auth-shell .login-card h2 {
   margin-bottom: 0.45rem;
   color: #152446;
-  font-size: clamp(2.5rem, 4vw, 3.35rem);
+  font-size: clamp(2.45rem, 3.5vw, 3rem);
   line-height: 0.98;
 }
 
@@ -7338,5 +7336,362 @@ textarea:focus {
   .auth-shell .login-card {
     padding: 2rem 1.5rem;
     border-radius: 1.3rem;
+  }
+}
+
+/* Branded sign-in heading and recovery controls */
+.auth-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.auth-card-heading .supporting-copy {
+  margin-bottom: 2.15rem;
+}
+
+.auth-card-mark {
+  position: relative;
+  display: grid;
+  width: 3.65rem;
+  height: 3.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 1.15rem;
+  background: linear-gradient(145deg, #0d2d76, #2f6ee8 72%, #43c6e8);
+  box-shadow:
+    0 0.8rem 1.8rem rgba(36, 92, 219, 0.22),
+    inset 0 1px rgba(255, 255, 255, 0.32);
+  place-items: center;
+}
+
+.auth-card-mark::after {
+  position: absolute;
+  inset: -55% -20% auto;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.12);
+  content: '';
+  transform: rotate(18deg);
+}
+
+.auth-card-mark img {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain;
+}
+
+.auth-password-label {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
+.auth-password-label label {
+  margin: 0;
+}
+
+.auth-shell .auth-forgot-button,
+.auth-shell .auth-back-button {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #3865c3;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.auth-shell .auth-forgot-button:hover,
+.auth-shell .auth-forgot-button:focus-visible,
+.auth-shell .auth-back-button:hover,
+.auth-shell .auth-back-button:focus-visible {
+  color: #174bbf;
+  background: transparent;
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 0.22rem;
+}
+
+.auth-shell .auth-back-button {
+  justify-self: center;
+  margin-top: 1rem;
+}
+
+.auth-success-banner {
+  margin: -0.8rem 0 1.2rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #bfe0ce;
+  border-radius: 0.8rem;
+  color: #17603e;
+  background: #eff9f3;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* Sharper, better-spaced wordmarks throughout the authenticated app */
+.sidebar-brand .sidebar-wordmark-frame {
+  width: 14.4rem;
+  height: 4.15rem;
+  filter: drop-shadow(0 0.55rem 1rem rgba(3, 18, 58, 0.18));
+}
+
+.sidebar-brand .sidebar-wordmark-frame img {
+  width: 14.25rem;
+}
+
+.campus-gateway-wordmark {
+  width: 14.75rem;
+  height: 4.25rem;
+  filter: drop-shadow(0 0.55rem 1rem rgba(3, 18, 58, 0.2));
+}
+
+/* Role-scoped account directory */
+.managed-accounts {
+  margin-top: 1.5rem;
+  padding: clamp(1.25rem, 2.4vw, 2rem);
+  border: 1px solid var(--mirai-line);
+  border-radius: 1.35rem;
+  background: #fff;
+  box-shadow: 0 1rem 2.5rem rgba(30, 52, 104, 0.06);
+}
+
+.managed-accounts-heading {
+  margin-bottom: 1.25rem;
+}
+
+.workspace-kicker {
+  margin: 0 0 0.25rem;
+  color: #4d6fb9;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.managed-accounts-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.72fr) minmax(24rem, 1.28fr);
+  min-height: 28rem;
+  overflow: hidden;
+  border: 1px solid #dbe3f0;
+  border-radius: 1.1rem;
+  background: #fbfcff;
+}
+
+.managed-account-list {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  max-height: 38rem;
+  padding: 0.8rem;
+  overflow-y: auto;
+  border-right: 1px solid #dbe3f0;
+  background: #f7f9fd;
+}
+
+.managed-account-list > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 0.9rem;
+  color: #19284a;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.managed-account-list > button:hover,
+.managed-account-list > button:focus-visible {
+  border-color: #c7d7f7;
+  background: #fff;
+  box-shadow: 0 0.6rem 1.4rem rgba(33, 72, 153, 0.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.managed-account-list > button.active {
+  border-color: #88aaf1;
+  background: #eef4ff;
+  box-shadow: inset 0.2rem 0 #2862db;
+}
+
+.managed-account-avatar {
+  display: grid;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 0.78rem;
+  color: #fff;
+  background: linear-gradient(145deg, #123b91, #3475ef);
+  font-size: 0.78rem;
+  font-weight: 850;
+  place-items: center;
+}
+
+.managed-account-identity {
+  display: grid;
+  min-width: 0;
+  gap: 0.16rem;
+}
+
+.managed-account-identity strong {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-account-identity strong small {
+  padding: 0.16rem 0.38rem;
+  border-radius: 999px;
+  color: #245cdb;
+  background: #dde8ff;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+
+.managed-account-identity > span,
+.managed-account-identity > small {
+  overflow: hidden;
+  color: #6d7890;
+  font-size: 0.73rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-account-list b {
+  padding: 0.28rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+}
+
+.managed-account-list b.active {
+  color: #17603e;
+  background: #e5f4eb;
+}
+
+.managed-account-list b.inactive {
+  color: #8b4522;
+  background: #fff0e8;
+}
+
+.managed-account-editor {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: clamp(1.25rem, 2.4vw, 2rem);
+  background: #fff;
+}
+
+.managed-account-editor header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid #e3e8f1;
+}
+
+.managed-account-editor header > span {
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  color: #245cdb;
+  background: #edf3ff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.managed-account-editor label {
+  display: grid;
+  gap: 0.42rem;
+  color: #243452;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.managed-account-editor input,
+.managed-account-editor select {
+  min-height: 3.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #d5deec;
+  border-radius: 0.75rem;
+  background: #fbfcff;
+}
+
+.managed-account-editor input:focus,
+.managed-account-editor select:focus {
+  border-color: #6890e8;
+  box-shadow: 0 0 0 4px rgba(36, 92, 219, 0.1);
+  outline: none;
+}
+
+.managed-account-editor > button {
+  justify-self: start;
+  min-width: 12rem;
+}
+
+.managed-account-placeholder {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.45rem;
+  color: #74819a;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(45, 104, 225, 0.06),
+      transparent 45%
+    ),
+    #fff;
+}
+
+.managed-account-placeholder > span {
+  color: #9aaccc;
+  font-family: Georgia, serif;
+  font-size: 2.5rem;
+}
+
+@media (max-width: 1050px) {
+  .managed-accounts-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .managed-account-list {
+    max-height: 20rem;
+    border-right: 0;
+    border-bottom: 1px solid #dbe3f0;
+  }
+}
+
+@media (max-width: 520px) {
+  .auth-card-mark {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+  }
+
+  .auth-card-mark img {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .managed-account-editor .field-pair {
+    grid-template-columns: 1fr;
   }
 }

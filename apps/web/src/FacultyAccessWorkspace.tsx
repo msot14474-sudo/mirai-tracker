@@ -5,6 +5,8 @@ import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   CreateAccessAccountInput,
   CreateFacultyInput,
+  ManagedAccount,
+  UpdateManagedAccountInput,
   facultyAccessApi,
 } from './facultyAccess';
 
@@ -15,11 +17,13 @@ export function FacultyAccessWorkspace({
   campusLocked = false,
   canCreateCampusManagers = false,
   canCreateAdministrators = false,
+  currentUserId = '',
 }: {
   initialCampusId?: string;
   campusLocked?: boolean;
   canCreateCampusManagers?: boolean;
   canCreateAdministrators?: boolean;
+  currentUserId?: string;
 }) {
   const queryClient = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
@@ -29,6 +33,7 @@ export function FacultyAccessWorkspace({
   });
   const [campusId, setCampusId] = useState(initialCampusId);
   const [accountType, setAccountType] = useState<AccountType>('FACULTY');
+  const [selectedAccountId, setSelectedAccountId] = useState('');
 
   useEffect(() => {
     if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
@@ -39,14 +44,24 @@ export function FacultyAccessWorkspace({
     queryFn: () => facultyAccessApi.campus(campusId),
     enabled: Boolean(campusId),
   });
+  const accounts = useQuery({
+    queryKey: ['managed-accounts', campusId],
+    queryFn: () => facultyAccessApi.accounts(campusId),
+    enabled: Boolean(campusId),
+  });
   const createFaculty = useMutation({
     mutationFn: (input: CreateFacultyInput) =>
       facultyAccessApi.create(campusId, input),
     onSuccess: async () => {
       form.current?.reset();
-      await queryClient.invalidateQueries({
-        queryKey: ['faculty-access', campusId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['faculty-access', campusId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['managed-accounts', campusId],
+        }),
+      ]);
     },
   });
   const createAccount = useMutation<
@@ -62,7 +77,31 @@ export function FacultyAccessWorkspace({
       type === 'ADMIN'
         ? facultyAccessApi.createAdministrator(input)
         : facultyAccessApi.createCampusManager(campusId, input),
-    onSuccess: () => form.current?.reset(),
+    onSuccess: async () => {
+      form.current?.reset();
+      await queryClient.invalidateQueries({
+        queryKey: ['managed-accounts', campusId],
+      });
+    },
+  });
+  const updateAccount = useMutation({
+    mutationFn: ({
+      userId,
+      input,
+    }: {
+      userId: string;
+      input: UpdateManagedAccountInput;
+    }) => facultyAccessApi.updateAccount(userId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['managed-accounts', campusId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['faculty-access', campusId],
+        }),
+      ]);
+    },
   });
 
   function chooseAccountType(type: AccountType) {
@@ -98,8 +137,31 @@ export function FacultyAccessWorkspace({
     createAccount.mutate({ type: accountType, input: account });
   }
 
+  function submitAccountUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedAccountId) return;
+    const values = new FormData(event.currentTarget);
+    const password = String(values.get('managedPassword') ?? '');
+    const notificationEmail = String(
+      values.get('managedNotificationEmail') ?? '',
+    ).trim();
+    updateAccount.mutate({
+      userId: selectedAccountId,
+      input: {
+        name: String(values.get('managedName') ?? ''),
+        email: String(values.get('managedEmail') ?? ''),
+        notificationEmail: notificationEmail || null,
+        status: String(values.get('managedStatus')) as 'ACTIVE' | 'SUSPENDED',
+        ...(password ? { password } : {}),
+      },
+    });
+  }
+
   const selectedCampus = campuses.data?.find(
     (campus) => campus.id === campusId,
+  );
+  const selectedAccount = accounts.data?.accounts?.find(
+    (account) => account.id === selectedAccountId,
   );
   const isFaculty = accountType === 'FACULTY';
   const formTitle =
@@ -360,6 +422,182 @@ export function FacultyAccessWorkspace({
           </div>
         ) : null}
       </div>
+
+      <section
+        className="managed-accounts"
+        aria-labelledby="managed-accounts-title"
+      >
+        <div className="subheading-row managed-accounts-heading">
+          <div>
+            <p className="workspace-kicker">Account controls</p>
+            <h3 id="managed-accounts-title">Managed accounts</h3>
+          </div>
+          <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
+        </div>
+
+        {accounts.isLoading ? (
+          <LoadingSkeleton variant="list" label="Loading managed accounts" />
+        ) : accounts.isError ? (
+          <p className="form-error" role="alert">
+            {accounts.error.message}
+          </p>
+        ) : (
+          <div className="managed-accounts-layout">
+            <div className="managed-account-list">
+              {accounts.data?.accounts?.map((account) => (
+                <button
+                  type="button"
+                  key={account.id}
+                  className={
+                    selectedAccountId === account.id ? 'active' : undefined
+                  }
+                  onClick={() => {
+                    setSelectedAccountId(account.id);
+                    updateAccount.reset();
+                  }}
+                >
+                  <span className="managed-account-avatar" aria-hidden="true">
+                    {account.name
+                      .split(/\s+/)
+                      .map((part) => part[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                  <span className="managed-account-identity">
+                    <strong>
+                      {account.name}
+                      {account.id === currentUserId ? <small>You</small> : null}
+                    </strong>
+                    <span>{account.email}</span>
+                    <small>{accountRoleLabel(account)}</small>
+                  </span>
+                  <b
+                    className={
+                      account.status === 'ACTIVE' ? 'active' : 'inactive'
+                    }
+                  >
+                    {account.status}
+                  </b>
+                </button>
+              ))}
+              {accounts.data?.accounts?.length === 0 ? (
+                <p className="empty-copy">
+                  No manageable accounts in this campus.
+                </p>
+              ) : null}
+            </div>
+
+            {selectedAccount ? (
+              <form
+                key={selectedAccount.id}
+                className="managed-account-editor"
+                onSubmit={submitAccountUpdate}
+              >
+                <header>
+                  <div>
+                    <p className="workspace-kicker">Editing</p>
+                    <h3>{selectedAccount.name}</h3>
+                  </div>
+                  <span>{accountRoleLabel(selectedAccount)}</span>
+                </header>
+                <div className="field-pair">
+                  <label>
+                    Full name
+                    <input
+                      name="managedName"
+                      defaultValue={selectedAccount.name}
+                      minLength={2}
+                      maxLength={160}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Login email
+                    <input
+                      name="managedEmail"
+                      type="email"
+                      defaultValue={selectedAccount.email}
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="field-pair">
+                  <label>
+                    OTP email
+                    <input
+                      name="managedNotificationEmail"
+                      type="email"
+                      defaultValue={selectedAccount.notificationEmail ?? ''}
+                    />
+                  </label>
+                  <label>
+                    Account status
+                    <select
+                      name="managedStatus"
+                      defaultValue={
+                        selectedAccount.status === 'SUSPENDED'
+                          ? 'SUSPENDED'
+                          : 'ACTIVE'
+                      }
+                      disabled={selectedAccount.id === currentUserId}
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="SUSPENDED">Suspended</option>
+                    </select>
+                  </label>
+                </div>
+                <label>
+                  New password <span className="optional-label">Optional</span>
+                  <input
+                    name="managedPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={256}
+                    placeholder="Leave blank to keep the current password"
+                  />
+                  <small>
+                    At least 12 characters. The current password is never shown.
+                  </small>
+                </label>
+                {updateAccount.error ? (
+                  <p className="form-error" role="alert">
+                    {updateAccount.error.message}
+                  </p>
+                ) : null}
+                {updateAccount.isSuccess ? (
+                  <p className="form-success" role="status">
+                    Account changes saved securely.
+                  </p>
+                ) : null}
+                <button type="submit" disabled={updateAccount.isPending}>
+                  {updateAccount.isPending ? 'Saving…' : 'Save account changes'}
+                </button>
+              </form>
+            ) : (
+              <div className="managed-account-placeholder">
+                <span>01</span>
+                <h3>Select an account</h3>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </section>
   );
+}
+
+function accountRoleLabel(account: ManagedAccount) {
+  const labels = {
+    ADMIN: 'Administrator',
+    PROGRAM_MANAGER: 'Administrator',
+    CAMPUS_MANAGER: 'Campus Manager',
+    FACULTY: 'Faculty',
+    STUDENT: 'Student',
+  } as const;
+  return account.roleAssignments
+    .map((assignment) => labels[assignment.role])
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(' · ');
 }

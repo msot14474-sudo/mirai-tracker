@@ -176,9 +176,9 @@ describe('FacultyAccessWorkspace', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Create campus manager' }),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Campus Manager access created',
-    );
+    expect(
+      await screen.findByText('Campus Manager access created.'),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Administrator' }));
     fireEvent.change(screen.getByLabelText('Full name'), {
@@ -193,9 +193,9 @@ describe('FacultyAccessWorkspace', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Create administrator' }),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Administrator access created',
-    );
+    expect(
+      await screen.findByText('Administrator access created.'),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       const posts = requests.filter((request) => request.method === 'POST');
@@ -210,6 +210,91 @@ describe('FacultyAccessWorkspace', () => {
         name: 'New Administrator',
         email: 'new.admin@example.edu',
       });
+    });
+  });
+
+  it('lets a campus manager securely update a managed student account', async () => {
+    const requests: Array<{ url: string; method?: string; body?: string }> = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      requests.push({
+        url,
+        method: init?.method,
+        body: init?.body?.toString(),
+      });
+      if (url.endsWith('/academic/campuses')) {
+        return response([
+          {
+            id: 'campus-a',
+            code: 'HI-TECH',
+            name: 'HI-Tech',
+            timezone: 'Asia/Kolkata',
+          },
+        ]);
+      }
+      if (url.endsWith('/faculty-access/campuses/campus-a/accounts')) {
+        return response({
+          accounts: [
+            {
+              id: 'student-user-a',
+              name: 'Student One',
+              email: 'student@example.edu',
+              notificationEmail: null,
+              status: 'ACTIVE',
+              roleAssignments: [
+                {
+                  role: 'STUDENT',
+                  campusId: 'campus-a',
+                  campus: { name: 'HI-Tech' },
+                },
+              ],
+              staffProfile: null,
+              studentProfile: {
+                studentCode: 'STU-101',
+                enrollmentStatus: 'ACTIVE',
+                batch: { code: 'MIRAI-A', name: 'Mirai A' },
+              },
+            },
+          ],
+        });
+      }
+      if (init?.method === 'PATCH') {
+        return response({
+          account: { id: 'student-user-a' },
+          passwordChanged: true,
+        });
+      }
+      return response({
+        campus: {
+          id: 'campus-a',
+          code: 'HI-TECH',
+          name: 'HI-Tech',
+          timezone: 'Asia/Kolkata',
+          active: true,
+        },
+        faculty: [],
+        offerings: [],
+      });
+    });
+
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: /Student One/ }));
+    fireEvent.change(screen.getByLabelText(/New password/), {
+      target: { value: 'a-new-student-password' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save account changes' }),
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Account changes saved securely',
+    );
+    const update = requests.find((request) => request.method === 'PATCH');
+    expect(update?.url).toContain('/faculty-access/accounts/student-user-a');
+    expect(JSON.parse(update!.body!)).toMatchObject({
+      name: 'Student One',
+      email: 'student@example.edu',
+      password: 'a-new-student-password',
     });
   });
 });

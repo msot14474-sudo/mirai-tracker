@@ -28,6 +28,21 @@ const verifyOtpInputSchema = z.object({
   code: z.string().regex(/^\d{6}$/),
 });
 
+const forgotPasswordInputSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(320)
+    .transform((value) => value.toLowerCase()),
+});
+
+const resetPasswordInputSchema = z.object({
+  challengeId: z.string().min(20).max(100),
+  code: z.string().regex(/^\d{6}$/),
+  password: z.string().min(12).max(256),
+});
+
 type HeaderResponse = {
   setHeader(name: string, value: string): void;
 };
@@ -68,6 +83,31 @@ export class AuthController {
       createSessionCookie(result.token, this.auth.sessionTtlSeconds),
     );
     return { user: result.user };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(@Body() body: unknown) {
+    const parsed = forgotPasswordInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException('Enter a valid email address.');
+    }
+    return this.auth.requestPasswordReset(parsed.data.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(@Body() body: unknown) {
+    const parsed = resetPasswordInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        'Enter a valid code and a password with at least 12 characters.',
+      );
+    }
+    await this.auth.resetPassword(parsed.data);
+    return { changed: true };
   }
 
   @Get('me')

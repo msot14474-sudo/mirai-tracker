@@ -1,4 +1,4 @@
-import { StaffType } from '@prisma/client';
+import { StaffType, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
 
@@ -43,7 +43,35 @@ export const createFacultySchema = z.object({
     .default([]),
 });
 
+export const updateManagedAccountSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160).optional(),
+    email: z
+      .string()
+      .trim()
+      .email()
+      .max(320)
+      .transform((value) => value.toLowerCase())
+      .optional(),
+    notificationEmail: z
+      .string()
+      .trim()
+      .email()
+      .max(320)
+      .transform((value) => value.toLowerCase())
+      .nullable()
+      .optional(),
+    status: z.enum([UserStatus.ACTIVE, UserStatus.SUSPENDED]).optional(),
+    password: z.string().min(12).max(256).optional(),
+  })
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: 'Provide at least one account change.',
+  });
+
 export type CreateAccessAccountInput = z.infer<
   typeof createAccessAccountSchema
 >;
 export type CreateFacultyInput = z.infer<typeof createFacultySchema>;
+export type UpdateManagedAccountInput = z.infer<
+  typeof updateManagedAccountSchema
+>;

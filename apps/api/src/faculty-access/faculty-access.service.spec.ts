@@ -24,10 +24,13 @@ describe('FacultyAccessService', () => {
   const campusFindUnique = jest.fn();
   const offeringFindMany = jest.fn();
   const userCreate = jest.fn();
+  const userFindMany = jest.fn();
+  const userFindUnique = jest.fn();
+  const userUpdate = jest.fn();
   const assignmentCreateMany = jest.fn();
   const auditCreate = jest.fn();
   const transaction = {
-    user: { create: userCreate },
+    user: { create: userCreate, update: userUpdate },
     facultyAssignment: { createMany: assignmentCreateMany },
     auditEvent: { create: auditCreate },
   };
@@ -35,6 +38,11 @@ describe('FacultyAccessService', () => {
     campus: { findUnique: campusFindUnique },
     subjectOffering: { findMany: offeringFindMany },
     staffProfile: { findMany: jest.fn() },
+    user: {
+      create: userCreate,
+      findMany: userFindMany,
+      findUnique: userFindUnique,
+    },
     $transaction: jest.fn((work: (client: typeof transaction) => unknown) =>
       work(transaction),
     ),
@@ -42,6 +50,7 @@ describe('FacultyAccessService', () => {
   const access = {
     assertCanManageCampus: jest.fn(),
     assertGlobalManager: jest.fn(),
+    isGlobalManager: jest.fn(),
   };
 
   beforeEach(() => {
@@ -78,6 +87,14 @@ describe('FacultyAccessService', () => {
     });
     assignmentCreateMany.mockResolvedValue({ count: 1 });
     auditCreate.mockResolvedValue({ id: 'audit-a' });
+    access.isGlobalManager.mockReturnValue(false);
+    userUpdate.mockResolvedValue({
+      id: 'student-user-a',
+      name: 'Student One',
+      email: 'student.one@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+    });
   });
 
   function service() {
@@ -241,5 +258,111 @@ describe('FacultyAccessService', () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userCreate).not.toHaveBeenCalled();
+  });
+
+  it('lets a campus manager update a student in the same campus', async () => {
+    userFindUnique.mockResolvedValue({
+      id: 'student-user-a',
+      name: 'Student One',
+      email: 'student@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.STUDENT, campusId }],
+    });
+
+    const result = await service().updateAccount(
+      'student-user-a',
+      {
+        name: 'Student One',
+        email: 'student.one@example.edu',
+        password: 'a-new-student-password',
+      },
+      actor,
+    );
+
+    expect(userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'student-user-a' },
+        data: expect.objectContaining({
+          passwordCredential: {
+            upsert: {
+              create: expect.objectContaining({
+                passwordHash: expect.any(String),
+              }),
+              update: expect.objectContaining({
+                passwordHash: expect.any(String),
+              }),
+            },
+          },
+        }),
+      }),
+    );
+    expect(JSON.stringify(auditCreate.mock.calls.at(-1)?.[0])).not.toContain(
+      'a-new-student-password',
+    );
+    expect(result).toMatchObject({ passwordChanged: true });
+  });
+
+  it('prevents a campus manager from changing an elevated account', async () => {
+    userFindUnique.mockResolvedValue({
+      id: 'campus-manager-b',
+      name: 'Campus Manager B',
+      email: 'manager.b@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.CAMPUS_MANAGER, campusId }],
+    });
+
+    await expect(
+      service().updateAccount(
+        'campus-manager-b',
+        { password: 'a-new-manager-password' },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(userUpdate).not.toHaveBeenCalled();
+  });
+
+  it('lets an administrator update their own account without suspending it', async () => {
+    const administrator = {
+      ...programManager,
+      id: 'admin-user-a',
+      roles: [{ role: UserRole.ADMIN, campusId: null }],
+    };
+    access.isGlobalManager.mockReturnValue(true);
+    userFindUnique.mockResolvedValue({
+      id: administrator.id,
+      name: 'Administrator',
+      email: 'admin@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: administrator.roles,
+    });
+    userUpdate.mockResolvedValue({
+      id: administrator.id,
+      name: 'Administrator Updated',
+      email: 'admin@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+    });
+
+    await expect(
+      service().updateAccount(
+        administrator.id,
+        { name: 'Administrator Updated' },
+        administrator,
+      ),
+    ).resolves.toMatchObject({
+      account: { name: 'Administrator Updated' },
+      passwordChanged: false,
+    });
+
+    await expect(
+      service().updateAccount(
+        administrator.id,
+        { status: UserStatus.SUSPENDED },
+        administrator,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

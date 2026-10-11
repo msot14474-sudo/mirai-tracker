@@ -64,6 +64,69 @@ describe('App authentication', () => {
     expect(screen.getByLabelText('Email')).toHaveValue('');
   });
 
+  it('resets a forgotten password with an emailed code', async () => {
+    const requests: Array<{ url: string; body?: string }> = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      requests.push({ url, body: init?.body?.toString() });
+      if (url.endsWith('/auth/forgot-password')) {
+        return new Response(
+          JSON.stringify({
+            challengeId: 'reset-challenge-identifier-long-enough',
+            expiresInSeconds: 600,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.endsWith('/auth/reset-password')) {
+        return new Response(JSON.stringify({ changed: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(null, { status: 401 });
+    });
+    renderApp();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Forgot password?' }),
+    );
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'faculty@mirai.local' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send reset code' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Create password' }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Reset code'), {
+      target: { value: '123456' },
+    });
+    fireEvent.change(screen.getByLabelText('New password'), {
+      target: { value: 'a-new-secure-password' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirm password'), {
+      target: { value: 'a-new-secure-password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update password' }));
+
+    expect(
+      await screen.findByText(
+        'Password updated. Sign in with your new password.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      requests.some((request) => request.url.endsWith('/auth/forgot-password')),
+    ).toBe(true);
+    const resetRequest = requests.find((request) =>
+      request.url.endsWith('/auth/reset-password'),
+    );
+    expect(JSON.parse(resetRequest!.body!)).toMatchObject({
+      code: '123456',
+      password: 'a-new-secure-password',
+    });
+  });
+
   it('verifies an email code before displaying role-aware faculty access', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -88,9 +151,7 @@ describe('App authentication', () => {
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'correct-password' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Continue' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Check your email' }),

@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -14,6 +15,7 @@ import { AuthenticatedUser } from '../auth/auth.types';
 import {
   createAccessAccountSchema,
   createFacultySchema,
+  updateManagedAccountSchema,
 } from './faculty-access.schemas';
 import { FacultyAccessService } from './faculty-access.service';
 
@@ -34,6 +36,27 @@ export class FacultyAccessController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.facultyAccess.campus(parse(uuidSchema, campusId), user);
+  }
+
+  @Get('campuses/:campusId/accounts')
+  accounts(
+    @Param('campusId') campusId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.facultyAccess.accounts(parse(uuidSchema, campusId), user);
+  }
+
+  @Patch('accounts/:userId')
+  updateAccount(
+    @Param('userId') userId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.facultyAccess.updateAccount(
+      parse(uuidSchema, userId),
+      parse(updateManagedAccountSchema, body),
+      user,
+    );
   }
 
   @Post('campuses/:campusId/faculty')

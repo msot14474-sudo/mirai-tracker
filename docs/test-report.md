@@ -2,7 +2,7 @@
 
 ## 1. Result summary
 
-The verified source baseline passes **246 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
+The verified source baseline passes **262 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
 
 The production Docker smoke test, PostgreSQL integration suite and public Vercel deployment have now passed. The live deployment uses managed PostgreSQL and Redis, authenticated five-minute QStash jobs and verified Brevo SMTP delivery. The five-faculty phone study remains an external activity.
 
