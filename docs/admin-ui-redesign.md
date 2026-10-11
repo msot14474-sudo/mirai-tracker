@@ -37,13 +37,14 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Polished the campus-selection gateway with balanced cards, accessible focus states and responsive desktop, tablet and mobile layouts.
 - [x] Replaced plain data-loading messages with responsive content-shaped shimmer skeletons across the frontend.
 - [x] Removed decorative boxed header icons and kept page titles aligned without empty visual space.
+- [x] Normalized workspace spacing, control heights and disabled-action contrast across the administrator interface.
 
 ## Next implementation sequence
 
 - [ ] Connect campus-specific overview metrics and today's lecture table to live data.
 - [ ] Apply the same layout system to timetable setup.
 - [x] Apply it to user access.
-- [ ] Apply it to lesson plans and planned topic dates.
+- [x] Apply it to lesson plans and planned topic dates.
 - [ ] Apply it to progress dashboards and exam readiness.
 - [ ] Apply it to exports and alerts.
 - [x] Design and verify responsive tablet and mobile layouts for the campus-selection gateway.

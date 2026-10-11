@@ -312,7 +312,9 @@ function SessionCapacityRow({
         {session.status}
       </span>
       {cancelled ? (
-        <small>{session.cancellationReason}</small>
+        <small className="cancellation-note">
+          {session.cancellationReason}
+        </small>
       ) : (
         <input
           aria-label={`Cancellation reason for ${session.sessionDate}`}
@@ -334,7 +336,9 @@ function SessionCapacityRow({
             ? 'Restore'
             : 'Cancel class'}
       </button>
-      {session.hasLogs ? <small>Protected: class log exists</small> : null}
+      {session.hasLogs ? (
+        <small className="protected-note">Protected: class log exists</small>
+      ) : null}
       {mutation.error ? (
         <p className="form-error">{mutation.error.message}</p>
       ) : null}
