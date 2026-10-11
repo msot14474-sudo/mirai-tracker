@@ -127,6 +127,7 @@ function AdminCampusGateway({
             alt="Mirai School of Technology"
           />
         </span>
+        <div className="campus-gateway-sidebar-rule" aria-hidden="true" />
         <div className="campus-gateway-account">
           <span className="account-avatar">{initials}</span>
           <span>
@@ -138,12 +139,19 @@ function AdminCampusGateway({
 
       <section className="campus-gateway-main">
         <header className="campus-gateway-topbar">
-          <div>
-            <span>Mirai Tracker</span>
-            <strong>Choose campus</strong>
+          <div className="campus-gateway-page-identity">
+            <span className="campus-gateway-page-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 10h16M6 10v8m4-8v8m4-8v8m4-8v8M3 21h18M12 3l9 5H3l9-5Z" />
+              </svg>
+            </span>
+            <div>
+              <span>Mirai Tracker</span>
+              <strong>Choose campus</strong>
+            </div>
           </div>
           <div className="campus-gateway-actions">
-            <span>{roleLabel}</span>
+            <span className="campus-gateway-role">{roleLabel}</span>
             <button
               type="button"
               className="secondary-button"
@@ -156,51 +164,79 @@ function AdminCampusGateway({
         </header>
 
         <div className="campus-gateway-content">
-          <p className="campus-gateway-eyebrow">Administration</p>
-          <h1>Welcome back, {firstName}</h1>
-          <p className="campus-gateway-copy">
-            Choose a campus to open its complete management workspace.
-          </p>
-
-          <div className="campus-gateway-summary">
-            <strong>{campuses.length} active campuses</strong>
-            <span>Select one to continue</span>
+          <div className="campus-gateway-intro">
+            <p className="campus-gateway-eyebrow">Administration</p>
+            <h1>Welcome back, {firstName}</h1>
+            <p className="campus-gateway-copy">
+              Choose a campus to open its complete management workspace.
+            </p>
           </div>
 
-          {isLoading ? (
-            <p className="campus-gateway-state">Loading campuses…</p>
-          ) : error ? (
-            <div className="campus-gateway-state" role="alert">
-              <p>{error.message}</p>
-              <button type="button" onClick={onRetry}>
-                Try again
-              </button>
+          <section
+            className="campus-gateway-selection"
+            aria-labelledby="campus-selection-title"
+          >
+            <div className="campus-gateway-summary">
+              <div>
+                <span className="campus-gateway-count" aria-hidden="true">
+                  {campuses.length.toString().padStart(2, '0')}
+                </span>
+                <strong id="campus-selection-title">
+                  {campuses.length} active campuses
+                </strong>
+              </div>
+              <span>Select one to continue</span>
             </div>
-          ) : campuses.length ? (
-            <div className="campus-choice-grid">
-              {campuses.map((campus) => (
-                <button
-                  type="button"
-                  className="campus-choice"
-                  key={campus.id}
-                  onClick={() => onSelect(campus.id)}
-                >
-                  <span className="campus-choice-topline">
-                    <small>{campus.code}</small>
-                    <span aria-hidden="true">→</span>
-                  </span>
-                  <strong>{campus.name}</strong>
-                  <span>{campus.timezone}</span>
+
+            {isLoading ? (
+              <p className="campus-gateway-state">Loading campuses…</p>
+            ) : error ? (
+              <div className="campus-gateway-state" role="alert">
+                <p>{error.message}</p>
+                <button type="button" onClick={onRetry}>
+                  Try again
                 </button>
-              ))}
-            </div>
-          ) : (
-            <p className="campus-gateway-state">No active campuses found.</p>
-          )}
+              </div>
+            ) : campuses.length ? (
+              <div className="campus-choice-grid">
+                {campuses.map((campus) => (
+                  <button
+                    type="button"
+                    className="campus-choice"
+                    key={campus.id}
+                    onClick={() => onSelect(campus.id)}
+                    aria-label={`Open ${campus.name}`}
+                  >
+                    <span className="campus-choice-topline">
+                      <small>{campus.code}</small>
+                      <span className="campus-choice-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <path d="M5 12h14m-5-5 5 5-5 5" />
+                        </svg>
+                      </span>
+                    </span>
+                    <span className="campus-choice-body">
+                      <strong>{campus.name}</strong>
+                      <span>Management workspace</span>
+                    </span>
+                    <span className="campus-choice-timezone">
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="8.5" />
+                        <path d="M12 7.5V12l3 2" />
+                      </svg>
+                      {campus.timezone}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="campus-gateway-state">No active campuses found.</p>
+            )}
+          </section>
 
           <p className="campus-gateway-security">
             <span aria-hidden="true" />
-            Your global access remains active across every campus.
+            <span>Your global access remains active across every campus.</span>
           </p>
         </div>
       </section>

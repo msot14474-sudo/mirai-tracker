@@ -34,6 +34,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Split semester import, exam readiness and planned dates into their own sidebar views.
 - [x] Expanded User access to create Faculty, Campus Manager and Administrator accounts with role-safe scope.
 - [x] Added a dedicated Subjects view in Academic setup with a shared subject catalog and creation form.
+- [x] Polished the campus-selection gateway with balanced cards, accessible focus states and responsive desktop, tablet and mobile layouts.
 
 ## Next implementation sequence
 
@@ -43,6 +44,6 @@ This document tracks the administrator interface redesign. The editable design s
 - [ ] Apply it to lesson plans and planned topic dates.
 - [ ] Apply it to progress dashboards and exam readiness.
 - [ ] Apply it to exports and alerts.
-- [ ] Design and verify responsive tablet and mobile layouts after the desktop administrator structure is approved.
+- [x] Design and verify responsive tablet and mobile layouts for the campus-selection gateway.
 
 The campus entry, animated Overview and single-view workspace navigation are implemented in the web app. The next UI phase applies the same layout system inside each operational workspace.
