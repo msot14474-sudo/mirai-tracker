@@ -148,6 +148,23 @@ function installFetchMock(onCreate?: (body: unknown) => void) {
 }
 
 describe('TimetableSetup', () => {
+  it('shows loading skeletons instead of a premature selection prompt', () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () => new Promise<Response>(() => undefined),
+    );
+    renderTimetable();
+
+    expect(
+      screen.getByRole('status', { name: 'Loading subject offerings' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: 'Loading timetable data' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Select a subject offering' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows weekly, dated and semester planned teaching from the API', async () => {
     installFetchMock();
     renderTimetable();

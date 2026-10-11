@@ -1445,6 +1445,10 @@ select {
   margin-bottom: 0.8rem;
 }
 
+.schedule-offering-strip > .content-skeleton {
+  grid-column: 1 / -1;
+}
+
 .schedule-offering-strip button {
   display: grid;
   gap: 0.28rem;

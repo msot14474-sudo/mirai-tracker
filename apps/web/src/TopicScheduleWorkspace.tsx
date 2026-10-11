@@ -18,6 +18,8 @@ export function TopicScheduleWorkspace() {
   useEffect(() => {
     if (!offeringId && offerings.data?.[0]) setOfferingId(offerings.data[0].id);
   }, [offeringId, offerings.data]);
+  const selectionIsLoading =
+    offerings.isLoading || (!offeringId && Boolean(offerings.data?.length));
 
   return (
     <section
@@ -44,30 +46,40 @@ export function TopicScheduleWorkspace() {
         className="schedule-offering-strip"
         aria-label="Planned-date offerings"
       >
-        {offerings.data?.map((offering) => (
-          <button
-            key={offering.id}
-            className={offering.id === offeringId ? 'selected' : ''}
-            onClick={() => setOfferingId(offering.id)}
-          >
-            <strong>{offering.subject.name}</strong>
-            <span>
-              {offering.batch.name} · {offering.batch.semester.campus.name}
-            </span>
-            <small>
-              {offering.latestSchedule
-                ? `Saved v${offering.latestSchedule.version}`
-                : 'Live preview only'}
-            </small>
-          </button>
-        ))}
+        {selectionIsLoading ? (
+          <LoadingSkeleton
+            variant="cards"
+            count={3}
+            label="Loading planned-date offerings"
+          />
+        ) : (
+          offerings.data?.map((offering) => (
+            <button
+              key={offering.id}
+              className={offering.id === offeringId ? 'selected' : ''}
+              onClick={() => setOfferingId(offering.id)}
+            >
+              <strong>{offering.subject.name}</strong>
+              <span>
+                {offering.batch.name} · {offering.batch.semester.campus.name}
+              </span>
+              <small>
+                {offering.latestSchedule
+                  ? `Saved v${offering.latestSchedule.version}`
+                  : 'Live preview only'}
+              </small>
+            </button>
+          ))
+        )}
       </div>
 
-      {!offeringId ? (
+      {selectionIsLoading ? (
+        <LoadingSkeleton variant="table" label="Loading planned dates" />
+      ) : !offeringId ? (
         <div className="empty-state compact-empty">
           <span>01</span>
-          <h3>Select a subject offering</h3>
-          <p>Its planned dates and usable class capacity will appear here.</p>
+          <h3>No subject offerings</h3>
+          <p>No offering is available for planned-date calculation.</p>
         </div>
       ) : detail.isLoading ? (
         <LoadingSkeleton variant="table" label="Calculating live dates" />

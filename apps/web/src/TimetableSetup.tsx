@@ -58,6 +58,14 @@ export function TimetableSetup({
     }
   }, [offeringId, offerings.data]);
 
+  const selectionIsLoading =
+    campuses.isLoading ||
+    (Boolean(campusId) && semesters.isLoading) ||
+    (!campusId && Boolean(campuses.data?.length)) ||
+    (!semesterId && Boolean(semesters.data?.length)) ||
+    (Boolean(semesterId) && offerings.isLoading) ||
+    (!offeringId && Boolean(offerings.data?.offerings.length));
+
   const refresh = async () => {
     await queryClient.invalidateQueries({
       queryKey: ['timetable', 'offering', offeringId],
@@ -85,7 +93,9 @@ export function TimetableSetup({
                 setOfferingId('');
               }}
             >
-              <option value="">Select campus</option>
+              <option value="">
+                {campuses.isLoading ? 'Loading campuses…' : 'Select campus'}
+              </option>
               {campuses.data?.map((campus) => (
                 <option key={campus.id} value={campus.id}>
                   {campus.name}
@@ -97,12 +107,15 @@ export function TimetableSetup({
             Semester
             <select
               value={semesterId}
+              disabled={!campusId || semesters.isLoading}
               onChange={(event) => {
                 setSemesterId(event.target.value);
                 setOfferingId('');
               }}
             >
-              <option value="">Select semester</option>
+              <option value="">
+                {semesters.isLoading ? 'Loading semesters…' : 'Select semester'}
+              </option>
               {semesters.data?.map((semester) => (
                 <option key={semester.id} value={semester.id}>
                   {semester.name}
@@ -125,25 +138,39 @@ export function TimetableSetup({
         <div className="offering-list" aria-label="Subject offerings">
           <div className="subheading-row">
             <h3>Subjects and batches</h3>
-            <span>{offerings.data?.offerings.length ?? 0} offerings</span>
+            <span>
+              {selectionIsLoading
+                ? 'Loading…'
+                : `${offerings.data?.offerings.length ?? 0} offerings`}
+            </span>
           </div>
-          {offerings.data?.offerings.map((offering) => (
-            <button
-              key={offering.id}
-              className={offering.id === offeringId ? 'selected' : ''}
-              onClick={() => setOfferingId(offering.id)}
-            >
-              <strong>{offering.subject.name}</strong>
-              <span>
-                {offering.subject.code} · {offering.batch.name}
-              </span>
-              <small>
-                {formatMinutes(offering.weeklyPlannedMinutes)} weekly ·{' '}
-                {offering.generatedSessions} sessions
-              </small>
-            </button>
-          ))}
-          {semesterId && offerings.data?.offerings.length === 0 ? (
+          {selectionIsLoading ? (
+            <LoadingSkeleton
+              variant="list"
+              count={3}
+              label="Loading subject offerings"
+            />
+          ) : (
+            offerings.data?.offerings.map((offering) => (
+              <button
+                key={offering.id}
+                className={offering.id === offeringId ? 'selected' : ''}
+                onClick={() => setOfferingId(offering.id)}
+              >
+                <strong>{offering.subject.name}</strong>
+                <span>
+                  {offering.subject.code} · {offering.batch.name}
+                </span>
+                <small>
+                  {formatMinutes(offering.weeklyPlannedMinutes)} weekly ·{' '}
+                  {offering.generatedSessions} sessions
+                </small>
+              </button>
+            ))
+          )}
+          {!selectionIsLoading &&
+          semesterId &&
+          offerings.data?.offerings.length === 0 ? (
             <p className="empty-copy">
               No subject offerings are attached to this semester yet.
             </p>
@@ -151,11 +178,19 @@ export function TimetableSetup({
         </div>
 
         <div className="timetable-detail">
-          {!offeringId ? (
+          {selectionIsLoading ? (
+            <LoadingSkeleton variant="panel" label="Loading timetable data" />
+          ) : !offeringId ? (
             <div className="empty-state">
               <span>01</span>
-              <h3>Select a subject offering</h3>
-              <p>Its weekly hours and generated teaching dates appear here.</p>
+              <h3>
+                {semesterId ? 'No subject offerings' : 'Select a semester'}
+              </h3>
+              <p>
+                {semesterId
+                  ? 'This semester has no subject offerings yet.'
+                  : 'Choose a semester to view its timetable.'}
+              </p>
             </div>
           ) : detail.isLoading ? (
             <LoadingSkeleton

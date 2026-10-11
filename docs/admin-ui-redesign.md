@@ -40,6 +40,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Normalized workspace spacing, control heights and disabled-action contrast across the administrator interface.
 - [x] Added deliberate exit-and-enter transitions between campuses and workspaces with reduced-motion support.
 - [x] Normalized workspace headings, section rows, upload controls and Lesson Plans content alignment.
+- [x] Replaced premature selection prompts with content-shaped loading states across timetable, semesters, lesson plans and planned dates.
 
 ## Next implementation sequence
 

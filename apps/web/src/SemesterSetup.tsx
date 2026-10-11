@@ -84,21 +84,33 @@ export function SemesterSetup({
             />
 
             <div className="semester-list" aria-label="Semesters">
-              {semesters.data?.map((semester) => (
-                <button
-                  key={semester.id}
-                  className={semester.id === semesterId ? 'selected' : ''}
-                  onClick={() => setSemesterId(semester.id)}
-                >
-                  <strong>{semester.name}</strong>
-                  <span>
-                    {dateOnly(semester.startDate)} →{' '}
-                    {dateOnly(semester.endDate)}
-                  </span>
-                  <small>{saturdayLabels[semester.workingSaturdayRule]}</small>
-                </button>
-              ))}
-              {campusId && semesters.data?.length === 0 ? (
+              {semesters.isLoading ? (
+                <LoadingSkeleton
+                  variant="list"
+                  count={3}
+                  label="Loading semesters"
+                />
+              ) : (
+                semesters.data?.map((semester) => (
+                  <button
+                    key={semester.id}
+                    className={semester.id === semesterId ? 'selected' : ''}
+                    onClick={() => setSemesterId(semester.id)}
+                  >
+                    <strong>{semester.name}</strong>
+                    <span>
+                      {dateOnly(semester.startDate)} →{' '}
+                      {dateOnly(semester.endDate)}
+                    </span>
+                    <small>
+                      {saturdayLabels[semester.workingSaturdayRule]}
+                    </small>
+                  </button>
+                ))
+              )}
+              {!semesters.isLoading &&
+              campusId &&
+              semesters.data?.length === 0 ? (
                 <p className="empty-copy">
                   No semester created for this campus.
                 </p>
@@ -107,7 +119,9 @@ export function SemesterSetup({
           </div>
 
           <div className="calendar-detail">
-            {!semesterId ? (
+            {semesters.isLoading ? (
+              <LoadingSkeleton variant="panel" label="Loading semesters" />
+            ) : !semesterId ? (
               <div className="empty-state">
                 <span>01</span>
                 <h3>Select or create a semester</h3>

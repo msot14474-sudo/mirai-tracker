@@ -23,6 +23,8 @@ export function LessonPlanWorkspace() {
   useEffect(() => {
     if (!offeringId && offerings.data?.[0]) setOfferingId(offerings.data[0].id);
   }, [offeringId, offerings.data]);
+  const selectionIsLoading =
+    offerings.isLoading || (!offeringId && Boolean(offerings.data?.length));
 
   return (
     <section
@@ -49,26 +51,36 @@ export function LessonPlanWorkspace() {
         <div className="plan-offering-list" aria-label="Lesson plan offerings">
           <div className="subheading-row">
             <h3>Your subject offerings</h3>
-            <span>{offerings.data?.length ?? 0}</span>
+            <span>
+              {selectionIsLoading ? 'Loading…' : (offerings.data?.length ?? 0)}
+            </span>
           </div>
-          {offerings.data?.map((offering) => (
-            <button
-              key={offering.id}
-              className={offering.id === offeringId ? 'selected' : ''}
-              onClick={() => setOfferingId(offering.id)}
-            >
-              <strong>{offering.subject.name}</strong>
-              <span>
-                {offering.batch.name} · {offering.batch.semester.campus.name}
-              </span>
-              <small>
-                {offering.plan
-                  ? `v${offering.plan.version} · ${formatTeachingTime(offering.plan.totalPlannedMinutes)}`
-                  : 'No lesson plan'}
-              </small>
-            </button>
-          ))}
-          {offerings.data?.length === 0 ? (
+          {selectionIsLoading ? (
+            <LoadingSkeleton
+              variant="list"
+              count={3}
+              label="Loading lesson-plan offerings"
+            />
+          ) : (
+            offerings.data?.map((offering) => (
+              <button
+                key={offering.id}
+                className={offering.id === offeringId ? 'selected' : ''}
+                onClick={() => setOfferingId(offering.id)}
+              >
+                <strong>{offering.subject.name}</strong>
+                <span>
+                  {offering.batch.name} · {offering.batch.semester.campus.name}
+                </span>
+                <small>
+                  {offering.plan
+                    ? `v${offering.plan.version} · ${formatTeachingTime(offering.plan.totalPlannedMinutes)}`
+                    : 'No lesson plan'}
+                </small>
+              </button>
+            ))
+          )}
+          {!selectionIsLoading && offerings.data?.length === 0 ? (
             <p className="empty-copy">
               No editable subject offering is assigned to you.
             </p>
@@ -76,13 +88,13 @@ export function LessonPlanWorkspace() {
         </div>
 
         <div className="plan-detail">
-          {!offeringId ? (
+          {selectionIsLoading ? (
+            <LoadingSkeleton variant="panel" label="Loading lesson plan" />
+          ) : !offeringId ? (
             <div className="empty-state">
               <span>01</span>
-              <h3>Select a subject offering</h3>
-              <p>
-                Its current lesson-plan version and exam scopes appear here.
-              </p>
+              <h3>No subject offerings</h3>
+              <p>No editable subject offering is assigned to you.</p>
             </div>
           ) : detail.isLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />
