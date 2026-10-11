@@ -359,7 +359,7 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
 
 function LoginScreen() {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState('faculty@mirai.local');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
@@ -400,29 +400,25 @@ function LoginScreen() {
             />
           </span>
         </div>
-        <p className="eyebrow">MSOT · Course Progression</p>
-        <h1>One clear view of every teaching day.</h1>
-        <p className="lede">
-          Log sessions quickly, follow the academic calendar and catch subjects
-          that need attention before the exam window closes.
-        </p>
-        <div className="principles" aria-label="Product principles">
-          <span>Effortless</span>
-          <span>Accurate</span>
-          <span>Early warning</span>
+        <div className="brand-statement">
+          <p className="eyebrow">Course progression</p>
+          <h1>
+            Plan. Track.
+            <br />
+            <span>Deliver.</span>
+          </h1>
         </div>
       </section>
 
       <section className="login-panel" aria-labelledby="login-title">
         <div className="login-card">
-          <p className="step-label">Secure access</p>
           <h2 id="login-title">
             {challenge ? 'Check your email' : 'Welcome back'}
           </h2>
           <p className="supporting-copy">
             {challenge
               ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
-              : 'Enter your account password. We will email a verification code before creating your session.'}
+              : 'Sign in to continue.'}
           </p>
 
           {challenge ? (
@@ -474,6 +470,7 @@ function LoginScreen() {
                 autoComplete="username"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@mirai.edu"
                 required
               />
 
@@ -496,24 +493,10 @@ function LoginScreen() {
               ) : null}
 
               <button type="submit" disabled={loginMutation.isPending}>
-                {loginMutation.isPending
-                  ? 'Sending code…'
-                  : 'Continue with email code'}
+                {loginMutation.isPending ? 'Please wait…' : 'Continue'}
               </button>
             </form>
           )}
-
-          <div className="demo-note">
-            <strong>Local demo accounts</strong>
-            <span>
-              admin, campus.manager, faculty or student{' '}
-              <code>@mirai.local</code>
-            </span>
-            <span>
-              Verification codes arrive in Mailpit locally and the configured
-              notification inbox in production.
-            </span>
-          </div>
         </div>
       </section>
     </main>

@@ -41,6 +41,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added deliberate exit-and-enter transitions between campuses and workspaces with reduced-motion support.
 - [x] Normalized workspace headings, section rows, upload controls and Lesson Plans content alignment.
 - [x] Replaced premature selection prompts with content-shaped loading states across timetable, semesters, lesson plans and planned dates.
+- [x] Refined the sign-in screen into a minimal Mirai-branded layout and removed demo credentials, technical notes and promotional filler.
 
 ## Next implementation sequence
 

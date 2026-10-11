@@ -61,7 +61,7 @@ describe('App authentication', () => {
     expect(
       await screen.findByRole('heading', { name: 'Welcome back' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Email')).toHaveValue('faculty@mirai.local');
+    expect(screen.getByLabelText('Email')).toHaveValue('');
   });
 
   it('verifies an email code before displaying role-aware faculty access', async () => {
@@ -82,11 +82,14 @@ describe('App authentication', () => {
     });
     renderApp();
 
+    fireEvent.change(await screen.findByLabelText('Email'), {
+      target: { value: 'faculty@mirai.local' },
+    });
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'correct-password' },
     });
     fireEvent.click(
-      screen.getByRole('button', { name: 'Continue with email code' }),
+      screen.getByRole('button', { name: 'Continue' }),
     );
 
     expect(
