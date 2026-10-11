@@ -7470,7 +7470,7 @@ textarea:focus {
 
 .auth-portrait {
   position: absolute;
-  top: 12%;
+  top: calc(12% + 1rem);
   left: 50%;
   z-index: 1;
   display: grid;
