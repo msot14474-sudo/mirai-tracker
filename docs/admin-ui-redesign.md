@@ -58,6 +58,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Removed the forced workspace-navigation pause, preloaded lazy workspace bundles and warmed Subject Planner offerings and first-detail queries for faster page changes.
 - [x] Centered the complete sign-in hero composition across the blue panel while preserving laptop-to-label spacing.
 - [x] Enlarged the centered sign-in wordmark, faculty portrait and campaign headline as one aligned composition.
+- [x] Replaced the sign-in portrait with a clearer transparent cutout from the provided faculty photograph.
 
 ## Next implementation sequence
 

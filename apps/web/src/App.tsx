@@ -444,7 +444,7 @@ function LoginScreen() {
     const fallbackTimer = window.setTimeout(reveal, 1_000);
     const sources = [
       '/mirai-wordmark-light-hd.png',
-      '/mirai-faculty-hero.png',
+      '/mirai-faculty-hero-v2.png',
       '/mirai-symbol-light.png',
     ];
     const decodeImage = (source: string) =>
@@ -559,7 +559,7 @@ function LoginScreen() {
           </span>
         </div>
         <div className="auth-portrait" aria-hidden="true">
-          <img src="/mirai-faculty-hero.png" alt="" fetchPriority="high" />
+          <img src="/mirai-faculty-hero-v2.png" alt="" fetchPriority="high" />
         </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>

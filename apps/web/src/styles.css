@@ -7473,7 +7473,7 @@ textarea:focus {
   left: 50%;
   z-index: 1;
   display: grid;
-  width: min(22rem, 66%);
+  width: min(24rem, 70%);
   height: min(49vh, 29rem);
   place-items: center;
   pointer-events: none;
@@ -7520,7 +7520,7 @@ textarea:focus {
 @media (min-width: 821px) and (max-height: 720px) {
   .auth-portrait {
     top: 16%;
-    width: min(19.25rem, 61%);
+    width: min(23rem, 67%);
     height: 48vh;
   }
 }
