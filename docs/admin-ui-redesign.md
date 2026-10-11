@@ -25,7 +25,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Added the HI-Tech, Rathinam and Jaggannath campus choices.
 - [x] Required global Admin and Program Manager accounts to select a campus before the full workspace navigation appears.
 - [x] Added a visible active-campus switcher after entry.
-- [x] Preselected and locked campus scope in academic setup, faculty access and timetable setup.
+- [x] Used the selected campus context throughout academic setup without repeating the campus field; kept scope locked in faculty access and timetable setup.
 - [x] Updated the active Neon campus catalog to the same three campuses.
 - [x] Replaced the stacked workspace page with single-view sidebar navigation.
 - [x] Made Overview the first screen after selecting a campus.

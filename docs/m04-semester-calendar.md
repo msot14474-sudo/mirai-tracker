@@ -44,7 +44,7 @@ All calendar math uses UTC accessors over date-only values. This prevents an `As
 
 ## Interface
 
-Academic setup has separate Semesters and Subjects views. The Semesters view provides campus selection, semester creation, Saturday-rule selection, calculated teaching/non-teaching totals, a preview of Saturdays and overrides, holiday/event/extra-day creation, exam-window creation and an exam summary. The Subjects view lets Admin and Program Manager users add a code, name and optional description to the shared catalog and review all active subjects. Both views collapse to a single-column flow on phones.
+Academic setup has separate Semesters and Subjects views and uses the campus already selected in the main dashboard. The Semesters view provides semester creation, Saturday-rule selection, calculated teaching/non-teaching totals, a preview of Saturdays and overrides, holiday/event/extra-day creation, exam-window creation and an exam summary. The Subjects view lets Admin and Program Manager users add a code, name and optional description to the shared catalog and review all active subjects. Both views collapse to a single-column flow on phones.
 
 ## Fictional sample
 

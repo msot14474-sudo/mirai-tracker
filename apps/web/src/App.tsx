@@ -778,12 +778,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'exports':
         return <ExportCenter />;
       case 'academic-setup':
-        return (
-          <SemesterSetup
-            initialCampusId={selectedCampusId}
-            campusLocked={Boolean(selectedCampus)}
-          />
-        );
+        return <SemesterSetup initialCampusId={selectedCampusId} />;
       case 'semester-import':
         return <SemesterImport />;
       case 'faculty-access':

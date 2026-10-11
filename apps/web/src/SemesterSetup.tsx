@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { academicApi, dateOnly, SaturdayRule } from './academic';
 
 const saturdayLabels: Record<SaturdayRule, string> = {
@@ -9,26 +9,16 @@ const saturdayLabels: Record<SaturdayRule, string> = {
 };
 
 export function SemesterSetup({
-  initialCampusId = '',
-  campusLocked = false,
+  initialCampusId,
 }: {
-  initialCampusId?: string;
-  campusLocked?: boolean;
+  initialCampusId: string;
 }) {
   const queryClient = useQueryClient();
-  const campuses = useQuery({
-    queryKey: ['academic', 'campuses'],
-    queryFn: academicApi.campuses,
-  });
-  const [campusId, setCampusId] = useState(initialCampusId);
+  const campusId = initialCampusId;
   const [semesterId, setSemesterId] = useState('');
   const [setupView, setSetupView] = useState<'semesters' | 'subjects'>(
     'semesters',
   );
-
-  useEffect(() => {
-    if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
-  }, [campusId, campuses.data]);
 
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
@@ -58,26 +48,6 @@ export function SemesterSetup({
             {setupView === 'semesters' ? 'Semester calendar' : 'Subjects'}
           </h2>
         </div>
-        {setupView === 'semesters' ? (
-          <label className="campus-picker">
-            Campus
-            <select
-              value={campusId}
-              disabled={campusLocked}
-              onChange={(event) => {
-                setCampusId(event.target.value);
-                setSemesterId('');
-              }}
-            >
-              <option value="">Select campus</option>
-              {campuses.data?.map((campus) => (
-                <option key={campus.id} value={campus.id}>
-                  {campus.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
       </div>
 
       <div className="access-type-tabs academic-setup-tabs" role="group">
@@ -96,12 +66,6 @@ export function SemesterSetup({
           Subjects
         </button>
       </div>
-
-      {setupView === 'semesters' && campuses.isError ? (
-        <p className="form-error" role="alert">
-          {campuses.error.message}
-        </p>
-      ) : null}
 
       {setupView === 'subjects' ? (
         <SubjectSetup />

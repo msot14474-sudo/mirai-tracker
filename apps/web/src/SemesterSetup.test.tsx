@@ -26,7 +26,7 @@ function renderSetup() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <SemesterSetup initialCampusId="campus-a" campusLocked />
+      <SemesterSetup initialCampusId="campus-a" />
     </QueryClientProvider>,
   );
 }
@@ -70,9 +70,11 @@ describe('SemesterSetup subjects', () => {
     });
 
     renderSetup();
+    expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Subjects' }));
 
     await screen.findByRole('heading', { name: 'Subject catalog' });
+    expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Subject code'), {
       target: { value: 'cs-dsa' },
     });

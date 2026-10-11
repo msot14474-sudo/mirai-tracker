@@ -228,9 +228,6 @@ describe('App authentication', () => {
       screen.getByRole('heading', { name: 'Create semester' }),
     ).toBeInTheDocument();
     expect(
-      (await screen.findAllByRole('option', { name: 'HI-Tech' })).length,
-    ).toBe(1);
-    expect(
       screen.queryByRole('heading', { name: 'Semester import' }),
     ).not.toBeInTheDocument();
 
@@ -329,10 +326,7 @@ describe('App authentication', () => {
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Campus')).not.toHaveLength(0);
-    screen
-      .getAllByLabelText('Campus')
-      .forEach((campusSelect) => expect(campusSelect).toBeDisabled());
+    expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
   });
 
   it('gives campus managers timetable access without global setup tools', async () => {
