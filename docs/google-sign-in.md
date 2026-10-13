@@ -9,7 +9,7 @@ The login form uses the supplied `/mirai-logo.jpg` symbol, a Google button, and 
 - [x] Verify Google token signature, expiry, issuer and client audience using Google's authentication library.
 - [x] Only existing, active accounts with assigned roles can create sessions. No automatic accounts or role escalation.
 - [x] Existing session cookie, audit trail and role permissions reused.
-- [x] Clear fallback message when Google configuration is unavailable or sign-in fails.
+- [x] Clear fallback message inside the form when Google configuration is unavailable or sign-in fails; a short-lived notice cookie keeps error parameters out of the address bar. Legacy error URLs and unused navigation fragments are cleaned up.
 - [x] Automated checks for replay, browser mismatch, invalid identity and inactive accounts.
 - [ ] Create/configure a Google OAuth **Web application** client and consent screen.
 - [ ] Add production credentials and redeploy the API.

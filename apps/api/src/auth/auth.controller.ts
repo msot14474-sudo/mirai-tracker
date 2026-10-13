@@ -76,6 +76,12 @@ type HeaderResponse = {
   setHeader(name: string, value: string): void;
 };
 
+// Only a fixed, non-sensitive UI message code is readable by the frontend.
+// Authentication and OAuth state cookies remain HttpOnly.
+export function googleNoticeCookie(code: 'unavailable' | 'failed' | '') {
+  return `mirai_google_notice=${code}; Path=/; SameSite=Lax; Max-Age=${code ? 60 : 0}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -94,19 +100,18 @@ export class AuthController {
   async startGoogle(
     @Res()
     response: {
-      setHeader(name: string, value: string): void;
+      setHeader(name: string, value: string | string[]): void;
       redirect(url: string): void;
     },
   ) {
     response.setHeader('Cache-Control', 'no-store');
     try {
       const result = await this.google.start();
-      response.setHeader('Set-Cookie', result.cookie);
+      response.setHeader('Set-Cookie', [result.cookie, googleNoticeCookie('')]);
       response.redirect(result.url);
     } catch {
-      response.redirect(
-        `${process.env.WEB_ORIGIN ?? 'http://localhost:5173'}/?google_error=unavailable`,
-      );
+      response.setHeader('Set-Cookie', googleNoticeCookie('unavailable'));
+      response.redirect(process.env.WEB_ORIGIN ?? 'http://localhost:5173');
     }
   }
 
@@ -129,12 +134,16 @@ export class AuthController {
       const result = await this.google.finish(code, state, cookie);
       response.setHeader('Set-Cookie', [
         this.google.cookie('', 0),
+        googleNoticeCookie(''),
         createSessionCookie(result.token, this.auth.sessionTtlSeconds),
       ]);
       response.redirect(home);
     } catch {
-      response.setHeader('Set-Cookie', this.google.cookie('', 0));
-      response.redirect(`${home}/?google_error=failed`);
+      response.setHeader('Set-Cookie', [
+        this.google.cookie('', 0),
+        googleNoticeCookie('failed'),
+      ]);
+      response.redirect(home);
     }
   }
 

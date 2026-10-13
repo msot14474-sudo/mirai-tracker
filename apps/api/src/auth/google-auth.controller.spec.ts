@@ -24,7 +24,10 @@ describe('Google sign-in endpoints', () => {
     google.start.mockRejectedValueOnce(new Error('Missing config'));
     await controller().startGoogle(response);
     expect(response.redirect).toHaveBeenCalledWith(
-      expect.stringContaining('google_error=unavailable'),
+      process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+    );
+    expect(JSON.stringify(response.redirect.mock.calls)).not.toContain(
+      'google_error',
     );
   });
   it('sets an HttpOnly session cookie after verification, without exposing it in the redirect', async () => {
@@ -32,6 +35,7 @@ describe('Google sign-in endpoints', () => {
     await controller().finishGoogle('code', 'state', 'cookie', response);
     expect(response.setHeader).toHaveBeenCalledWith('Set-Cookie', [
       expect.any(String),
+      expect.stringContaining('mirai_google_notice=;'),
       expect.stringContaining('HttpOnly'),
     ]);
     expect(response.redirect.mock.calls[0][0]).not.toContain('private-session');
@@ -41,12 +45,12 @@ describe('Google sign-in endpoints', () => {
       new Error('sensitive provider details'),
     );
     await controller().finishGoogle('code', 'state', 'cookie', response);
-    expect(response.setHeader).toHaveBeenCalledWith(
-      'Set-Cookie',
+    expect(response.setHeader).toHaveBeenCalledWith('Set-Cookie', [
       'state=; Max-Age=0',
-    );
+      expect.stringContaining('mirai_google_notice=failed;'),
+    ]);
     expect(response.redirect).toHaveBeenCalledWith(
-      expect.stringContaining('google_error=failed'),
+      process.env.WEB_ORIGIN ?? 'http://localhost:5173',
     );
     expect(JSON.stringify(response.redirect.mock.calls)).not.toContain(
       'sensitive',

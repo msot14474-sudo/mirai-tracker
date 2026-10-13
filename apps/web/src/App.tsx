@@ -380,6 +380,28 @@ function NavigationIcon({ name }: { name: NavigationIconName }) {
 }
 
 function LoginScreen() {
+  const [googleNotice] = useState(() => {
+    const cookie = document.cookie
+      .split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith('mirai_google_notice='))
+      ?.split('=')[1];
+    const notice =
+      cookie ?? new URLSearchParams(window.location.search).get('google_error');
+    return notice === 'unavailable' || notice === 'failed' ? notice : null;
+  });
+  useEffect(() => {
+    document.cookie = 'mirai_google_notice=; Path=/; SameSite=Lax; Max-Age=0';
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('google_error')) {
+      url.searchParams.delete('google_error');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        url.pathname + url.search + url.hash,
+      );
+    }
+  }, []);
   const queryClient = useQueryClient();
   const [assetsReady, setAssetsReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -639,13 +661,9 @@ function LoginScreen() {
               <div className="auth-email-divider">
                 <span>or login with email</span>
               </div>
-              {new URLSearchParams(window.location.search).has(
-                'google_error',
-              ) ? (
+              {googleNotice ? (
                 <p className="form-error" role="alert">
-                  {new URLSearchParams(window.location.search).get(
-                    'google_error',
-                  ) === 'unavailable'
+                  {googleNotice === 'unavailable'
                     ? 'Google sign-in is not available yet. Please use email.'
                     : 'Google sign-in could not be completed. Use your registered Mirai email or sign in below.'}
                 </p>
@@ -1527,6 +1545,15 @@ async function warmTopicScheduleWorkspace(queryClient: QueryClient) {
 }
 
 export function App() {
+  useEffect(() => {
+    if (window.location.hash) {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        window.location.pathname + window.location.search,
+      );
+    }
+  }, []);
   const currentUser = useQuery({
     queryKey: currentUserKey,
     queryFn: loadCurrentUser,

@@ -72,6 +72,39 @@ describe('App authentication', () => {
     ).toHaveAttribute('href', expect.stringContaining('/auth/google'));
   });
 
+  it('shows a Google error once without retaining it in the URL or cookie', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/?google_error=unavailable#progress',
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 401 }),
+    );
+    renderApp();
+    expect(
+      await screen.findByText(
+        'Google sign-in is not available yet. Please use email.',
+      ),
+    ).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(window.location.hash).toBe('');
+    expect(document.cookie).not.toContain('mirai_google_notice');
+  });
+
+  it('shows a Google callback notice on the clean login URL', async () => {
+    document.cookie = 'mirai_google_notice=failed; Path=/';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 401 }),
+    );
+    renderApp();
+    expect(
+      await screen.findByText(/Google sign-in could not be completed/),
+    ).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(document.cookie).not.toContain('mirai_google_notice');
+  });
+
   it('resets a forgotten password with an emailed code', async () => {
     const requests: Array<{ url: string; body?: string }> = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
