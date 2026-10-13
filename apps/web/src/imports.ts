@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type ImportIssue = {
   sheet: string;
   rowNumber: number;
@@ -45,8 +46,6 @@ export type ImportJob = {
   errors?: ImportIssue[];
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -58,7 +57,7 @@ async function messageFrom(response: Response) {
 async function upload<T>(path: string, file: File): Promise<T> {
   const body = new FormData();
   body.append('file', file);
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await apiFetch(`${apiUrl}${path}`, {
     method: 'POST',
     credentials: 'include',
     body,
@@ -75,7 +74,7 @@ export const importApi = {
       file,
     ),
   jobs: async () => {
-    const response = await fetch(`${apiUrl}/imports`, {
+    const response = await apiFetch(`${apiUrl}/imports`, {
       credentials: 'include',
     });
     if (!response.ok) throw new Error(await messageFrom(response));

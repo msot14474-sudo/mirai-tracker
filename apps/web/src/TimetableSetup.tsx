@@ -180,7 +180,9 @@ export function TimetableSetup({
         <div className="timetable-detail">
           {selectionIsLoading ? (
             <LoadingSkeleton variant="panel" label="Loading timetable data" />
-          ) : !offeringId ? (
+          ) : campuses.isError ||
+            semesters.isError ||
+            offerings.isError ? null : !offeringId ? (
             <div className="empty-state">
               <span>01</span>
               <h3>

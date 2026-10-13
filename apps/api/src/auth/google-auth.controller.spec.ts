@@ -9,7 +9,7 @@ describe('Google sign-in endpoints', () => {
     finish: jest.fn(),
     cookie: jest.fn(() => 'state=; Max-Age=0'),
   };
-  const auth = { sessionTtlSeconds: 3600 };
+  const auth = { sessionCookieMaxAgeSeconds: 3600 };
   const response = { setHeader: jest.fn(), redirect: jest.fn() };
   const controller = () =>
     new AuthController(

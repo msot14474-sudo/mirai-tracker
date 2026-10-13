@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type SessionLogStatus =
   'COMPLETED' | 'IN_PROGRESS' | 'SKIPPED' | 'MERGED' | 'CANCELLED';
 
@@ -71,8 +72,6 @@ export type SessionLogDay = {
   }>;
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -86,7 +85,7 @@ async function messageFrom(response: Response) {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await apiFetch(`${apiUrl}${path}`, {
     ...init,
     credentials: 'include',
     headers: init?.body

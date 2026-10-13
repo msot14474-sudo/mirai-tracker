@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './auth.constants';
 import { AuthService } from './auth.service';
 import { AuthenticatedRequest } from './auth.types';
-import { readSessionCookie } from './session-cookie';
+import { createSessionCookie, readSessionCookie } from './session-cookie';
 
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
@@ -32,6 +32,11 @@ export class AuthenticationGuard implements CanActivate {
     if (!user)
       throw new UnauthorizedException('Session is invalid or expired.');
 
+    const response = context.switchToHttp().getResponse();
+    response.setHeader(
+      'Set-Cookie',
+      createSessionCookie(token, this.auth.sessionCookieMaxAgeSeconds),
+    );
     request.user = user;
     request.sessionToken = token;
     return true;

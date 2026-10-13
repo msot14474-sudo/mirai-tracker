@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type ProgressStatus = 'ON_TRACK' | 'TIGHT' | 'DANGER' | 'COMPLETE';
 
 export type ProgressMetrics = {
@@ -51,8 +52,6 @@ export type ProgressDashboardData = {
   subjects: SubjectProgress[];
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -64,7 +63,7 @@ async function messageFrom(response: Response) {
 
 export const progressApi = {
   dashboard: async (asOfDate: string): Promise<ProgressDashboardData> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${apiUrl}/progress/dashboard?asOf=${encodeURIComponent(asOfDate)}`,
       { credentials: 'include' },
     );

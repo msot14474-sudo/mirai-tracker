@@ -3,11 +3,15 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AuthenticationGuard } from './auth.guard';
 import { RolesGuard } from './roles.guard';
 
+const setHeader = jest.fn();
 const context = (request: Record<string, unknown> = { headers: {} }) =>
   ({
     getHandler: () => 'handler',
     getClass: () => 'class',
-    switchToHttp: () => ({ getRequest: () => request }),
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => ({ setHeader }),
+    }),
   }) as never;
 
 describe('AuthenticationGuard', () => {
@@ -32,11 +36,22 @@ describe('AuthenticationGuard', () => {
     const request = { headers: { cookie: 'mirai_session=valid-token' } };
     const user = { id: 'user-a', roles: [] };
     const reflector = { getAllAndOverride: jest.fn().mockReturnValue(false) };
-    const auth = { userForSession: jest.fn().mockResolvedValue(user) };
+    const auth = {
+      userForSession: jest.fn().mockResolvedValue(user),
+      sessionCookieMaxAgeSeconds: 34560000,
+    };
     const guard = new AuthenticationGuard(reflector as never, auth as never);
 
     await expect(guard.canActivate(context(request))).resolves.toBe(true);
     expect(request).toMatchObject({ user, sessionToken: 'valid-token' });
+    expect(setHeader).toHaveBeenCalledWith(
+      'Set-Cookie',
+      expect.stringContaining('Max-Age=34560000'),
+    );
+    expect(setHeader).toHaveBeenCalledWith(
+      'Set-Cookie',
+      expect.stringContaining('HttpOnly'),
+    );
   });
 });
 

@@ -1,3 +1,4 @@
+import { advanceSessionGeneration, apiFetch, apiUrl } from './http';
 export type UserRole =
   'ADMIN' | 'PROGRAM_MANAGER' | 'CAMPUS_MANAGER' | 'FACULTY' | 'STUDENT';
 
@@ -34,8 +35,6 @@ export type PasswordResetApproval = {
   expiresInSeconds: number;
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -45,7 +44,7 @@ async function messageFrom(response: Response) {
 }
 
 export async function loadCurrentUser(): Promise<AuthenticatedUser | null> {
-  const response = await fetch(`${apiUrl}/auth/me`, {
+  const response = await apiFetch(`${apiUrl}/auth/me`, {
     credentials: 'include',
   });
   if (response.status === 401) return null;
@@ -55,7 +54,7 @@ export async function loadCurrentUser(): Promise<AuthenticatedUser | null> {
 }
 
 export async function updateOwnAccount(input: UpdateOwnAccountInput) {
-  const response = await fetch(`${apiUrl}/auth/account`, {
+  const response = await apiFetch(`${apiUrl}/auth/account`, {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -67,7 +66,7 @@ export async function updateOwnAccount(input: UpdateOwnAccountInput) {
 }
 
 export async function login(email: string, password: string) {
-  const response = await fetch(`${apiUrl}/auth/login`, {
+  const response = await apiFetch(`${apiUrl}/auth/login`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -78,7 +77,7 @@ export async function login(email: string, password: string) {
 }
 
 export async function verifyOtp(challengeId: string, code: string) {
-  const response = await fetch(`${apiUrl}/auth/verify-otp`, {
+  const response = await apiFetch(`${apiUrl}/auth/verify-otp`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -86,11 +85,12 @@ export async function verifyOtp(challengeId: string, code: string) {
   });
   if (!response.ok) throw new Error(await messageFrom(response));
   const body = (await response.json()) as { user: AuthenticatedUser };
+  advanceSessionGeneration();
   return body.user;
 }
 
 export async function requestPasswordReset(email: string) {
-  const response = await fetch(`${apiUrl}/auth/forgot-password`, {
+  const response = await apiFetch(`${apiUrl}/auth/forgot-password`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -104,7 +104,7 @@ export async function verifyPasswordResetOtp(
   challengeId: string,
   code: string,
 ) {
-  const response = await fetch(`${apiUrl}/auth/verify-reset-otp`, {
+  const response = await apiFetch(`${apiUrl}/auth/verify-reset-otp`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -115,7 +115,7 @@ export async function verifyPasswordResetOtp(
 }
 
 export async function resetPassword(resetToken: string, password: string) {
-  const response = await fetch(`${apiUrl}/auth/reset-password`, {
+  const response = await apiFetch(`${apiUrl}/auth/reset-password`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -125,7 +125,7 @@ export async function resetPassword(resetToken: string, password: string) {
 }
 
 export async function logout() {
-  const response = await fetch(`${apiUrl}/auth/logout`, {
+  const response = await apiFetch(`${apiUrl}/auth/logout`, {
     method: 'POST',
     credentials: 'include',
   });

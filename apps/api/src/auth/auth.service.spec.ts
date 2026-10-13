@@ -36,6 +36,11 @@ describe('AuthService', () => {
     ),
   };
   const redis = {
+    setPersistent: jest.fn((key: string, value: string) => {
+      store.set(key, value);
+      return Promise.resolve();
+    }),
+    persist: jest.fn().mockResolvedValue(undefined),
     get: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     setWithExpiry: jest.fn((key: string, value: string) => {
       store.set(key, value);
@@ -182,10 +187,14 @@ describe('AuthService', () => {
 
     expect(result.token).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(result.user.roles[0]?.role).toBe(UserRole.FACULTY);
-    expect(redis.setWithExpiry).toHaveBeenCalledWith(
+    expect(
+      redis.setWithExpiry.mock.calls.some(([key]) =>
+        String(key).startsWith('auth:session:'),
+      ),
+    ).toBe(false);
+    expect(redis.setPersistent).toHaveBeenCalledWith(
       expect.stringMatching(/^auth:session:/),
       'user-a',
-      28_800,
     );
     expect(createAuditEvent).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -302,6 +311,7 @@ describe('AuthService', () => {
       id: 'user-a',
       staffProfileId: 'faculty-a',
     });
+    expect(redis.persist).toHaveBeenCalledWith(sessionKey);
   });
 
   it('verifies the emailed code before accepting a new password', async () => {

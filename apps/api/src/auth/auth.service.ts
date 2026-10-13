@@ -15,7 +15,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthEmailService } from './auth-email.service';
-import { DEFAULT_SESSION_TTL_SECONDS } from './auth.constants';
+import { SESSION_COOKIE_MAX_AGE_SECONDS } from './auth.constants';
 import { AuthenticatedUser } from './auth.types';
 import { hashPassword, verifyPassword } from './password';
 
@@ -56,7 +56,7 @@ type SessionUser = {
 
 @Injectable()
 export class AuthService {
-  readonly sessionTtlSeconds: number;
+  readonly sessionCookieMaxAgeSeconds = SESSION_COOKIE_MAX_AGE_SECONDS;
   readonly otpTtlSeconds = OTP_TTL_SECONDS;
   private readonly sessionSecret: string;
 
@@ -65,12 +65,6 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly email: AuthEmailService,
   ) {
-    const configuredTtl = Number(process.env.SESSION_TTL_SECONDS);
-    this.sessionTtlSeconds =
-      Number.isInteger(configuredTtl) && configuredTtl > 0
-        ? configuredTtl
-        : DEFAULT_SESSION_TTL_SECONDS;
-
     const configuredSecret = process.env.SESSION_SECRET;
     if (!configuredSecret) {
       throw new Error('SESSION_SECRET is required.');
@@ -525,6 +519,8 @@ export class AuthService {
       return null;
     }
 
+    // Upgrade still-valid sessions created under the previous expiry policy.
+    await this.redis.persist(key);
     return this.toAuthenticatedUser(user);
   }
 
@@ -535,7 +531,7 @@ export class AuthService {
   private async createSession(user: SessionUser, authenticationMethod: string) {
     const token = randomBytes(32).toString('base64url');
     const sessionKey = this.sessionKey(token);
-    await this.redis.setWithExpiry(sessionKey, user.id, this.sessionTtlSeconds);
+    await this.redis.setPersistent(sessionKey, user.id);
     try {
       await this.prisma.auditEvent.create({
         data: {

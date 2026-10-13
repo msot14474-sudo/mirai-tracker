@@ -64,9 +64,7 @@ export function LessonPlanWorkspace() {
             offerings.data?.map((offering) => (
               <button
                 key={offering.id}
-                className={
-                  offering.id === selectedOfferingId ? 'selected' : ''
-                }
+                className={offering.id === selectedOfferingId ? 'selected' : ''}
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>
@@ -91,7 +89,8 @@ export function LessonPlanWorkspace() {
         <div className="plan-detail">
           {selectionIsLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />
-          ) : !selectedOfferingId ? (
+          ) : offerings.isError &&
+            !offerings.data ? null : !selectedOfferingId ? (
             <div className="empty-state">
               <span>01</span>
               <h3>No subject offerings</h3>

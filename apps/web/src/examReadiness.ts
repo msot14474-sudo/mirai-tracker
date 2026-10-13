@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type ExamReadinessMetrics = {
   topicsInScope: number;
   completedTopics: number;
@@ -43,8 +44,6 @@ export type ExamReadinessData = {
   exams: ExamReadinessExam[];
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -56,7 +55,7 @@ async function messageFrom(response: Response) {
 
 export const examReadinessApi = {
   list: async (asOfDate: string): Promise<ExamReadinessData> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${apiUrl}/progress/exam-readiness?asOf=${encodeURIComponent(asOfDate)}`,
       { credentials: 'include' },
     );

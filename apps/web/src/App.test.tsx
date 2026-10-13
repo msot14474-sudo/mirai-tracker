@@ -262,6 +262,25 @@ describe('App authentication', () => {
     );
   });
 
+  it('returns to sign in when a protected request reports an invalid session', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/auth/me')) return userResponse('FACULTY');
+      return new Response(
+        JSON.stringify({ message: 'Authentication required.' }),
+        { status: 401, headers: { 'content-type': 'application/json' } },
+      );
+    });
+    renderApp();
+    await screen.findByRole('heading', { name: 'Welcome back, Sample' });
+    fireEvent.click(screen.getByRole('button', { name: 'Lesson plans' }));
+    expect(
+      await screen.findByText('Please sign in again to continue.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Workspace navigation' }),
+    ).not.toBeInTheDocument();
+  });
   it('verifies an email code before displaying role-aware faculty access', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -276,6 +295,22 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
+      if (
+        url.endsWith('/topic-schedules/offerings') ||
+        url.endsWith('/academic/campuses')
+      )
+        return new Response('[]', {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      if (url.endsWith('/lesson-plans/offerings'))
+        return new Response('[]', {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      if (url.includes('/session-logs/sessions'))
+        return new Response(
+          JSON.stringify({ sessions: [], date: '2026-10-13' }),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
       return new Response(null, { status: 401 });
     });
     renderApp();

@@ -28,7 +28,9 @@ function renderDashboard(scope: 'faculty' | 'manager' = 'manager') {
 
 describe('M11 progress dashboard', () => {
   it('shows every required metric for campus, track and subject views', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(dashboard));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(dashboard),
+    );
     renderDashboard();
 
     expect(
@@ -55,7 +57,9 @@ describe('M11 progress dashboard', () => {
   });
 
   it('makes the worst-subject roll-up rule and danger result explicit', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(dashboard));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(dashboard),
+    );
     renderDashboard();
 
     expect(
@@ -70,7 +74,7 @@ describe('M11 progress dashboard', () => {
   it('reloads the calculation when the reporting date changes', async () => {
     const fetch = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(jsonResponse(dashboard));
+      .mockImplementation(async () => jsonResponse(dashboard));
     renderDashboard('faculty');
     await screen.findByRole('heading', { name: 'Data Structures' });
 
@@ -81,13 +85,18 @@ describe('M11 progress dashboard', () => {
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('/progress/dashboard?asOf=2026-10-15'),
-        { credentials: 'include' },
+        expect.objectContaining({
+          credentials: 'include',
+          signal: expect.any(AbortSignal),
+        }),
       ),
     );
   });
 
   it('filters subject cards without changing the server roll-ups', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(dashboard));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(dashboard),
+    );
     renderDashboard();
     await screen.findByRole('heading', { name: 'Data Structures' });
 

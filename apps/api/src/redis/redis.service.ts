@@ -34,6 +34,14 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
     return this.client.get(key);
   }
 
+  async setPersistent(key: string, value: string) {
+    await this.client.set(key, value);
+  }
+
+  async persist(key: string) {
+    await this.client.persist(key);
+  }
+
   async setWithExpiry(key: string, value: string, ttlSeconds: number) {
     await this.client.set(key, value, 'EX', ttlSeconds);
   }

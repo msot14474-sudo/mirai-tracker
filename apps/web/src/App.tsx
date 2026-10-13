@@ -1,3 +1,5 @@
+import { advanceSessionGeneration, apiUrl, sessionExpiredEvent } from './http';
+import { RequestRecovery, AppErrorBoundary } from './RequestRecovery';
 import {
   type QueryClient,
   useMutation,
@@ -629,10 +631,7 @@ function LoginScreen() {
 
           {!challenge && mode === 'login' ? (
             <>
-              <a
-                className="auth-google-button"
-                href={`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/auth/google`}
-              >
+              <a className="auth-google-button" href={`${apiUrl}/auth/google`}>
                 <svg
                   viewBox="0 0 48 48"
                   aria-hidden="true"
@@ -1472,23 +1471,26 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         </header>
 
         <div className="dashboard-content" aria-live="polite">
-          <section
-            key={activeView}
-            id={activeView}
-            className="dashboard-view workspace-view-enter"
-            aria-label={activeViewLabel}
-          >
-            <Suspense
-              fallback={
-                <LoadingSkeleton
-                  variant="panel"
-                  label={`Loading ${activeViewLabel.toLowerCase()}`}
-                />
-              }
+          <RequestRecovery />
+          <AppErrorBoundary key={activeView}>
+            <section
+              key={activeView}
+              id={activeView}
+              className="dashboard-view workspace-view-enter"
+              aria-label={activeViewLabel}
             >
-              {renderActiveView()}
-            </Suspense>
-          </section>
+              <Suspense
+                fallback={
+                  <LoadingSkeleton
+                    variant="panel"
+                    label={`Loading ${activeViewLabel.toLowerCase()}`}
+                  />
+                }
+              >
+                {renderActiveView()}
+              </Suspense>
+            </section>
+          </AppErrorBoundary>
         </div>
       </div>
     </main>
@@ -1545,6 +1547,22 @@ async function warmTopicScheduleWorkspace(queryClient: QueryClient) {
 }
 
 export function App() {
+  const queryClient = useQueryClient();
+  const [sessionNotice, setSessionNotice] = useState(false);
+  useEffect(() => {
+    const expire = () => {
+      if (!queryClient.getQueryData(currentUserKey)) return;
+      advanceSessionGeneration();
+      void queryClient.cancelQueries();
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== 'current-user',
+      });
+      queryClient.setQueryData(currentUserKey, null);
+      setSessionNotice(true);
+    };
+    window.addEventListener(sessionExpiredEvent, expire);
+    return () => window.removeEventListener(sessionExpiredEvent, expire);
+  }, [queryClient]);
   useEffect(() => {
     if (window.location.hash) {
       window.history.replaceState(
@@ -1558,13 +1576,28 @@ export function App() {
     queryKey: currentUserKey,
     queryFn: loadCurrentUser,
     retry: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5 * 60_000,
   });
+
+  useEffect(() => {
+    if (currentUser.data === null) {
+      void queryClient.cancelQueries({
+        predicate: (query) => query.queryKey[0] !== 'current-user',
+      });
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== 'current-user',
+      });
+    } else if (currentUser.data) {
+      setSessionNotice(false);
+    }
+  }, [currentUser.data, queryClient]);
 
   if (currentUser.isPending) {
     return <LoadingSkeleton variant="app" label="Checking your session" />;
   }
 
-  if (currentUser.isError) {
+  if (currentUser.isError && !currentUser.data) {
     return (
       <main className="loading-shell">
         <p className="form-error">{currentUser.error.message}</p>
@@ -1576,6 +1609,13 @@ export function App() {
   return currentUser.data ? (
     <Dashboard user={currentUser.data} />
   ) : (
-    <LoginScreen />
+    <>
+      {sessionNotice ? (
+        <p className="session-notice" role="status">
+          Please sign in again to continue.
+        </p>
+      ) : null}
+      <LoginScreen />
+    </>
   );
 }

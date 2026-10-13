@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type ExportType =
   | 'FULL_DATA'
   | 'CAMPUS_PROGRESS'
@@ -25,8 +26,6 @@ export type ExportJob = {
   requestedBy: { id: string; name: string; email: string };
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function errorMessage(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -38,7 +37,7 @@ async function errorMessage(response: Response) {
 
 export const exportApi = {
   history: async (): Promise<ExportJob[]> => {
-    const response = await fetch(`${apiUrl}/exports`, {
+    const response = await apiFetch(`${apiUrl}/exports`, {
       credentials: 'include',
     });
     if (!response.ok) throw new Error(await errorMessage(response));
@@ -46,7 +45,7 @@ export const exportApi = {
   },
 
   download: async (request: ExportRequest) => {
-    const response = await fetch(`${apiUrl}/exports`, {
+    const response = await apiFetch(`${apiUrl}/exports`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

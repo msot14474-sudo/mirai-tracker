@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 import { Campus } from './academic';
 
 export type FacultyAccessDetail = {
@@ -87,10 +88,8 @@ export type UpdateManagedAccountInput = {
   password?: string;
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await apiFetch(`${apiUrl}${path}`, {
     ...init,
     credentials: 'include',
     headers: init?.body

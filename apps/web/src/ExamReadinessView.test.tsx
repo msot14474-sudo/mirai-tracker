@@ -33,7 +33,9 @@ function renderView() {
 
 describe('M12 exam readiness view', () => {
   it('shows the upcoming mid-term and end-term with their dates', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(data),
+    );
     renderView();
 
     expect(
@@ -47,7 +49,9 @@ describe('M12 exam readiness view', () => {
   });
 
   it('shows correct in-scope coverage and hours still needed', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(data),
+    );
     renderView();
     const midHeading = await screen.findByRole('heading', {
       name: 'Mid-term 2026',
@@ -62,7 +66,9 @@ describe('M12 exam readiness view', () => {
   });
 
   it('lists only topics mapped to each exam scope', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      jsonResponse(data),
+    );
     renderView();
     const midCard = (
       await screen.findByRole('heading', { name: 'Mid-term 2026' })
@@ -80,7 +86,7 @@ describe('M12 exam readiness view', () => {
   it('reloads readiness for a changed reporting date', async () => {
     const fetch = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(jsonResponse(data));
+      .mockImplementation(async () => jsonResponse(data));
     renderView();
     await screen.findByRole('heading', { name: 'Mid-term 2026' });
 
@@ -91,7 +97,10 @@ describe('M12 exam readiness view', () => {
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('/progress/exam-readiness?asOf=2026-10-10'),
-        { credentials: 'include' },
+        expect.objectContaining({
+          credentials: 'include',
+          signal: expect.any(AbortSignal),
+        }),
       ),
     );
   });

@@ -55,9 +55,7 @@ export function TopicScheduleWorkspace() {
           offerings.data?.map((offering) => (
             <button
               key={offering.id}
-              className={
-                offering.id === selectedOfferingId ? 'selected' : ''
-              }
+              className={offering.id === selectedOfferingId ? 'selected' : ''}
               onClick={() => setOfferingId(offering.id)}
             >
               <strong>{offering.subject.name}</strong>
@@ -76,7 +74,7 @@ export function TopicScheduleWorkspace() {
 
       {selectionIsLoading ? (
         <LoadingSkeleton variant="table" label="Loading planned dates" />
-      ) : !selectedOfferingId ? (
+      ) : offerings.isError && !offerings.data ? null : !selectedOfferingId ? (
         <div className="empty-state compact-empty">
           <span>01</span>
           <h3>No subject offerings</h3>

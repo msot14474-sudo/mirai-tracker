@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type LessonPlanOffering = {
   id: string;
   subject: { id: string; code: string; name: string };
@@ -100,8 +101,6 @@ export type LessonPlanUnit = {
   }>;
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -117,7 +116,7 @@ async function messageFrom(response: Response) {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await apiFetch(`${apiUrl}${path}`, {
     ...init,
     credentials: 'include',
     headers:

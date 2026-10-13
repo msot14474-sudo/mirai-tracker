@@ -155,6 +155,21 @@ function installFetchMock(
 }
 
 describe('TopicScheduleWorkspace', () => {
+  it('does not show an empty offering result when loading fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ message: 'Access denied.' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        }),
+    );
+    renderWorkspace();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Access denied.',
+    );
+    expect(screen.queryByText('No subject offerings')).not.toBeInTheDocument();
+  });
+
   it('shows live allocations, capacity and the explicit shortfall', async () => {
     installFetchMock();
     renderWorkspace();

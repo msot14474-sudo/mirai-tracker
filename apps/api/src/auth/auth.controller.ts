@@ -135,7 +135,7 @@ export class AuthController {
       response.setHeader('Set-Cookie', [
         this.google.cookie('', 0),
         googleNoticeCookie(''),
-        createSessionCookie(result.token, this.auth.sessionTtlSeconds),
+        createSessionCookie(result.token, this.auth.sessionCookieMaxAgeSeconds),
       ]);
       response.redirect(home);
     } catch {
@@ -176,7 +176,7 @@ export class AuthController {
     );
     response.setHeader(
       'Set-Cookie',
-      createSessionCookie(result.token, this.auth.sessionTtlSeconds),
+      createSessionCookie(result.token, this.auth.sessionCookieMaxAgeSeconds),
     );
     return { user: result.user };
   }

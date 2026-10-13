@@ -1,3 +1,4 @@
+import { apiFetch, apiUrl } from './http';
 export type MissedLogAlertType =
   'FACULTY_MISSED_LOG' | 'CAMPUS_MANAGER_ESCALATION';
 export type MissedLogAlertStatus = 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
@@ -30,8 +31,6 @@ export type MissedLogAlertFeed = {
   alerts: MissedLogAlert[];
 };
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -43,7 +42,7 @@ async function messageFrom(response: Response) {
 
 export const alertApi = {
   mine: async (): Promise<MissedLogAlertFeed> => {
-    const response = await fetch(`${apiUrl}/missed-log-alerts/me`, {
+    const response = await apiFetch(`${apiUrl}/missed-log-alerts/me`, {
       credentials: 'include',
     });
     if (!response.ok) throw new Error(await messageFrom(response));
