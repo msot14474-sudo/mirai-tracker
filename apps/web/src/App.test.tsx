@@ -189,9 +189,9 @@ describe('App authentication', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Update password' }));
 
-    expect(
-      await screen.findByRole('alert'),
-    ).toHaveTextContent('Password must contain at least 12 characters.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Password must contain at least 12 characters.',
+    );
   });
 
   it('opens account and help from the profile menu', async () => {
@@ -246,7 +246,7 @@ describe('App authentication', () => {
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'correct-password' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Check your email' }),

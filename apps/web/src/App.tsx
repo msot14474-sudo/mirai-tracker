@@ -384,7 +384,12 @@ function LoginScreen() {
   const [assetsReady, setAssetsReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(
+    () => window.localStorage.getItem('mirai:remembered-email') ?? '',
+  );
+  const [rememberEmail, setRememberEmail] = useState(() =>
+    Boolean(window.localStorage.getItem('mirai:remembered-email')),
+  );
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
@@ -478,6 +483,11 @@ function LoginScreen() {
   function submitCredentials(event: FormEvent) {
     event.preventDefault();
     setResetComplete(false);
+    if (rememberEmail) {
+      window.localStorage.setItem('mirai:remembered-email', email.trim());
+    } else {
+      window.localStorage.removeItem('mirai:remembered-email');
+    }
     loginMutation.mutate();
   }
 
@@ -533,7 +543,7 @@ function LoginScreen() {
           ? 'Choose a new password for your account.'
           : 'Enter the six-digit code sent to your email.'
         : 'We will email a secure six-digit reset code.'
-      : 'Sign in to continue.';
+      : 'Please enter your details.';
 
   return (
     <main
@@ -580,12 +590,10 @@ function LoginScreen() {
         <div className="login-card">
           <div className="auth-card-heading">
             <div>
+              <span className="auth-secure-kicker">Secure access</span>
               <h2 id="login-title">{title}</h2>
               <p className="supporting-copy">{supportingCopy}</p>
             </div>
-            <span className="auth-card-mark" aria-hidden="true">
-              <img src="/mirai-symbol-light.png" alt="" />
-            </span>
           </div>
 
           {resetComplete ? (
@@ -762,7 +770,7 @@ function LoginScreen() {
               </form>
             )
           ) : (
-            <form onSubmit={submitCredentials}>
+            <form className="auth-login-form" onSubmit={submitCredentials}>
               <label htmlFor="email">Email</label>
               <input
                 id="email"
@@ -775,20 +783,7 @@ function LoginScreen() {
                 required
               />
 
-              <div className="auth-password-label">
-                <label htmlFor="password">Password</label>
-                <button
-                  type="button"
-                  className="secondary-button auth-forgot-button"
-                  onClick={() => {
-                    setMode('forgot');
-                    setResetComplete(false);
-                    loginMutation.reset();
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label htmlFor="password">Password</label>
               <div className="password-field">
                 <input
                   id="password"
@@ -810,6 +805,32 @@ function LoginScreen() {
                 </button>
               </div>
 
+              <div className="auth-form-options">
+                <label
+                  className="auth-remember-option"
+                  htmlFor="remember-email"
+                >
+                  <input
+                    id="remember-email"
+                    type="checkbox"
+                    checked={rememberEmail}
+                    onChange={(event) => setRememberEmail(event.target.checked)}
+                  />
+                  <span>Remember email</span>
+                </label>
+                <button
+                  type="button"
+                  className="secondary-button auth-forgot-button"
+                  onClick={() => {
+                    setMode('forgot');
+                    setResetComplete(false);
+                    loginMutation.reset();
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
               {loginMutation.error ? (
                 <p className="form-error" role="alert">
                   {loginMutation.error.message}
@@ -818,12 +839,15 @@ function LoginScreen() {
 
               <button type="submit" disabled={loginMutation.isPending}>
                 <span>
-                  {loginMutation.isPending ? 'Please wait…' : 'Continue'}
+                  {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
                 </span>
                 <svg viewBox="0 0 20 20" aria-hidden="true">
                   <path d="M4 10h11M11 6l4 4-4 4" />
                 </svg>
               </button>
+              <p className="auth-account-note">
+                Need an account? Contact your campus administrator.
+              </p>
             </form>
           )}
         </div>
