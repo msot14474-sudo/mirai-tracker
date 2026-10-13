@@ -8727,6 +8727,7 @@ body:has(.auth-shell) {
   .auth-shell .brand-statement {
     min-width: 0;
     width: 100%;
+    container-type: inline-size;
     padding: 0;
     animation: none;
   }
@@ -8735,8 +8736,14 @@ body:has(.auth-shell) {
     font-size: clamp(0.6rem, 1.4dvh, 0.78rem);
   }
   .brand-panel .brand-statement h1 {
-    font-size: clamp(2.4rem, min(5.6vw, 8.5dvh), 6rem);
-    line-height: 0.96;
+    font-size: clamp(2.4rem, min(6.4vw, 10.5dvh), 7.5rem);
+    line-height: 0.98;
+  }
+  @supports (font-size: 1cqw) {
+    .brand-panel .brand-statement h1 {
+      /* Bound the two-line headline by its actual column width and viewport height. */
+      font-size: min(18cqw, 10.5dvh, 7.5rem);
+    }
   }
 }
 

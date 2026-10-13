@@ -75,6 +75,8 @@ This document tracks the administrator interface redesign. The editable design s
 
 - [x] Sized the login screen to the viewport, compacted form spacing on short screens and maximized the portrait inside the reserved middle row. At extreme zoom or with an open mobile keyboard, the form can scroll internally to keep controls reachable.
 
+- [x] Enlarged the campaign headline with column-width and viewport-height limits; its grid row reserves space below the portrait.
+
 ## Next implementation sequence
 
 - [ ] Connect campus-specific overview metrics and today's lecture table to live data.
