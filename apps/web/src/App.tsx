@@ -568,13 +568,15 @@ function LoginScreen() {
             />
           </span>
         </div>
-        <div className="auth-portrait" aria-hidden="true">
-          <img
-            src="/mirai-faculty-hero-v2.png"
-            alt=""
-            decoding="sync"
-            fetchPriority="high"
-          />
+        <div className="auth-visual-safe-zone">
+          <div className="auth-portrait" aria-hidden="true">
+            <img
+              src="/mirai-faculty-hero-v2.png"
+              alt=""
+              decoding="sync"
+              fetchPriority="high"
+            />
+          </div>
         </div>
         <div className="brand-statement">
           <p className="eyebrow">Course progression</p>

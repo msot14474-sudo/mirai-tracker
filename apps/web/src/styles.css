@@ -8524,3 +8524,124 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/*
+ * Login artwork safe layout
+ *
+ * The wordmark, portrait and statement each own a grid row. The middle row is
+ * paint-contained and clipped, so enlarging the portrait can never cover the
+ * wordmark or the copy at any supported desktop height.
+ */
+@media (min-width: 1401px),
+  (min-width: 1101px) and (orientation: landscape) {
+  .auth-shell .brand-panel {
+    display: grid;
+    grid-template-rows:
+      clamp(5.25rem, 9vh, 7.5rem)
+      minmax(18rem, 1fr)
+      auto;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: clamp(0.8rem, 1.7vh, 1.6rem);
+    padding-block: clamp(2rem, 4vh, 4.5rem);
+  }
+
+  .auth-shell .brand-panel::before {
+    display: none;
+  }
+
+  .auth-shell .auth-brand {
+    position: relative;
+    z-index: 3;
+    min-width: 0;
+    min-height: 0;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .auth-shell .auth-wordmark-frame {
+    width: min(31rem, 82%);
+    height: 100%;
+    margin: 0 auto;
+    transform: none;
+  }
+
+  .auth-shell .auth-wordmark-frame img {
+    width: 100%;
+    max-width: 31rem;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .auth-visual-safe-zone {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    overflow: clip;
+    contain: layout paint;
+    place-items: end center;
+  }
+
+  .auth-visual-safe-zone::before {
+    position: absolute;
+    inset: 8% 10% 0;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(5, 27, 83, 0.2),
+      transparent 68%
+    );
+    filter: blur(1.8rem);
+    content: '';
+  }
+
+  .auth-portrait {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    display: grid;
+    width: min(44rem, 100%);
+    height: 100%;
+    min-height: 0;
+    place-items: end center;
+    translate: none;
+  }
+
+  .auth-portrait::before {
+    display: none;
+  }
+
+  .auth-portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+  }
+
+  .brand-statement {
+    position: relative;
+    z-index: 3;
+    min-width: 0;
+    padding-top: clamp(0.35rem, 0.8vh, 0.75rem);
+  }
+}
+
+@media (min-width: 1101px) and (orientation: landscape) and (max-height: 760px) {
+  .auth-shell .brand-panel {
+    grid-template-rows: 4.5rem minmax(12rem, 1fr) auto;
+    gap: 0.55rem;
+    padding-block: 1.25rem;
+  }
+
+  .brand-panel .brand-statement .eyebrow {
+    margin-bottom: 0.55rem;
+  }
+
+  .brand-panel .brand-statement h1 {
+    font-size: clamp(3.25rem, 5vw, 4.8rem);
+  }
+}
