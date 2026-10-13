@@ -88,3 +88,10 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Design and verify responsive tablet and mobile layouts for the campus-selection gateway.
 
 The campus entry, animated Overview, single-view navigation, account settings and contextual help are implemented in the web app. The next UI phase applies the same layout system inside each remaining operational workspace.
+
+## Shared visual polish — 13 October 2026
+
+- Bundled Inter Variable locally for consistent typography across dashboard, campus selection and login forms.
+- Reduced heavy font weights and tight heading tracking; refined sidebar, header controls, account/help surfaces, form fields, tables and metric cards within the existing blue theme.
+- Preserved wording, component structure, font sizes, navigation, workspace grids and responsive breakpoints. Login artwork keeps its established typeface and layout.
+- Validation: production web build and all 54 frontend tests passed. Browser visual verification remains outstanding.

@@ -1,6 +1,6 @@
 :root {
   font-family:
-    Inter,
+    'Inter Variable',
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -8788,4 +8788,245 @@ body:has(.auth-shell) {
     min-height: 2.8rem;
     margin-top: 1rem;
   }
+}
+
+/* Shared visual finish. Preserve workspace grids, content and responsive layout. */
+.dashboard-shell {
+  --display-font: 'Inter Variable', Inter, system-ui, sans-serif;
+  --mirai-canvas: #f6f8fc;
+  --mirai-line: #e3e8f0;
+  --mirai-muted: #64748b;
+  font-family: var(--display-font);
+  font-weight: 400;
+}
+
+.dashboard-shell :is(h1, h2, h3, h4) {
+  font-family: var(--display-font);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-shell :is(button, label, th, strong) {
+  font-weight: 600;
+}
+
+.dashboard-shell :is(input, select, textarea) {
+  font-weight: 450;
+  letter-spacing: normal;
+  border-color: #d7dfeb;
+  box-shadow: 0 1px 2px rgb(15 35 70 / 3%);
+}
+
+.dashboard-shell :is(input, select, textarea):focus-visible {
+  outline: 3px solid rgb(36 92 219 / 14%);
+  outline-offset: 1px;
+  border-color: #5d83d4;
+}
+
+.dashboard-shell :is(button, a):focus-visible {
+  outline: 2px solid #5384e6;
+  outline-offset: 3px;
+}
+
+.dashboard-shell :is(.eyebrow, .step-label, .workspace-kicker) {
+  font-weight: 600;
+  letter-spacing: 0.11em;
+}
+
+.dashboard-shell :is(.status-pill, .account-role-list span, .role-list span) {
+  font-weight: 550;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-shell .app-sidebar {
+  background: linear-gradient(165deg, #102c69 0%, #163e8b 55%, #2056b5 100%);
+  box-shadow: 1px 0 0 rgb(15 35 70 / 8%);
+}
+
+.dashboard-shell .sidebar-navigation button {
+  color: #d5e1f8;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dashboard-shell .sidebar-navigation button.active {
+  color: #214d9d;
+  background: #f7faff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgb(5 25 65 / 8%);
+}
+
+.dashboard-shell .sidebar-account strong {
+  font-weight: 550;
+}
+
+.dashboard-shell .sidebar-account small {
+  color: #c5d5f2;
+  font-weight: 450;
+  letter-spacing: 0.035em;
+}
+
+.dashboard-shell .topbar {
+  border-bottom-color: #e3e8f0;
+  box-shadow: 0 2px 12px rgb(20 42 80 / 2%);
+}
+
+.dashboard-shell .topbar strong {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.dashboard-shell .topbar .eyebrow {
+  color: #61769a;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.dashboard-shell .topbar .role-list span {
+  border-color: #e5eaf2;
+  background: #f5f7fb;
+  color: #526581;
+}
+
+.dashboard-shell .campus-switcher {
+  border-color: #d8e2f3;
+  background: #f8faff;
+  box-shadow: 0 1px 3px rgb(21 55 110 / 4%);
+}
+
+.dashboard-shell .campus-switcher span {
+  color: #234579;
+  font-weight: 600;
+}
+
+.dashboard-shell .campus-switcher small {
+  color: #61779c;
+  font-weight: 450;
+}
+
+.dashboard-shell .topbar .secondary-button {
+  border-color: #dfe5ee;
+  color: #405474;
+  font-weight: 550;
+  box-shadow: 0 1px 3px rgb(21 55 110 / 3%);
+}
+
+.dashboard-shell .topbar button:hover:not(:disabled) {
+  border-color: #aebfdd;
+  background: #f0f5fd;
+}
+
+.dashboard-shell :is(.account-hero, .help-hero) {
+  background: linear-gradient(115deg, #143572, #225bc2);
+  border-color: #2456a9;
+  box-shadow: 0 6px 20px rgb(20 49 100 / 8%);
+}
+
+.dashboard-shell :is(.account-hero, .help-hero)::after {
+  border-color: rgb(255 255 255 / 10%);
+}
+
+.dashboard-shell .account-hero-avatar {
+  font-weight: 550;
+  border-color: rgb(255 255 255 / 25%);
+  background: rgb(255 255 255 / 9%);
+}
+
+.dashboard-shell :is(.account-settings-card, .help-faq-card) {
+  border-color: #e1e7f0;
+  box-shadow: 0 4px 20px rgb(20 42 80 / 4%);
+}
+
+.dashboard-shell .account-field-grid label {
+  align-content: start;
+  font-weight: 550;
+}
+
+.dashboard-shell .account-field-grid input {
+  background: #fff;
+  font-weight: 450;
+}
+
+.dashboard-shell .account-field-grid input[readonly] {
+  background: #f5f7fa;
+  color: #66748b;
+}
+
+.dashboard-shell .account-field-grid small {
+  color: #66748b;
+  font-weight: 400;
+}
+
+.dashboard-shell .account-settings-card > footer button {
+  font-weight: 550;
+  box-shadow: 0 3px 8px rgb(35 94 215 / 14%);
+}
+
+.dashboard-shell
+  :is(.calendar-summary, .timetable-summary, .plan-summary, .schedule-metrics)
+  > div:not(.danger) {
+  background: #f4f7fb;
+  border-color: #e3e8f0;
+}
+
+.dashboard-shell
+  :is(.calendar-summary, .timetable-summary, .plan-summary, .schedule-metrics)
+  strong {
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-shell table th {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-shell table td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Use the same typeface in campus selection and auth forms, retaining artwork geometry. */
+.campus-gateway,
+.login-card {
+  font-family: 'Inter Variable', Inter, system-ui, sans-serif;
+}
+
+.brand-panel {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+.campus-gateway {
+  --display-font: 'Inter Variable', Inter, system-ui, sans-serif;
+}
+.campus-gateway :is(h1, h2, h3) {
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.campus-gateway
+  :is(button, strong, .campus-gateway-role, .campus-gateway-eyebrow) {
+  font-weight: 550;
+}
+.campus-choice {
+  box-shadow: 0 3px 14px rgb(20 42 80 / 4%);
+  border-color: #e1e7f0;
+}
+.auth-shell .login-card {
+  --display-font: 'Inter Variable', Inter, system-ui, sans-serif;
+}
+.auth-shell .login-card :is(label, button) {
+  font-weight: 550;
+}
+.auth-shell .login-card h2 {
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
