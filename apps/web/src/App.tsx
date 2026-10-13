@@ -451,6 +451,7 @@ function LoginScreen() {
       '/mirai-wordmark-light-hd.png',
       '/mirai-faculty-hero-v2.png',
       '/mirai-symbol-light.png',
+      '/mirai-logo.jpg',
     ];
     const decodeImage = (source: string) =>
       new Promise<void>((resolve) => {
@@ -534,7 +535,7 @@ function LoginScreen() {
           ? 'Create password'
           : 'Verify reset code'
         : 'Reset password'
-      : 'Welcome back';
+      : 'Login to your account';
   const supportingCopy = challenge
     ? `Enter the six-digit code sent to ${challenge.destination}. It expires in 10 minutes.`
     : mode === 'forgot'
@@ -589,14 +590,68 @@ function LoginScreen() {
       </section>
 
       <section className="login-panel" aria-labelledby="login-title">
-        <div className="login-card">
+        <div className="login-card auth-reference-card">
           <div className="auth-card-heading">
             <div>
-              <span className="auth-secure-kicker">Secure access</span>
+              <img
+                className="auth-original-icon"
+                src="/mirai-logo.jpg"
+                alt="Mirai"
+                width="64"
+                height="64"
+              />
               <h2 id="login-title">{title}</h2>
               <p className="supporting-copy">{supportingCopy}</p>
             </div>
           </div>
+
+          {!challenge && mode === 'login' ? (
+            <>
+              <a
+                className="auth-google-button"
+                href={`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/auth/google`}
+              >
+                <svg
+                  viewBox="0 0 48 48"
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                >
+                  <path
+                    fill="#4285F4"
+                    d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.18v5.14h6.62c3.88-3.58 6.07-8.85 6.07-14.82Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M24 44c5.54 0 10.18-1.84 13.57-4.97l-6.62-5.14c-1.84 1.23-4.2 1.96-6.95 1.96-5.36 0-9.9-3.62-11.52-8.48H5.64v5.3A20 20 0 0 0 24 44Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M12.48 27.37a12 12 0 0 1 0-7.64v-5.3H5.64a20 20 0 0 0 0 18.24l6.84-5.3Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M24 11.15c3.01 0 5.71 1.04 7.84 3.08l5.88-5.88C34.17 5.04 29.54 3 24 3A20 20 0 0 0 5.64 14.43l6.84 5.3C14.1 14.87 18.64 11.15 24 11.15Z"
+                  />
+                </svg>
+                Continue with Google
+              </a>
+              <div className="auth-email-divider">
+                <span>or login with email</span>
+              </div>
+              {new URLSearchParams(window.location.search).has(
+                'google_error',
+              ) ? (
+                <p className="form-error" role="alert">
+                  {new URLSearchParams(window.location.search).get(
+                    'google_error',
+                  ) === 'unavailable'
+                    ? 'Google sign-in is not available yet. Please use email.'
+                    : 'Google sign-in could not be completed. Use your registered Mirai email or sign in below.'}
+                </p>
+              ) : null}
+            </>
+          ) : null}
 
           {resetComplete ? (
             <p className="auth-success-banner" role="status">
@@ -840,16 +895,8 @@ function LoginScreen() {
               ) : null}
 
               <button type="submit" disabled={loginMutation.isPending}>
-                <span>
-                  {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
-                </span>
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M4 10h11M11 6l4 4-4 4" />
-                </svg>
+                <span>{loginMutation.isPending ? 'Signing in…' : 'Login'}</span>
               </button>
-              <p className="auth-account-note">
-                Need an account? Contact your campus administrator.
-              </p>
             </form>
           )}
         </div>

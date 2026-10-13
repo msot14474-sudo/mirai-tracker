@@ -65,6 +65,14 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Increased the full-height desktop portrait while retaining the collision-safe compact-height sizing.
 - [x] Expanded the portrait itself to fill the available desktop space between the raised wordmark and campaign label.
 
+## Login form reference update — 13 October 2026
+
+- [x] Matched the supplied form hierarchy with the original Mirai icon (no wordmark in the form), Google button, email divider and compact fields.
+- [x] Preserved the existing left portrait, logo, headline and protective layout.
+- [x] Implemented secure Google authorization and existing-account checks.
+- [x] Verified frontend tests and backend authentication tests; production builds pass.
+- [ ] Activate Google credentials and complete live Google account verification. See [Google sign-in setup](google-sign-in.md).
+
 ## Next implementation sequence
 
 - [ ] Connect campus-specific overview metrics and today's lecture table to live data.

@@ -8532,8 +8532,7 @@ textarea:focus {
  * paint-contained and clipped, so enlarging the portrait can never cover the
  * wordmark or the copy at any supported desktop height.
  */
-@media (min-width: 1401px),
-  (min-width: 1101px) and (orientation: landscape) {
+@media (min-width: 1401px), (min-width: 1101px) and (orientation: landscape) {
   .auth-shell .brand-panel {
     display: grid;
     grid-template-rows:
@@ -8637,8 +8636,7 @@ textarea:focus {
   }
 }
 
-@media (max-width: 1100px),
-  (orientation: portrait) and (max-width: 1400px) {
+@media (max-width: 1100px), (orientation: portrait) and (max-width: 1400px) {
   .auth-visual-safe-zone {
     display: none;
   }
@@ -8661,5 +8659,106 @@ textarea:focus {
 
   .auth-portrait img {
     transform: none;
+  }
+}
+
+/* Reference sign-in form: original symbol, Google entry, clean email form. */
+.auth-shell .auth-reference-card {
+  width: min(100%, 31rem);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.auth-shell .auth-reference-card::before,
+.auth-shell .auth-reference-card::after {
+  display: none;
+}
+.auth-original-icon {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1.6rem;
+  object-fit: contain;
+}
+.auth-shell .auth-reference-card h2 {
+  font-size: clamp(1.65rem, 2.5vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.auth-shell .auth-reference-card .supporting-copy {
+  margin-bottom: 1.8rem;
+  font-size: 0.9rem;
+}
+.auth-google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 3.2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dce1e8;
+  border-radius: 0.35rem;
+  color: #25314b;
+  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-google-button:hover {
+  background: #f7f9fc;
+  border-color: #aebfdf;
+}
+.auth-google-button:focus-visible {
+  outline: 3px solid #9dbbff;
+  outline-offset: 3px;
+}
+.auth-google-button svg {
+  flex: 0 0 20px;
+}
+.auth-email-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.8rem 0;
+  color: #7b8494;
+  font-size: 0.75rem;
+}
+.auth-email-divider::before,
+.auth-email-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e7eaf0;
+}
+.auth-shell .auth-reference-card .auth-login-form > input,
+.auth-shell .auth-reference-card .password-field input {
+  min-height: 3.25rem;
+  border-radius: 0.3rem;
+  background: #fff;
+  box-shadow: none;
+  margin-bottom: 1.15rem;
+}
+.auth-shell .auth-reference-card .auth-login-form > label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.auth-shell .auth-reference-card .auth-login-form > button[type='submit'] {
+  min-height: 3.25rem;
+  border-radius: 0.35rem;
+  background: var(--mirai-blue);
+  box-shadow: none;
+  margin-top: 1.6rem;
+}
+@media (max-width: 560px) {
+  .auth-shell .auth-reference-card {
+    padding: 1.4rem 1rem;
+  }
+  .auth-reference-card .auth-form-options {
+    flex-wrap: wrap;
+    gap: 0.8rem;
   }
 }

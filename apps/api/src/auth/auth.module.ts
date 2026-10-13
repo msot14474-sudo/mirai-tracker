@@ -1,3 +1,4 @@
+import { GoogleAuthService } from './google-auth.service';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AccessPolicyService } from './access-policy.service';
@@ -12,6 +13,7 @@ import { RequestOriginGuard } from './origin.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    GoogleAuthService,
     AuthEmailService,
     AccessPolicyService,
     { provide: APP_GUARD, useClass: RequestOriginGuard },

@@ -1,3 +1,4 @@
+import { GoogleAuthService } from './google-auth.service';
 import {
   BadRequestException,
   Body,
@@ -7,6 +8,8 @@ import {
   Patch,
   Post,
   Res,
+  Query,
+  Headers,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { CurrentSessionToken, CurrentUser, Public } from './auth.decorators';
@@ -75,7 +78,65 @@ type HeaderResponse = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly google: GoogleAuthService,
+  ) {}
+
+  @Public()
+  @Get('google/config')
+  googleConfig() {
+    return { enabled: this.google.enabled };
+  }
+
+  @Public()
+  @Get('google')
+  async startGoogle(
+    @Res()
+    response: {
+      setHeader(name: string, value: string): void;
+      redirect(url: string): void;
+    },
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      const result = await this.google.start();
+      response.setHeader('Set-Cookie', result.cookie);
+      response.redirect(result.url);
+    } catch {
+      response.redirect(
+        `${process.env.WEB_ORIGIN ?? 'http://localhost:5173'}/?google_error=unavailable`,
+      );
+    }
+  }
+
+  @Public()
+  @Get('google/callback')
+  async finishGoogle(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Headers('cookie') cookie: string | undefined,
+    @Res()
+    response: {
+      setHeader(name: string, value: string | string[]): void;
+      redirect(url: string): void;
+    },
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    const home = process.env.WEB_ORIGIN ?? 'http://localhost:5173';
+    try {
+      const result = await this.google.finish(code, state, cookie);
+      response.setHeader('Set-Cookie', [
+        this.google.cookie('', 0),
+        createSessionCookie(result.token, this.auth.sessionTtlSeconds),
+      ]);
+      response.redirect(home);
+    } catch {
+      response.setHeader('Set-Cookie', this.google.cookie('', 0));
+      response.redirect(`${home}/?google_error=failed`);
+    }
+  }
 
   @Public()
   @Post('login')

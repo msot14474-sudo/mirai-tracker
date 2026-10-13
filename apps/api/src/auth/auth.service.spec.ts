@@ -94,6 +94,38 @@ describe('AuthService', () => {
     return new AuthService(prisma as never, redis as never, email as never);
   }
 
+  it('uses existing account roles for Google and records the authentication method', async () => {
+    findUnique.mockResolvedValueOnce(await activeUser());
+    const result = await service().loginWithGoogle('  FACULTY@MIRAI.LOCAL  ');
+    expect(result.user.roles).toEqual([
+      { role: UserRole.FACULTY, campusId: 'campus-a' },
+    ]);
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'faculty@mirai.local' } }),
+    );
+    expect(createAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: { authenticationMethod: 'google' },
+        }),
+      }),
+    );
+  });
+
+  it('denies Google access for absent, inactive and unassigned users', async () => {
+    for (const user of [
+      null,
+      { ...(await activeUser()), status: 'INACTIVE' },
+      { ...(await activeUser()), roleAssignments: [] },
+    ]) {
+      findUnique.mockResolvedValueOnce(user);
+      await expect(
+        service().loginWithGoogle('faculty@gmail.com'),
+      ).rejects.toThrow('No active Mirai account');
+    }
+    expect(createAuditEvent).not.toHaveBeenCalled();
+  });
+
   it('emails a short-lived code after valid credentials without creating a session', async () => {
     findUnique.mockResolvedValueOnce(await activeUser());
 

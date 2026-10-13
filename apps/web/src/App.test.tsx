@@ -60,9 +60,16 @@ describe('App authentication', () => {
     );
     renderApp();
     expect(
-      await screen.findByRole('heading', { name: 'Welcome back' }),
+      await screen.findByRole('heading', { name: 'Login to your account' }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveValue('');
+    expect(screen.getByRole('img', { name: 'Mirai' })).toHaveAttribute(
+      'src',
+      '/mirai-logo.jpg',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Continue with Google' }),
+    ).toHaveAttribute('href', expect.stringContaining('/auth/google'));
   });
 
   it('resets a forgotten password with an emailed code', async () => {
@@ -246,7 +253,7 @@ describe('App authentication', () => {
     fireEvent.change(await screen.findByLabelText('Password'), {
       target: { value: 'correct-password' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Check your email' }),

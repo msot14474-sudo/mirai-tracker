@@ -173,6 +173,27 @@ export class AuthService {
     };
   }
 
+  async loginWithGoogle(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      include: {
+        roleAssignments: { select: { role: true, campusId: true } },
+        staffProfile: { select: { id: true } },
+        studentProfile: { select: { id: true, batchId: true } },
+      },
+    });
+    if (
+      !user ||
+      user.status !== UserStatus.ACTIVE ||
+      !user.roleAssignments.length
+    ) {
+      throw new UnauthorizedException(
+        'No active Mirai account is available. Contact your campus administrator.',
+      );
+    }
+    return this.createSession(user, 'google');
+  }
+
   async verifyOtp(challengeId: string, code: string) {
     const challengeKey = this.otpChallengeKey(challengeId);
     const rawChallenge = await this.redis.get(challengeKey);
