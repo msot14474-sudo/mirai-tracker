@@ -129,6 +129,7 @@ export async function logout() {
     method: 'POST',
     credentials: 'include',
   });
+  advanceSessionGeneration();
   if (!response.ok && response.status !== 401) {
     throw new Error(await messageFrom(response));
   }

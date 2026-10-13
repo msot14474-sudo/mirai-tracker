@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   advanceSessionGeneration,
+  resolveApiUrl,
+  canRecoverRequest,
+  RequestError,
   apiFetch,
   sessionExpiredEvent,
 } from './http';
@@ -149,4 +152,74 @@ describe('shared request protection', () => {
       'unreadable response',
     );
   });
+});
+
+it('handles a connection drop while consuming the body of a read', async () => {
+  const broken = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.error(new TypeError('Failed to fetch'));
+      },
+    }),
+  );
+  const fetcher = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce(broken)
+    .mockResolvedValueOnce(json({ restored: true }));
+  expect(await (await apiFetch('/api/subjects')).json()).toEqual({
+    restored: true,
+  });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it('protects downloads when the connection drops after headers', async () => {
+  const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.error(new TypeError('Failed to fetch'));
+        },
+      }),
+    ),
+  );
+  await expect(apiFetch('/api/exports', { method: 'POST' })).rejects.toThrow(
+    'Check whether your change was saved',
+  );
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('preserves binary downloads and their filenames', async () => {
+  const bytes = new Uint8Array([0, 255, 42, 128]);
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(bytes, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': 'attachment; filename="report.xlsx"',
+      },
+    }),
+  );
+  const response = await apiFetch('/api/exports', { method: 'POST' });
+  expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
+  expect(response.headers.get('Content-Disposition')).toContain('report.xlsx');
+});
+it('does not send a queued retry after the session changes', async () => {
+  vi.useFakeTimers();
+  const fetcher = vi
+    .spyOn(globalThis, 'fetch')
+    .mockRejectedValue(new TypeError('Failed to fetch'));
+  const result = expect(apiFetch('/api/subjects')).rejects.toMatchObject({
+    name: 'AbortError',
+  });
+  await vi.advanceTimersByTimeAsync(100);
+  advanceSessionGeneration();
+  await vi.advanceTimersByTimeAsync(500);
+  await result;
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it('keeps production requests on the cookie-bearing website origin', () => {
+  expect(resolveApiUrl(true, 'https://old-api.example.com')).toBe('/api');
+  expect(resolveApiUrl(false, 'http://localhost:3001/')).toBe(
+    'http://localhost:3001',
+  );
+  expect(canRecoverRequest(new RequestError('offline'))).toBe(true);
+  expect(canRecoverRequest(new RequestError('forbidden', 403))).toBe(false);
 });

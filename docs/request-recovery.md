@@ -9,3 +9,9 @@ All frontend API modules use the shared transport. Reads retry once for network 
 Invalid authenticated sessions clear protected query caches and return to login. Stale responses from previous sessions cannot invalidate newly authenticated sessions. Active failed queries expose a shared retry action; reconnecting retries active data queries. Workspace and application error boundaries provide recovery for rendering or lazy module failures. Planned dates, lesson plans and timetable selection no longer treat failed loads as empty data.
 
 Validation covers transient recovery, bounded retries, non-replayed writes, timeouts, authorization failures, invalid sessions, stale responses, malformed JSON, rendering failures and the misleading empty-state regression. UI browser verification is still outstanding.
+
+## Complete-response recovery
+
+Production always uses `/api` on the website origin, avoiding accidental cross-origin cookie/CORS configuration. Response bodies (including binary downloads) are fully buffered within the request timeout and error handler. Interrupted bodies get the same safe read retry policy; writes remain single-attempt. Session changes cancel queued retries and discard late responses. Transient failed queries also recover when the user returns to the window; validation and permission errors do not automatically retry.
+
+Live checks before this update found the production API ready, with database and Redis healthy, and Google sign-in configured. These checks cannot rule out intermittent internet or hosting outages.

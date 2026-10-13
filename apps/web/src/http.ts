@@ -1,6 +1,13 @@
-export const apiUrl =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.PROD ? '/api' : 'http://localhost:3000');
+// Production uses the deployed /api proxy so session cookies never cross origins.
+export function resolveApiUrl(production: boolean, configured?: string) {
+  return production
+    ? '/api'
+    : (configured || 'http://localhost:3000').replace(/\/$/, '');
+}
+export const apiUrl = resolveApiUrl(
+  import.meta.env.PROD,
+  import.meta.env.VITE_API_URL,
+);
 export const sessionExpiredEvent = 'mirai:session-expired';
 let sessionGeneration = 0;
 export function advanceSessionGeneration() {
@@ -38,6 +45,9 @@ export async function apiFetch(
     '',
   );
   for (let attempt = 0; ; attempt++) {
+    if (generation !== sessionGeneration || init.signal?.aborted) {
+      throw new DOMException('Request cancelled.', 'AbortError');
+    }
     const controller = new AbortController();
     const abort = () => controller.abort();
     if (init.signal?.aborted) abort();
@@ -45,13 +55,25 @@ export async function apiFetch(
     const timeout = window.setTimeout(abort, read ? 15_000 : 60_000);
     let error: RequestError;
     try {
-      const response = await fetch(url, {
+      const received = await fetch(url, {
         ...init,
         credentials: 'include',
+        cache: 'no-store',
         signal: controller.signal,
       });
-      if (generation !== sessionGeneration)
-        throw new DOMException('Session changed.', 'AbortError');
+      // Read the complete body under the same timeout and network-error handling.
+      // Returning a buffered response also protects JSON parsing and downloads.
+      const bytes = await received.arrayBuffer();
+      if (generation !== sessionGeneration || init.signal?.aborted)
+        throw new DOMException('Request cancelled.', 'AbortError');
+      const response = new Response(
+        [204, 205, 304].includes(received.status) ? null : bytes,
+        {
+          status: received.status,
+          statusText: received.statusText,
+          headers: received.headers,
+        },
+      );
       if (response.status === 401 && path === '/auth/logout') return response;
       if (response.status === 401 && path === '/auth/me') {
         window.dispatchEvent(new Event(sessionExpiredEvent));
@@ -95,7 +117,7 @@ export async function apiFetch(
         response.headers.get('content-type')?.includes('application/json') &&
         response.status !== 204
       ) {
-        const text = await response.clone().text();
+        const text = new TextDecoder().decode(bytes);
         try {
           JSON.parse(text);
         } catch {
@@ -107,7 +129,9 @@ export async function apiFetch(
       }
       return response;
     } catch (cause) {
-      if (init.signal?.aborted || generation !== sessionGeneration) throw cause;
+      if (init.signal?.aborted || generation !== sessionGeneration) {
+        throw new DOMException('Request cancelled.', 'AbortError');
+      }
       error =
         cause instanceof RequestError
           ? cause
@@ -135,4 +159,11 @@ export async function apiFetch(
       throw error;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+}
+
+export function canRecoverRequest(error: unknown): boolean {
+  return (
+    error instanceof RequestError &&
+    (error.status === 0 || [502, 503, 504].includes(error.status))
+  );
 }

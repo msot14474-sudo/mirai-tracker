@@ -1,3 +1,4 @@
+import { canRecoverRequest } from './http';
 import { AppErrorBoundary } from './RequestRecovery';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
@@ -11,7 +12,8 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: (query) =>
+        query.state.status === 'error' && canRecoverRequest(query.state.error),
       retry: false,
       refetchOnReconnect: true,
     },

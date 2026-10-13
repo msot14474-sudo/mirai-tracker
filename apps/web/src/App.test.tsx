@@ -1,5 +1,7 @@
+import { apiFetch } from './http';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -265,14 +267,22 @@ describe('App authentication', () => {
   it('returns to sign in when a protected request reports an invalid session', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       if (String(input).endsWith('/auth/me')) return userResponse('FACULTY');
-      return new Response(
-        JSON.stringify({ message: 'Authentication required.' }),
-        { status: 401, headers: { 'content-type': 'application/json' } },
-      );
+      if (String(input).endsWith('/protected'))
+        return new Response(
+          JSON.stringify({ message: 'Authentication required.' }),
+          { status: 401, headers: { 'content-type': 'application/json' } },
+        );
+      return new Response('[]', {
+        headers: { 'content-type': 'application/json' },
+      });
     });
     renderApp();
     await screen.findByRole('heading', { name: 'Welcome back, Sample' });
-    fireEvent.click(screen.getByRole('button', { name: 'Lesson plans' }));
+    await act(async () => {
+      await expect(apiFetch('/api/protected')).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+    });
     expect(
       await screen.findByText('Please sign in again to continue.'),
     ).toBeInTheDocument();
@@ -281,6 +291,7 @@ describe('App authentication', () => {
       screen.queryByRole('navigation', { name: 'Workspace navigation' }),
     ).not.toBeInTheDocument();
   });
+
   it('verifies an email code before displaying role-aware faculty access', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
