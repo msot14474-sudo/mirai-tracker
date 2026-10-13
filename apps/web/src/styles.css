@@ -4874,19 +4874,20 @@ textarea:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 34%);
   align-items: center;
-  min-height: 280px;
-  padding: clamp(2rem, 5vw, 4rem);
+  min-height: 240px;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   overflow: hidden;
-  border-radius: 1.5rem;
+  border: 1px solid #244b89;
+  border-radius: 1.25rem;
   color: #fff;
   background:
     radial-gradient(
       circle at 78% 20%,
-      rgba(67, 207, 235, 0.32),
+      rgba(101, 158, 225, 0.13),
       transparent 28%
     ),
-    linear-gradient(125deg, #071b4b 0%, #0d347f 58%, #2564df 100%);
-  box-shadow: 0 1.2rem 3.4rem rgba(16, 55, 139, 0.2);
+    linear-gradient(115deg, #102c61 0%, #173d7a 58%, #2053a3 100%);
+  box-shadow: 0 6px 20px rgb(16 55 100 / 8%);
 }
 
 .overview-hero-copy {
@@ -4896,10 +4897,10 @@ textarea:focus {
 
 .overview-eyebrow {
   margin: 0 0 0.7rem;
-  color: #70d7f0;
+  color: #607391;
   font-size: 0.76rem;
-  font-weight: 850;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -4907,15 +4908,15 @@ textarea:focus {
   max-width: 720px;
   margin: 0;
   color: #fff;
-  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  font-size: clamp(1.85rem, 3vw, 2.75rem);
   line-height: 1;
   letter-spacing: -0.05em;
 }
 
 .overview-hero-copy > p:not(.overview-eyebrow) {
-  margin: 1rem 0 1.4rem;
+  margin: 0.8rem 0 1.15rem;
   color: rgba(235, 243, 255, 0.82);
-  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-size: 0.95rem;
 }
 
 .overview-role {
@@ -4926,12 +4927,12 @@ textarea:focus {
   color: #fff;
   background: rgba(255, 255, 255, 0.1);
   font-size: 0.76rem;
-  font-weight: 750;
+  font-weight: 550;
 }
 
 .overview-motion {
   position: relative;
-  width: min(320px, 100%);
+  width: min(220px, 100%);
   aspect-ratio: 1;
   justify-self: end;
 }
@@ -4945,8 +4946,8 @@ textarea:focus {
 }
 
 .overview-orbit {
-  border: 1px solid rgba(187, 228, 255, 0.35);
-  animation: overview-spin 15s linear infinite;
+  border: 1px solid rgba(187, 228, 255, 0.18);
+  animation: overview-spin 30s linear infinite;
 }
 
 .overview-orbit i {
@@ -4957,7 +4958,7 @@ textarea:focus {
   height: 0.9rem;
   border-radius: 50%;
   background: #58d5ed;
-  box-shadow: 0 0 1.5rem rgba(88, 213, 237, 0.9);
+  box-shadow: none;
 }
 
 .overview-orbit-outer {
@@ -4968,7 +4969,7 @@ textarea:focus {
 .overview-orbit-inner {
   width: 55%;
   height: 55%;
-  animation-duration: 10s;
+  animation-duration: 24s;
   animation-direction: reverse;
 }
 
@@ -4977,7 +4978,7 @@ textarea:focus {
   left: -0.35rem;
   width: 0.7rem;
   height: 0.7rem;
-  background: #ffcf65;
+  background: #bdd9fa;
 }
 
 .overview-logo-core {
@@ -4986,8 +4987,8 @@ textarea:focus {
   height: 30%;
   place-items: center;
   background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 3rem rgba(83, 206, 238, 0.3);
-  animation: overview-float 4.5s ease-in-out infinite;
+  box-shadow: 0 0 2rem rgb(83 150 230 / 10%);
+  animation: overview-float 8s ease-in-out infinite;
   backdrop-filter: blur(10px);
 }
 
@@ -5019,7 +5020,7 @@ textarea:focus {
 .overview-details span {
   color: var(--mirai-muted);
   font-size: 0.72rem;
-  font-weight: 750;
+  font-weight: 550;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -5059,7 +5060,7 @@ textarea:focus {
   border: 1px solid #dfe6f3;
   border-radius: 1rem;
   color: #18346f;
-  background: linear-gradient(145deg, #fbfcff, #f2f6ff);
+  background: #fff;
   text-align: left;
   cursor: pointer;
   transition:
@@ -5071,9 +5072,8 @@ textarea:focus {
 .overview-shortcut-grid button:hover,
 .overview-shortcut-grid button:focus-visible {
   border-color: #9db7ec;
-  box-shadow: 0 0.8rem 1.8rem rgba(35, 72, 151, 0.1);
-  outline: none;
-  transform: translateY(-3px);
+  box-shadow: 0 4px 14px rgb(35 72 151 / 8%);
+  transform: translateY(-1px);
 }
 
 .overview-shortcut-grid .sidebar-icon {
@@ -5084,7 +5084,7 @@ textarea:focus {
 .overview-shortcut-number {
   color: #6d88c3;
   font-size: 0.75rem;
-  font-weight: 850;
+  font-weight: 600;
 }
 
 .overview-shortcut-grid strong,
@@ -5100,7 +5100,16 @@ textarea:focus {
 .overview-shortcut-action {
   color: #2a5ecb;
   font-size: 0.76rem;
-  font-weight: 750;
+  font-weight: 550;
+}
+
+.overview-hero .overview-eyebrow {
+  color: #b4cdee;
+}
+
+.overview-details strong,
+.overview-shortcut-grid strong {
+  overflow-wrap: anywhere;
 }
 
 @keyframes overview-spin {
@@ -5984,7 +5993,7 @@ textarea:focus {
   }
 
   .overview-hero h1 {
-    font-size: 2.2rem;
+    font-size: 1.85rem;
   }
 
   .overview-details,
@@ -8669,6 +8678,8 @@ body:has(.auth-shell) {
   }
   .auth-shell .auth-brand {
     position: relative;
+    /* Shift within the reserved row gap, keeping clear of the portrait. */
+    top: clamp(0.25rem, 0.6dvh, 0.5rem);
     min-width: 0;
     min-height: 0;
     align-items: center;
