@@ -73,6 +73,8 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Verified frontend tests and backend authentication tests; production builds pass.
 - [ ] Activate Google credentials and complete live Google account verification. See [Google sign-in setup](google-sign-in.md).
 
+- [x] Sized the login screen to the viewport, compacted form spacing on short screens and maximized the portrait inside the reserved middle row. At extreme zoom or with an open mobile keyboard, the form can scroll internally to keep controls reachable.
+
 ## Next implementation sequence
 
 - [ ] Connect campus-specific overview metrics and today's lecture table to live data.

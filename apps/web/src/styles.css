@@ -8525,143 +8525,6 @@ textarea:focus {
   }
 }
 
-/*
- * Login artwork safe layout
- *
- * The wordmark, portrait and statement each own a grid row. The middle row is
- * paint-contained and clipped, so enlarging the portrait can never cover the
- * wordmark or the copy at any supported desktop height.
- */
-@media (min-width: 1401px), (min-width: 1101px) and (orientation: landscape) {
-  .auth-shell .brand-panel {
-    display: grid;
-    grid-template-rows:
-      clamp(5.25rem, 9vh, 7.5rem)
-      minmax(18rem, 1fr)
-      auto;
-    align-items: stretch;
-    justify-content: stretch;
-    gap: clamp(0.8rem, 1.7vh, 1.6rem);
-    padding-block: clamp(2rem, 4vh, 4.5rem);
-  }
-
-  .auth-shell .brand-panel::before {
-    display: none;
-  }
-
-  .auth-shell .auth-brand {
-    position: relative;
-    z-index: 3;
-    min-width: 0;
-    min-height: 0;
-    align-items: center;
-    overflow: hidden;
-  }
-
-  .auth-shell .auth-wordmark-frame {
-    width: min(31rem, 82%);
-    height: 100%;
-    margin: 0 auto;
-    transform: none;
-  }
-
-  .auth-shell .auth-wordmark-frame img {
-    width: 100%;
-    max-width: 31rem;
-    height: 100%;
-    object-fit: contain;
-  }
-
-  .auth-visual-safe-zone {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    overflow: clip;
-    contain: layout paint;
-    place-items: end center;
-  }
-
-  .auth-visual-safe-zone::before {
-    position: absolute;
-    inset: 8% 10% 0;
-    z-index: -1;
-    border-radius: 50%;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(5, 27, 83, 0.2),
-      transparent 68%
-    );
-    filter: blur(1.8rem);
-    content: '';
-  }
-
-  .auth-portrait {
-    position: relative;
-    inset: auto;
-    z-index: 1;
-    display: grid;
-    width: min(52rem, 92%);
-    height: 100%;
-    min-height: 0;
-    max-width: 100%;
-    max-height: 100%;
-    place-items: end center;
-    translate: none;
-  }
-
-  .auth-portrait::before {
-    display: none;
-  }
-
-  .auth-portrait img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    object-position: center bottom;
-    transform: scale(1.1);
-    transform-origin: center bottom;
-  }
-
-  .brand-statement {
-    position: relative;
-    z-index: 3;
-    min-width: 0;
-    padding-top: clamp(0.35rem, 0.8vh, 0.75rem);
-  }
-}
-
-@media (max-width: 1100px), (orientation: portrait) and (max-width: 1400px) {
-  .auth-visual-safe-zone {
-    display: none;
-  }
-}
-
-@media (min-width: 1101px) and (orientation: landscape) and (max-height: 760px) {
-  .auth-shell .brand-panel {
-    grid-template-rows: 4.5rem minmax(12rem, 1fr) auto;
-    gap: 0.55rem;
-    padding-block: 1.25rem;
-  }
-
-  .brand-panel .brand-statement .eyebrow {
-    margin-bottom: 0.55rem;
-  }
-
-  .brand-panel .brand-statement h1 {
-    font-size: clamp(3.25rem, 5vw, 4.8rem);
-  }
-
-  .auth-portrait img {
-    transform: none;
-  }
-}
-
 /* Reference sign-in form: original symbol, Google entry, clean email form. */
 .auth-shell .auth-reference-card {
   width: min(100%, 31rem);
@@ -8760,5 +8623,162 @@ textarea:focus {
   .auth-reference-card .auth-form-options {
     flex-wrap: wrap;
     gap: 0.8rem;
+  }
+}
+
+/* Fit the sign-in composition to the viewport, reserving real space for each row. */
+body:has(.auth-shell) {
+  min-height: 0;
+  overflow: hidden;
+}
+.auth-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.auth-shell .login-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(1rem, 3vh, 2rem) clamp(1rem, 3vw, 3rem);
+  /* Retain access to fields at extreme zoom or while a mobile keyboard is open. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  align-items: safe center;
+}
+.auth-shell .auth-reference-card {
+  min-width: 0;
+  max-width: 100%;
+  padding-block: clamp(0.75rem, 2vh, 1.5rem);
+}
+
+@media (min-width: 1401px), (min-width: 1101px) and (orientation: landscape) {
+  .auth-shell .brand-panel {
+    display: grid;
+    grid-template-rows: clamp(2.75rem, 8dvh, 5.5rem) minmax(0, 1fr) auto;
+    align-items: stretch;
+    justify-content: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding: clamp(0.75rem, 2.5dvh, 2rem) clamp(1rem, 3vw, 3rem);
+    gap: clamp(0.5rem, 1.3dvh, 1rem);
+  }
+  .auth-shell .brand-panel::before {
+    display: none;
+  }
+  .auth-shell .auth-brand {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    align-items: center;
+    overflow: hidden;
+    animation: none;
+  }
+  .auth-shell .auth-wordmark-frame {
+    width: min(31rem, 90%);
+    height: 100%;
+    margin: 0 auto;
+    transform: none;
+  }
+  .auth-shell .auth-wordmark-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .auth-visual-safe-zone {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    contain: layout paint;
+    container-type: size;
+    isolation: isolate;
+  }
+  .auth-portrait {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    translate: none;
+    transform: none;
+    animation: none;
+  }
+  .auth-portrait::before {
+    display: none;
+  }
+  .auth-portrait img {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: auto;
+    height: 100%;
+    max-width: none;
+    max-height: 100%;
+    object-fit: contain;
+    transform: translateX(-50%);
+  }
+  @supports (height: 1cqh) {
+    .auth-portrait img {
+      /* Account for transparent side margins in the supplied portrait. */
+      height: min(100cqh, 120cqw);
+    }
+  }
+  .auth-shell .brand-statement {
+    min-width: 0;
+    width: 100%;
+    padding: 0;
+    animation: none;
+  }
+  .brand-panel .brand-statement .eyebrow {
+    margin: 0 0 clamp(0.45rem, 1.2dvh, 0.9rem);
+    font-size: clamp(0.6rem, 1.4dvh, 0.78rem);
+  }
+  .brand-panel .brand-statement h1 {
+    font-size: clamp(2.4rem, min(5.6vw, 8.5dvh), 6rem);
+    line-height: 0.96;
+  }
+}
+
+@media (max-width: 1100px), (orientation: portrait) and (max-width: 1400px) {
+  .auth-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .auth-shell .brand-panel {
+    min-height: 0;
+    padding: 0.5rem 1rem;
+  }
+  .auth-shell .auth-wordmark-frame {
+    height: clamp(2.5rem, 7dvh, 3.5rem);
+  }
+  .auth-visual-safe-zone {
+    display: none;
+  }
+}
+
+@media (max-height: 850px) {
+  .auth-original-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.8rem;
+  }
+  .auth-shell .auth-reference-card .supporting-copy {
+    margin-bottom: 1rem;
+  }
+  .auth-reference-card .auth-email-divider {
+    margin: 1.1rem 0;
+  }
+  .auth-shell .auth-reference-card .auth-login-form > input,
+  .auth-shell .auth-reference-card .password-field input {
+    min-height: 2.8rem;
+    padding-block: 0.7rem;
+    margin-bottom: 0.9rem;
+  }
+  .auth-reference-card .auth-google-button {
+    min-height: 2.8rem;
+  }
+  .auth-shell .auth-reference-card .auth-login-form > button[type='submit'] {
+    min-height: 2.8rem;
+    margin-top: 1rem;
   }
 }
