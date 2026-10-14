@@ -1,3 +1,4 @@
+import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { advanceSessionGeneration, apiUrl, sessionExpiredEvent } from './http';
 import { RequestRecovery, AppErrorBoundary } from './RequestRecovery';
 import {
@@ -1320,13 +1321,16 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'overview':
       default:
         return (
-          <CampusOverview
-            user={user}
-            campus={selectedCampus}
-            roleLabel={primaryRoleLabel}
-            workspaces={navigation}
-            onOpen={openView}
-          />
+          <>
+            <CampusOverview
+              user={user}
+              campus={selectedCampus}
+              roleLabel={primaryRoleLabel}
+              workspaces={navigation}
+              onOpen={openView}
+            />
+            {canViewStudentOverview ? <StudentLectureFeedback /> : null}
+          </>
         );
     }
   }

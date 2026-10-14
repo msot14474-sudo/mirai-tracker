@@ -1,3 +1,4 @@
+import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { useQuery } from '@tanstack/react-query';
 import {
   StudentExam,
@@ -37,7 +38,6 @@ export function StudentOverview() {
             from the exact syllabus mapped to each exam.
           </p>
         </div>
-        <span className="read-only-badge">READ ONLY</span>
       </div>
 
       {overview.isLoading ? (
@@ -74,6 +74,8 @@ export function StudentOverview() {
               </div>
             </dl>
           </div>
+
+          <StudentLectureFeedback />
 
           <section
             className="student-subjects"

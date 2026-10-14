@@ -21,18 +21,20 @@ function renderOverview() {
 }
 
 describe('M13 student overview', () => {
-  it('shows the authenticated batch context and read-only state', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+  it('shows the authenticated batch context and lecture feedback', async () => {
+    mockStudentRequests();
     renderOverview();
 
     expect(await screen.findByText('Mirai Sample Batch A')).toBeInTheDocument();
     expect(screen.getByText('HI-Tech Campus')).toBeInTheDocument();
     expect(screen.getByText('Mirai Track')).toBeInTheDocument();
-    expect(screen.getByText('READ ONLY')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Lecture feedback' }),
+    ).toBeInTheDocument();
   });
 
   it('shows covered work and the ordered topics coming next', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+    mockStudentRequests();
     renderOverview();
     const subject = (
       await screen.findByRole('heading', { name: 'Data Structures' })
@@ -47,7 +49,7 @@ describe('M13 student overview', () => {
   });
 
   it('shows upcoming exam dates and exact subject scope', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+    mockStudentRequests();
     renderOverview();
     const exam = (
       await screen.findByRole('heading', { name: 'Mid-term 2026' })
@@ -61,12 +63,15 @@ describe('M13 student overview', () => {
     expect(within(exam).queryByText('Queues')).not.toBeInTheDocument();
   });
 
-  it('contains no editing controls', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(data));
+  it('keeps academic progress read-only', async () => {
+    mockStudentRequests();
     renderOverview();
     await screen.findByRole('heading', { name: 'My course progress' });
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    const subject = (
+      await screen.findByRole('heading', { name: 'Data Structures' })
+    ).closest('article')!;
+    expect(within(subject).queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   });
@@ -169,4 +174,21 @@ function jsonResponse(value: unknown) {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function mockStudentRequests() {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) =>
+    jsonResponse(
+      String(input).includes('/student/lectures')
+        ? {
+            lectures: [],
+            pendingCount: 0,
+            total: 0,
+            page: 0,
+            pageSize: 20,
+            timezone: 'Asia/Kolkata',
+          }
+        : data,
+    ),
+  );
 }

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nest start --watch",
-    "build": "pnpm --filter @mirai/calculations build && prisma generate && nest build",
+    "build": "pnpm --filter @mirai/calculations build && prisma generate && nest build && node scripts/deploy-migrations.cjs",
     "start": "node dist/main.js",
     "test": "jest --runInBand",
     "test:schema": "jest --runInBand src/database/schema.contract.spec.ts",

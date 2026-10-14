@@ -9077,3 +9077,125 @@ body:has(.auth-shell) {
   color: #284775;
   box-shadow: 0 4px 20px rgb(20 42 80 / 10%);
 }
+
+.lecture-feedback {
+  margin-top: 1.25rem;
+  padding: clamp(1rem, 3vw, 1.8rem);
+  border: 1px solid #e1e7f0;
+  border-radius: 1rem;
+  background: #fff;
+}
+.lecture-feedback h3 {
+  margin-bottom: 0.4rem;
+}
+.lecture-feedback header p {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.lecture-review-tabs,
+.lecture-review-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-block: 1rem;
+}
+.lecture-review-tabs button,
+.lecture-review-pagination button {
+  padding: 0.6rem 1rem;
+  border: 1px solid #d8e2f0;
+  border-radius: 0.6rem;
+  background: white;
+  color: #254d8b;
+}
+.lecture-review-tabs button[aria-pressed='true'] {
+  background: #edf3ff;
+  border-color: #a9c0ec;
+}
+.lecture-review-list {
+  display: grid;
+  gap: 1rem;
+}
+.lecture-review-card {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid #dfe6ef;
+  border-radius: 0.8rem;
+}
+.lecture-review-card > header,
+.lecture-review-card footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.lecture-review-card h4 {
+  margin: 0.3rem 0;
+}
+.lecture-review-card small,
+.lecture-review-card footer span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.lecture-review-card fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0.5rem 0;
+}
+.lecture-review-card legend {
+  font-size: 0.9rem;
+  font-weight: 550;
+  margin-bottom: 0.8rem;
+}
+.lecture-review-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.lecture-review-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.lecture-review-options input {
+  width: 1rem;
+  height: 1rem;
+  min-height: 0;
+  padding: 0;
+  accent-color: #245cdb;
+}
+.lecture-review-details {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+.lecture-review-details textarea {
+  width: 100%;
+  padding: 0.7rem;
+  resize: vertical;
+  border: 1px solid #d7dfeb;
+  border-radius: 0.6rem;
+}
+.lecture-summary {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #475569;
+  font-size: 0.85rem;
+}
+.lecture-review-card footer {
+  align-items: center;
+  margin-top: 0.6rem;
+}
+.lecture-review-card footer button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: #245cdb;
+  color: white;
+}
+.lecture-feedback button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -103,8 +103,8 @@ describe('StudentViewService', () => {
   });
 });
 
-describe('StudentViewController read-only contract', () => {
-  it('requires the student role and exposes only the overview method', () => {
+describe('StudentViewController role contract', () => {
+  it('requires the student role for course views and lecture feedback', () => {
     expect(
       Reflect.getMetadata(REQUIRED_ROLES_KEY, StudentViewController),
     ).toEqual([UserRole.STUDENT]);
@@ -112,7 +112,7 @@ describe('StudentViewController read-only contract', () => {
       Object.getOwnPropertyNames(StudentViewController.prototype).filter(
         (name) => name !== 'constructor',
       ),
-    ).toEqual(['overview']);
+    ).toEqual(['listLectures', 'reviewLecture', 'overview']);
   });
 });
 

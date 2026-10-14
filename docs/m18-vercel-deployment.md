@@ -21,6 +21,14 @@ pnpm monorepos. Keep that setting enabled for the API because it imports
 - Generate independent `SESSION_SECRET` and `INTERNAL_JOB_SECRET` values. Never
   store either value in Git.
 
+## Production migrations
+
+The API build runs committed Prisma migrations only when Vercel identifies the
+build as production. A migration failure fails the build, leaving the previous
+API deployment active. Local and preview builds do not migrate a database.
+Migrations must remain backward-compatible because the web and API deploy
+independently.
+
 ## Database initialization
 
 After connecting PostgreSQL, pull the API project's production environment and
