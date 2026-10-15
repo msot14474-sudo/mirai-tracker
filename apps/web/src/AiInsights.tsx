@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
 import { apiFetch, apiUrl } from './http';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -84,28 +85,20 @@ export function AiInsights({
   canLog: boolean;
   onOpen: (view: ManagementView) => void;
 }) {
-  const [offeringId, setOfferingId] = useState('');
   const [question, setQuestion] = useState('');
   const [selectedConversationId, setConversationId] = useState('');
   const transcript = useRef<HTMLDivElement>(null);
   const client = useQueryClient();
   const scope = {
     ...(campusId ? { campusId } : {}),
-    ...(offeringId ? { offeringId } : {}),
   };
-  const options = useQuery({
+  const query = useQuery({
     queryKey: ['ai-insights', campusId ?? '', ''],
     queryFn: () => getSnapshot(campusId),
   });
-  const focused = useQuery({
-    queryKey: ['ai-insights', campusId ?? '', offeringId],
-    queryFn: () => getSnapshot(campusId, offeringId),
-    enabled: Boolean(offeringId),
-  });
-  const query = offeringId ? focused : options;
   const chatQuery = new URLSearchParams(scope).toString();
   const chats = useQuery({
-    queryKey: ['ai-chats', campusId ?? '', offeringId],
+    queryKey: ['ai-chats', campusId ?? '', ''],
     queryFn: async (): Promise<{ id: string; title: string }[]> =>
       (
         await apiFetch(`${apiUrl}/ai-insights/conversations?${chatQuery}`)
@@ -113,7 +106,7 @@ export function AiInsights({
   });
   const conversationId = selectedConversationId || chats.data?.[0]?.id || '';
   const history = useQuery({
-    queryKey: ['ai-chat', conversationId, campusId ?? '', offeringId],
+    queryKey: ['ai-chat', conversationId, campusId ?? '', ''],
     enabled: Boolean(conversationId),
     queryFn: async (): Promise<Chat> =>
       (
@@ -145,7 +138,7 @@ export function AiInsights({
     onSuccess: (result, variables) => {
       if (result.conversationId) {
         client.setQueryData<Chat>(
-          ['ai-chat', result.conversationId, campusId ?? '', offeringId],
+          ['ai-chat', result.conversationId, campusId ?? '', ''],
           (previous) => ({
             id: result.conversationId!,
             title: previous?.title || variables.ask || 'Academic report',
@@ -229,32 +222,6 @@ export function AiInsights({
           </button>
         </div>
       </header>
-      <div className="ai-toolbar">
-        <label>
-          Subject
-          <select
-            value={offeringId}
-            disabled={report.isPending}
-            onChange={(e) => {
-              setOfferingId(e.target.value);
-              setConversationId('');
-              report.reset();
-            }}
-          >
-            <option value="">All permitted subjects</option>
-            {options.data?.subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.code} · {s.batch} · {s.campus.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>
-          {data
-            ? `Updated ${new Date(data.generatedAt).toLocaleString()}`
-            : 'Reading academic records…'}
-        </span>
-      </div>
       {query.isPending ? (
         <LoadingSkeleton variant="cards" label="Loading academic insights" />
       ) : query.isError ? (
@@ -327,7 +294,19 @@ export function AiInsights({
                     <strong>
                       {message.role === 'user' ? 'You' : 'Mirai AI'}
                     </strong>
-                    <div>{message.content}</div>
+                    <div
+                      className={
+                        message.role === 'assistant' ? 'ai-markdown' : undefined
+                      }
+                    >
+                      {message.role === 'assistant' ? (
+                        <Markdown skipHtml disallowedElements={['img']}>
+                          {message.content}
+                        </Markdown>
+                      ) : (
+                        message.content
+                      )}
+                    </div>
                   </article>
                 ))}
               {report.isPending ? (
@@ -360,7 +339,11 @@ export function AiInsights({
                   ) ? (
                     <div className="ai-chat-message ai-chat-assistant">
                       <strong>Mirai AI</strong>
-                      <div>{report.data.text}</div>
+                      <div className="ai-markdown">
+                        <Markdown skipHtml disallowedElements={['img']}>
+                          {report.data.text}
+                        </Markdown>
+                      </div>
                     </div>
                   ) : null}
                   {report.data.incomplete ? (

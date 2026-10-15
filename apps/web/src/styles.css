@@ -9279,3 +9279,18 @@ body:has(.auth-shell) {
   .ai-composer-footer { justify-content:flex-end; }
   .ai-transcript .ai-chat-message { max-width:100%; padding:12px; }
 }
+
+.ai-chat-message > .ai-markdown { white-space:normal; }
+.ai-markdown :is(h1,h2,h3,h4,h5,h6) { font-size:17px; line-height:1.45; font-weight:600; letter-spacing:-.015em; margin:22px 0 10px; }
+.ai-markdown > :first-child { margin-top:0; }
+.ai-markdown > :last-child { margin-bottom:0; }
+.ai-markdown p { margin:0 0 12px; color:inherit; }
+.ai-markdown :is(ul,ol) { padding-left:24px; margin:12px 0; }
+.ai-markdown li { padding-left:4px; margin:6px 0; }
+.ai-markdown li p { margin:0; }
+.ai-markdown strong { font-weight:600; }
+.ai-markdown hr { border:0; border-top:1px solid #e5eaf2; margin:24px 0; }
+.ai-markdown pre { max-width:100%; overflow:auto; padding:14px; border-radius:8px; background:#f5f7fa; white-space:pre; }
+.ai-markdown code { font-size:.9em; background:#f5f7fa; }
+.ai-markdown blockquote { margin:16px 0; padding-left:16px; border-left:3px solid #ccd8ec; }
+.ai-markdown a { color:#2459ce; text-decoration:underline; }

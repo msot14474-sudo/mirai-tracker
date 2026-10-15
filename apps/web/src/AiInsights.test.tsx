@@ -171,7 +171,8 @@ it('reopens saved conversations and sends follow-ups using their conversation id
           {
             id: 'm2',
             role: 'assistant',
-            content: 'Focus on Arrays.',
+            content:
+              '### Focus areas\n\n**Focus on Arrays.**\n\n- Review loops\n\n<script>alert(1)</script>',
             createdAt: snapshot.generatedAt,
           },
         ],
@@ -200,7 +201,15 @@ it('reopens saved conversations and sends follow-ups using their conversation id
     </QueryClientProvider>,
   );
   expect(screen.queryByLabelText('Saved chats')).not.toBeInTheDocument();
-  await screen.findByText('Focus on Arrays.');
+  const answer = await screen.findByText('Focus on Arrays.');
+  expect(answer.tagName).toBe('STRONG');
+  expect(
+    screen.getByRole('heading', { name: 'Focus areas' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Review loops').tagName).toBe('LI');
+  expect(screen.getByRole('log').textContent).not.toContain('**');
+  expect(screen.getByRole('log').querySelector('script')).toBeNull();
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
     target: { value: 'How should I teach that?' },
   });
