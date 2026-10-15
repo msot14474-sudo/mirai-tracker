@@ -206,6 +206,7 @@ model User {
   createdAt              DateTime               @default(now()) @db.Timestamptz(3)
   updatedAt              DateTime               @updatedAt @db.Timestamptz(3)
   roleAssignments        RoleAssignment[]
+  aiConversations        AiConversation[]
   passwordCredential     PasswordCredential?
   staffProfile           StaffProfile?
   studentProfile         StudentProfile?
@@ -756,4 +757,31 @@ model LectureReview {
 
   @@unique([studentProfileId, scheduledSessionId])
   @@index([scheduledSessionId])
+}
+
+model AiConversation {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  title     String      @db.VarChar(160)
+  scopeKey  String      @db.VarChar(200)
+  accessKey String      @db.VarChar(64)
+  version   Int         @default(0)
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime    @updatedAt @db.Timestamptz(3)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
+
+  @@index([userId, scopeKey, updatedAt])
+}
+
+model AiMessage {
+  id             String         @id @default(uuid()) @db.Uuid
+  conversationId String         @db.Uuid
+  ordinal        Int
+  role           String         @db.VarChar(16)
+  content        String         @db.Text
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, ordinal])
 }

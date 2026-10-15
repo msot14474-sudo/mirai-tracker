@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiFetch, apiUrl } from './http';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -52,7 +52,20 @@ type Snapshot = {
     session: { id: string; offeringId: string; startsAt: string };
   }[];
 };
+type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+};
+type Chat = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  earlierMessages: number;
+};
 type Report = {
+  conversationId?: string;
   mode: 'ai' | 'data';
   text: string;
   generatedAt: string;
@@ -73,6 +86,8 @@ export function AiInsights({
 }) {
   const [offeringId, setOfferingId] = useState('');
   const [question, setQuestion] = useState('');
+  const [conversationId, setConversationId] = useState('');
+  const client = useQueryClient();
   const scope = {
     ...(campusId ? { campusId } : {}),
     ...(offeringId ? { offeringId } : {}),
@@ -87,6 +102,24 @@ export function AiInsights({
     enabled: Boolean(offeringId),
   });
   const query = offeringId ? focused : options;
+  const chatQuery = new URLSearchParams(scope).toString();
+  const chats = useQuery({
+    queryKey: ['ai-chats', campusId ?? '', offeringId],
+    queryFn: async (): Promise<{ id: string; title: string }[]> =>
+      (
+        await apiFetch(`${apiUrl}/ai-insights/conversations?${chatQuery}`)
+      ).json(),
+  });
+  const history = useQuery({
+    queryKey: ['ai-chat', conversationId, campusId ?? '', offeringId],
+    enabled: Boolean(conversationId),
+    queryFn: async (): Promise<Chat> =>
+      (
+        await apiFetch(
+          `${apiUrl}/ai-insights/conversations/${conversationId}?${chatQuery}`,
+        )
+      ).json(),
+  });
   const report = useMutation({
     mutationFn: async ({
       useAi,
@@ -102,10 +135,21 @@ export function AiInsights({
           body: JSON.stringify({
             ...scope,
             useAi,
+            ...(useAi && conversationId ? { conversationId } : {}),
             ...(ask ? { question: ask } : {}),
           }),
         })
       ).json(),
+    onSuccess: (result) => {
+      if (result.conversationId) {
+        setConversationId(result.conversationId);
+        setQuestion('');
+        void client.invalidateQueries({ queryKey: ['ai-chats'] });
+        void client.invalidateQueries({
+          queryKey: ['ai-chat', result.conversationId],
+        });
+      }
+    },
   });
   const data = query.data;
   const subjectName = (id: string) => {
@@ -148,6 +192,7 @@ export function AiInsights({
             disabled={report.isPending}
             onChange={(e) => {
               setOfferingId(e.target.value);
+              setConversationId('');
               report.reset();
             }}
           >
@@ -202,6 +247,79 @@ export function AiInsights({
                   : 'AI is not connected yet. Live monitoring and data reports are available.'}
               </p>
             </div>
+            <div className="ai-chat-tools">
+              <label>
+                Saved chats
+                <select
+                  value={conversationId}
+                  disabled={report.isPending}
+                  onChange={(e) => {
+                    setConversationId(e.target.value);
+                    report.reset();
+                    setQuestion('');
+                  }}
+                >
+                  <option value="">New conversation</option>
+                  {chats.data?.map((chat) => (
+                    <option key={chat.id} value={chat.id}>
+                      {chat.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={report.isPending}
+                onClick={() => {
+                  setConversationId('');
+                  setQuestion('');
+                  report.reset();
+                }}
+              >
+                New chat
+              </button>
+            </div>
+            {chats.isError ? (
+              <p role="alert">
+                Saved chats could not load.{' '}
+                <button type="button" onClick={() => void chats.refetch()}>
+                  Retry chats
+                </button>
+              </p>
+            ) : null}
+            {conversationId && history.isPending ? (
+              <p role="status">Loading conversation…</p>
+            ) : null}
+            {history.isError ? (
+              <p className="form-error" role="alert">
+                {history.error.message}
+              </p>
+            ) : null}
+            {conversationId && history.data ? (
+              <div className="ai-chat-history" aria-label="Conversation">
+                <p className="ai-chat-note">
+                  Saved automatically · Replies use the latest app data and the
+                  most recent 6 exchanges.
+                </p>
+                {history.data.earlierMessages > 0 ? (
+                  <p>
+                    {history.data.earlierMessages} earlier messages are saved.
+                    Showing the latest 100 messages.
+                  </p>
+                ) : null}
+                {history.data.messages.map((message) => (
+                  <article
+                    className={`ai-chat-message ai-chat-${message.role}`}
+                    key={message.id}
+                  >
+                    <strong>
+                      {message.role === 'user' ? 'You' : 'Mirai AI'}
+                    </strong>
+                    <div>{message.content}</div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -209,23 +327,32 @@ export function AiInsights({
                   report.mutate({ useAi: true, ask: question.trim() });
               }}
             >
-              <label htmlFor="ai-question">
-                What would you like to understand?
-              </label>
+              <label htmlFor="ai-question">Message Mirai AI</label>
               <textarea
                 id="ai-question"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 maxLength={2000}
                 rows={3}
-                placeholder="Which topics need more focus, and what should we cover next?"
-                disabled={!data.ai.ready || report.isPending}
+                placeholder="Ask a question or continue the conversation…"
+                disabled={
+                  !data.ai.ready ||
+                  report.isPending ||
+                  Boolean(
+                    conversationId && (history.isPending || history.isError),
+                  )
+                }
               />
               <div className="ai-actions">
                 <button
                   type="button"
                   disabled={
-                    !data.ai.ready || report.isPending || !data.subjects.length
+                    !data.ai.ready ||
+                    report.isPending ||
+                    Boolean(
+                      conversationId && (history.isPending || history.isError),
+                    ) ||
+                    !data.subjects.length
                   }
                   onClick={() => report.mutate({ useAi: true })}
                 >
@@ -236,11 +363,14 @@ export function AiInsights({
                   disabled={
                     !data.ai.ready ||
                     report.isPending ||
+                    Boolean(
+                      conversationId && (history.isPending || history.isError),
+                    ) ||
                     !question.trim() ||
                     !data.subjects.length
                   }
                 >
-                  Ask AI
+                  Send
                 </button>
               </div>
             </form>
@@ -280,7 +410,11 @@ export function AiInsights({
                   try again.
                 </p>
               ) : null}
-              <div className="ai-report-text">{report.data.text}</div>
+              {report.data.mode === 'data' || !report.data.conversationId ? (
+                <div className="ai-report-text">{report.data.text}</div>
+              ) : (
+                <p>Saved in your conversation above.</p>
+              )}
             </article>
           ) : null}
           {!data.subjects.length ? (

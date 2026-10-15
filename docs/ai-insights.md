@@ -85,3 +85,23 @@ Ollama references:
 - https://docs.ollama.com/cloud
 - https://ollama.com/library/gpt-oss:20b-cloud
 - https://docs.ollama.com/api/chat
+
+## Saved conversations
+
+AI exchanges are stored in PostgreSQL, owned by the signed-in account. Use Saved
+chats to reopen a conversation or New chat to start fresh. Switching the academic
+scope starts a new conversation. The current permission/subject fingerprint is
+checked before reading messages or generating a continuation; changed access
+makes old-scope chats unavailable rather than disclosing old data.
+
+Each reply includes the latest authorized academic snapshot and the most recent
+six exchanges (older message bodies excerpted at 2,400 characters each). Full
+messages remain saved; the viewer shows the latest 100 messages. The model is
+instructed to resolve follow-up references and prefer current records over older
+answers. The cache fingerprint includes conversation context. Failed provider
+requests leave the typed question available for retry. Successful user/assistant
+pairs save atomically; a version check rejects simultaneous stale continuations.
+
+The additive conversation migration runs during API production builds. Database
+integration tests cover persistence, ordering, ownership, scope changes, context
+bounds and concurrent updates against a disposable PostgreSQL database.

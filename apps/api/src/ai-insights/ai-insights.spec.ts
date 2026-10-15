@@ -1,3 +1,4 @@
+import { AiConversationService } from './ai-conversation.service';
 import { ForbiddenException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
@@ -159,7 +160,7 @@ it('generates a real data report without provider credentials or Redis', async (
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
     incrementWithExpiry: jest.fn(),
   };
-  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const svc = makeInsights(context, redis as unknown as RedisService);
   const report = await svc.generate(user('ADMIN'), {});
   expect(report.mode).toBe('data');
   expect(report.text).toContain('Arrays');
@@ -168,7 +169,7 @@ it('generates a real data report without provider credentials or Redis', async (
 });
 it('rejects unconfigured AI clearly instead of labelling data rules as AI', async () => {
   const { context } = setup();
-  const svc = new AiInsightsService(context, {} as RedisService);
+  const svc = makeInsights(context, {} as RedisService);
   await expect(
     svc.generate(user('ADMIN'), {}, 'What next?', true),
   ).rejects.toThrow('AI is not connected');
@@ -195,7 +196,7 @@ it('calls the configured provider with server context and no tools or storage', 
     ),
   );
   const { context } = setup();
-  const svc = new AiInsightsService(context, {
+  const svc = makeInsights(context, {
     get: jest.fn().mockResolvedValue(null),
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
     incrementWithExpiry: jest.fn().mockResolvedValue(1),
@@ -219,7 +220,7 @@ it('protects provider failures and limits without leaking raw responses', async 
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
     incrementWithExpiry: jest.fn().mockResolvedValue(21),
   };
-  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const svc = makeInsights(context, redis as unknown as RedisService);
   const fetcher = jest
     .spyOn(globalThis, 'fetch')
     .mockResolvedValue(new Response('secret diagnostic', { status: 401 }));
@@ -228,7 +229,7 @@ it('protects provider failures and limits without leaking raw responses', async 
   ).rejects.toThrow('limit reached');
   expect(fetcher).not.toHaveBeenCalled();
   const other = setup();
-  const failing = new AiInsightsService(other.context, {
+  const failing = makeInsights(other.context, {
     get: jest.fn().mockResolvedValue(null),
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
     incrementWithExpiry: jest.fn().mockResolvedValue(1),
@@ -240,27 +241,25 @@ it('protects provider failures and limits without leaking raw responses', async 
 
 it('uses Ollama cloud with the efficient default and only returns the final answer', async () => {
   process.env.OLLAMA_API_KEY = 'test-ollama-key';
-  const fetcher = jest
-    .spyOn(globalThis, 'fetch')
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          done: true,
-          done_reason: 'stop',
-          message: {
-            content: 'Focus on Arrays.',
-            thinking: 'private reasoning',
-          },
-        }),
-      ),
-    );
+  const fetcher = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        done: true,
+        done_reason: 'stop',
+        message: {
+          content: 'Focus on Arrays.',
+          thinking: 'private reasoning',
+        },
+      }),
+    ),
+  );
   const { context } = setup();
   const redis = {
     get: jest.fn().mockResolvedValue(null),
     setWithExpiry: jest.fn().mockResolvedValue(undefined),
     incrementWithExpiry: jest.fn().mockResolvedValue(1),
   };
-  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const svc = makeInsights(context, redis as unknown as RedisService);
   expect(svc.configuration()).toEqual({ ready: true, provider: 'ollama' });
   const report = await svc.generate(user('FACULTY'), {}, 'What next?', true);
   expect(fetcher.mock.calls[0]![0]).toBe('https://ollama.com/api/chat');
@@ -285,20 +284,25 @@ it('reuses cached AI output only after collecting fresh authorized context', asy
   const snapshot = jest.spyOn(context, 'snapshot');
   const fetcher = jest.spyOn(globalThis, 'fetch');
   const redis = {
-    get: jest
-      .fn()
-      .mockResolvedValue(
-        JSON.stringify({
-          text: 'Cached report',
-          generatedAt: '2026-10-15T10:00:00Z',
-        }),
-      ),
+    get: jest.fn().mockResolvedValue(
+      JSON.stringify({
+        text: 'Cached report',
+        generatedAt: '2026-10-15T10:00:00Z',
+      }),
+    ),
     incrementWithExpiry: jest.fn(),
   };
-  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const svc = makeInsights(context, redis as unknown as RedisService);
   const report = await svc.generate(user('FACULTY'), {}, 'What next?', true);
   expect(report.text).toBe('Cached report');
   expect(snapshot).toHaveBeenCalledWith(user('FACULTY'), {});
   expect(fetcher).not.toHaveBeenCalled();
   expect(redis.incrementWithExpiry).not.toHaveBeenCalled();
 });
+
+function makeInsights(context: AiContextService, redis: RedisService) {
+  return new AiInsightsService(context, redis, {
+    history: jest.fn().mockResolvedValue(null),
+    append: jest.fn().mockResolvedValue('chat-id'),
+  } as unknown as AiConversationService);
+}

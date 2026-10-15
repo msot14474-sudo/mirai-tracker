@@ -1,3 +1,5 @@
+import { AiConversationService } from './ai-conversation.service';
+import { Param, ParseUUIDPipe } from '@nestjs/common';
 import {
   BadRequestException,
   Body,
@@ -19,6 +21,7 @@ const filter = z
   .strict();
 const request = filter.extend({
   question: z.string().trim().min(1).max(2000).optional(),
+  conversationId: z.string().uuid().optional(),
   useAi: z.boolean().default(false),
 });
 function parse<T extends z.ZodTypeAny>(schema: T, value: unknown): z.output<T> {
@@ -37,14 +40,32 @@ function parse<T extends z.ZodTypeAny>(schema: T, value: unknown): z.output<T> {
   UserRole.FACULTY,
 )
 export class AiInsightsController {
-  constructor(private readonly insights: AiInsightsService) {}
+  constructor(
+    private readonly insights: AiInsightsService,
+    private readonly chats: AiConversationService,
+  ) {}
   @Get()
   overview(@CurrentUser() user: AuthenticatedUser, @Query() query: unknown) {
     return this.insights.overview(user, parse(filter, query));
   }
+  @Get('conversations')
+  conversations(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: unknown,
+  ) {
+    return this.chats.list(user, parse(filter, query));
+  }
+  @Get('conversations/:id')
+  conversation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: unknown,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.chats.read(user, parse(filter, query), id);
+  }
   @Post('report')
   report(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
-    const { question, useAi, ...scope } = parse(request, body);
-    return this.insights.generate(user, scope, question, useAi);
+    const { question, useAi, conversationId, ...scope } = parse(request, body);
+    return this.insights.generate(user, scope, question, useAi, conversationId);
   }
 }
