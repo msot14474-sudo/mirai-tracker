@@ -296,5 +296,19 @@ describe('FacultyAccessWorkspace', () => {
       email: 'student@example.edu',
       password: 'a-new-student-password',
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete access' }));
+    expect(
+      requests.filter((request) => request.method === 'PATCH'),
+    ).toHaveLength(1);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirm delete access' }),
+    );
+    await waitFor(() =>
+      expect(
+        requests.filter((request) => request.method === 'PATCH'),
+      ).toHaveLength(2),
+    );
+    const revoked = requests.filter((request) => request.method === 'PATCH')[1];
+    expect(JSON.parse(revoked.body!)).toEqual({ status: 'SUSPENDED' });
   });
 });

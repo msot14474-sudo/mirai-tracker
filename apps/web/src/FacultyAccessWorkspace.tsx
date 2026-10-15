@@ -34,6 +34,7 @@ export function FacultyAccessWorkspace({
   const [campusId, setCampusId] = useState(initialCampusId);
   const [accountType, setAccountType] = useState<AccountType>('FACULTY');
   const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [revokeAccountId, setRevokeAccountId] = useState('');
 
   useEffect(() => {
     if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
@@ -93,6 +94,7 @@ export function FacultyAccessWorkspace({
       input: UpdateManagedAccountInput;
     }) => facultyAccessApi.updateAccount(userId, input),
     onSuccess: async () => {
+      setRevokeAccountId('');
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['managed-accounts', campusId],
@@ -490,7 +492,7 @@ export function FacultyAccessWorkspace({
 
             {selectedAccount ? (
               <form
-                key={selectedAccount.id}
+                key={selectedAccount.id + selectedAccount.status}
                 className="managed-account-editor"
                 onSubmit={submitAccountUpdate}
               >
@@ -569,6 +571,50 @@ export function FacultyAccessWorkspace({
                 {updateAccount.isSuccess ? (
                   <p className="form-success" role="status">
                     Account changes saved securely.
+                  </p>
+                ) : null}
+                {selectedAccount.id !== currentUserId &&
+                selectedAccount.status === 'ACTIVE' ? (
+                  <div className="access-revoke">
+                    {revokeAccountId === selectedAccount.id ? (
+                      <>
+                        <p>
+                          Delete access for {selectedAccount.name}? This blocks
+                          sign-in across the app. Academic records are kept.
+                        </p>
+                        <button
+                          type="button"
+                          disabled={updateAccount.isPending}
+                          onClick={() =>
+                            updateAccount.mutate({
+                              userId: selectedAccount.id,
+                              input: { status: 'SUSPENDED' },
+                            })
+                          }
+                        >
+                          Confirm delete access
+                        </button>
+                        <button
+                          type="button"
+                          disabled={updateAccount.isPending}
+                          onClick={() => setRevokeAccountId('')}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={updateAccount.isPending}
+                        onClick={() => setRevokeAccountId(selectedAccount.id)}
+                      >
+                        Delete access
+                      </button>
+                    )}
+                  </div>
+                ) : selectedAccount.status === 'SUSPENDED' ? (
+                  <p role="status">
+                    Access revoked. This account cannot sign in.
                   </p>
                 ) : null}
                 <button type="submit" disabled={updateAccount.isPending}>

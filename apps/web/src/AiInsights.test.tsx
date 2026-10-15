@@ -104,17 +104,20 @@ function setup(ready = false, fail = false) {
   );
   return { requests, onOpen };
 }
-it('shows grounded priorities and keeps data reports available without AI', async () => {
+it('shows grounded priorities without header action buttons', async () => {
   const { requests, onOpen } = setup();
   await screen.findByText('Data Structures');
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   fireEvent.click(screen.getByText('Academic context and priorities'));
   fireEvent.click(screen.getByRole('button', { name: 'Review lesson plans' }));
   expect(onOpen).toHaveBeenCalledWith('lesson-plans');
-  fireEvent.click(screen.getByRole('button', { name: 'Generate report' }));
-  await screen.findByText('Academic report: Arrays');
-  expect(requests).toEqual([{ campusId: 'campus-a', useAi: false }]);
-  expect(screen.getByRole('button', { name: 'Download report' })).toBeEnabled();
+  expect(
+    screen.queryByRole('button', { name: 'Generate report' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Refresh' }),
+  ).not.toBeInTheDocument();
+  expect(requests).toEqual([]);
 });
 it('submits AI questions with selected scope but never client context', async () => {
   const { requests } = setup(true);
@@ -134,7 +137,9 @@ it('keeps dashboard usable when report generation fails', async () => {
   await screen.findByText('Data Structures');
   fireEvent.click(screen.getByRole('button', { name: 'Generate AI report' }));
   await screen.findByRole('alert');
-  expect(screen.getByRole('button', { name: 'Generate report' })).toBeEnabled();
+  expect(
+    screen.getByRole('button', { name: 'Generate AI report' }),
+  ).toBeEnabled();
   expect(screen.getByText('Data Structures')).toBeInTheDocument();
 });
 it('escapes model and student text in downloadable reports', () => {

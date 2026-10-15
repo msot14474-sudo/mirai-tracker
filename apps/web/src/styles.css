@@ -9310,3 +9310,34 @@ body:has(.auth-shell) {
   .dashboard-ai-focus .ai-heading .ai-actions { width:auto; }
   .dashboard-ai-focus .ai-heading h2 { font-size:19px; }
 }
+
+/* Bound every flex/grid ancestor so only the transcript scrolls. */
+.dashboard-shell.dashboard-ai-focus { height:100dvh; min-height:0; overflow:hidden; grid-template-rows:minmax(0,1fr); }
+.dashboard-ai-focus .app-sidebar { height:100%; min-height:0; }
+.dashboard-ai-focus .dashboard-main,
+.dashboard-ai-focus .dashboard-content,
+.dashboard-ai-focus .dashboard-view { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.dashboard-ai-focus .dashboard-content,
+.dashboard-ai-focus .dashboard-view,
+.dashboard-ai-focus .ai-workspace { flex:1; }
+.dashboard-ai-focus .ai-workspace { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.dashboard-ai-focus .ai-heading { flex-shrink:0; min-height:32px; }
+.dashboard-ai-focus .ai-conversation { height:auto; min-height:0; flex:1; }
+.dashboard-ai-focus .ai-academic-context { flex-shrink:0; max-height:35%; overflow-y:auto; }
+.dashboard-ai-focus .ai-academic-context > summary { padding:6px 0; }
+.dashboard-ai-focus .ai-composer textarea { resize:none; max-height:80px; }
+@media (max-width:900px) {
+  .dashboard-shell.dashboard-ai-focus { grid-template-rows:auto minmax(0,1fr); }
+  .dashboard-ai-focus .app-sidebar { height:auto; }
+}
+@media (max-height:550px) {
+  .dashboard-ai-focus .dashboard-content { padding-block:6px; }
+  .dashboard-ai-focus .ai-workspace { gap:6px; }
+  .dashboard-ai-focus .ai-composer textarea { min-height:32px; height:32px; padding-block:4px; }
+  .dashboard-ai-focus .ai-composer { margin-bottom:6px; padding:8px; }
+  .dashboard-ai-focus .ai-composer-footer > span { display:none; }
+}
+
+.access-revoke { margin-block:16px; padding-top:16px; border-top:1px solid #e3e8ef; }
+.access-revoke p { font-size:13px; line-height:1.5; color:#536682; }
+.managed-account-editor .access-revoke button { background:#fff; color:#b42318; border:1px solid #efc7c3; margin:0 8px 8px 0; }

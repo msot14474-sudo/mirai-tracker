@@ -200,25 +200,6 @@ export function AiInsights({
         <div>
           <h2>AI insights</h2>
         </div>
-        <div className="ai-actions">
-          <button
-            type="button"
-            disabled={query.isFetching || report.isPending}
-            onClick={() => {
-              report.reset();
-              void query.refetch();
-            }}
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
-            disabled={!data || report.isPending || !data.subjects.length}
-            onClick={() => report.mutate({ useAi: false })}
-          >
-            Generate report
-          </button>
-        </div>
       </header>
       {query.isPending ? (
         <LoadingSkeleton variant="cards" label="Loading academic insights" />
