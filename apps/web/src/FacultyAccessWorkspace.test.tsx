@@ -309,6 +309,6 @@ describe('FacultyAccessWorkspace', () => {
       ).toHaveLength(2),
     );
     const revoked = requests.filter((request) => request.method === 'PATCH')[1];
-    expect(JSON.parse(revoked.body!)).toEqual({ status: 'SUSPENDED' });
+    expect(JSON.parse(revoked!.body!)).toEqual({ status: 'SUSPENDED' });
   });
 });
