@@ -108,6 +108,7 @@ it('shows grounded priorities and keeps data reports available without AI', asyn
   const { requests, onOpen } = setup();
   await screen.findByText('Data Structures');
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  fireEvent.click(screen.getByText('Academic context and priorities'));
   fireEvent.click(screen.getByRole('button', { name: 'Review lesson plans' }));
   expect(onOpen).toHaveBeenCalledWith('lesson-plans');
   fireEvent.click(screen.getByRole('button', { name: 'Generate report' }));
@@ -198,10 +199,7 @@ it('reopens saved conversations and sends follow-ups using their conversation id
       <AiInsights canLog={false} onOpen={vi.fn()} />
     </QueryClientProvider>,
   );
-  await screen.findByRole('option', { name: 'Focus areas' });
-  fireEvent.change(screen.getByLabelText('Saved chats'), {
-    target: { value: 'chat-1' },
-  });
+  expect(screen.queryByLabelText('Saved chats')).not.toBeInTheDocument();
   await screen.findByText('Focus on Arrays.');
   fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
     target: { value: 'How should I teach that?' },
@@ -216,4 +214,17 @@ it('reopens saved conversations and sends follow-ups using their conversation id
       },
     ]),
   );
+});
+
+it('sends with Enter and preserves Shift+Enter for multiline follow-ups', async () => {
+  const { requests } = setup(true);
+  await waitFor(() =>
+    expect(screen.getByLabelText('Message Mirai AI')).toBeEnabled(),
+  );
+  const composer = screen.getByLabelText('Message Mirai AI');
+  fireEvent.change(composer, { target: { value: 'What next?' } });
+  fireEvent.keyDown(composer, { key: 'Enter', shiftKey: true });
+  expect(requests).toHaveLength(0);
+  fireEvent.keyDown(composer, { key: 'Enter' });
+  await waitFor(() => expect(requests).toHaveLength(1));
 });

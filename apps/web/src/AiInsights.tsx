@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch, apiUrl } from './http';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -86,7 +86,8 @@ export function AiInsights({
 }) {
   const [offeringId, setOfferingId] = useState('');
   const [question, setQuestion] = useState('');
-  const [conversationId, setConversationId] = useState('');
+  const [selectedConversationId, setConversationId] = useState('');
+  const transcript = useRef<HTMLDivElement>(null);
   const client = useQueryClient();
   const scope = {
     ...(campusId ? { campusId } : {}),
@@ -110,6 +111,7 @@ export function AiInsights({
         await apiFetch(`${apiUrl}/ai-insights/conversations?${chatQuery}`)
       ).json(),
   });
+  const conversationId = selectedConversationId || chats.data?.[0]?.id || '';
   const history = useQuery({
     queryKey: ['ai-chat', conversationId, campusId ?? '', offeringId],
     enabled: Boolean(conversationId),
@@ -140,8 +142,31 @@ export function AiInsights({
           }),
         })
       ).json(),
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       if (result.conversationId) {
+        client.setQueryData<Chat>(
+          ['ai-chat', result.conversationId, campusId ?? '', offeringId],
+          (previous) => ({
+            id: result.conversationId!,
+            title: previous?.title || variables.ask || 'Academic report',
+            earlierMessages: previous?.earlierMessages || 0,
+            messages: [
+              ...(previous?.messages || []),
+              {
+                id: 'pending-user-' + result.generatedAt,
+                role: 'user',
+                content: variables.ask || 'Generate an academic report',
+                createdAt: result.generatedAt,
+              },
+              {
+                id: 'pending-assistant-' + result.generatedAt,
+                role: 'assistant',
+                content: result.text,
+                createdAt: result.generatedAt,
+              },
+            ],
+          }),
+        );
         setConversationId(result.conversationId);
         setQuestion('');
         void client.invalidateQueries({ queryKey: ['ai-chats'] });
@@ -152,6 +177,26 @@ export function AiInsights({
     },
   });
   const data = query.data;
+  const chatBusy =
+    chats.isPending ||
+    chats.isError ||
+    Boolean(conversationId && (history.isPending || history.isError));
+  const canSend = Boolean(
+    data?.ai.ready && data.subjects.length && !chatBusy && !report.isPending,
+  );
+  const send = () => {
+    if (canSend && question.trim())
+      report.mutate({ useAi: true, ask: question.trim() });
+  };
+  useEffect(() => {
+    const element = transcript.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }, [
+    conversationId,
+    history.data?.messages.length,
+    report.isPending,
+    report.data,
+  ]);
   const subjectName = (id: string) => {
     const s = data?.subjects.find((s) => s.id === id);
     return s ? `${s.code} · ${s.batch}` : 'Subject';
@@ -221,93 +266,60 @@ export function AiInsights({
         </div>
       ) : data ? (
         <>
-          <div className="ai-metrics">
-            {[
-              ['Subjects', data.summary.subjects],
-              ['Need attention', data.summary.attention],
-              ['Overdue topics', data.summary.overdueTopics],
-              ['Missing logs', data.summary.missingLogs],
-              [
-                'Need-help responses',
-                `${data.summary.needsHelp} / ${data.summary.reviews}`,
-              ],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-              </div>
-            ))}
-          </div>
-          <div className="ai-assistant">
-            <div>
-              <h3>Ask about your academics</h3>
-              <p>
-                {data.ai.ready
-                  ? 'Answers use the records you can access. Review suggestions before making changes.'
-                  : 'AI is not connected yet. Live monitoring and data reports are available.'}
-              </p>
-            </div>
-            <div className="ai-chat-tools">
-              <label>
-                Saved chats
-                <select
-                  value={conversationId}
-                  disabled={report.isPending}
-                  onChange={(e) => {
-                    setConversationId(e.target.value);
-                    report.reset();
-                    setQuestion('');
-                  }}
-                >
-                  <option value="">New conversation</option>
-                  {chats.data?.map((chat) => (
-                    <option key={chat.id} value={chat.id}>
-                      {chat.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                disabled={report.isPending}
-                onClick={() => {
-                  setConversationId('');
-                  setQuestion('');
-                  report.reset();
-                }}
-              >
-                New chat
-              </button>
-            </div>
-            {chats.isError ? (
-              <p role="alert">
-                Saved chats could not load.{' '}
-                <button type="button" onClick={() => void chats.refetch()}>
-                  Retry chats
-                </button>
-              </p>
-            ) : null}
-            {conversationId && history.isPending ? (
-              <p role="status">Loading conversation…</p>
-            ) : null}
-            {history.isError ? (
-              <p className="form-error" role="alert">
-                {history.error.message}
-              </p>
-            ) : null}
-            {conversationId && history.data ? (
-              <div className="ai-chat-history" aria-label="Conversation">
-                <p className="ai-chat-note">
-                  Saved automatically · Replies use the latest app data and the
-                  most recent 6 exchanges.
-                </p>
-                {history.data.earlierMessages > 0 ? (
-                  <p>
-                    {history.data.earlierMessages} earlier messages are saved.
-                    Showing the latest 100 messages.
-                  </p>
-                ) : null}
-                {history.data.messages.map((message) => (
+          <div className="ai-conversation">
+            <div
+              className="ai-transcript"
+              ref={transcript}
+              role="log"
+              aria-label="Conversation"
+            >
+              {chats.isPending || (conversationId && history.isPending) ? (
+                <LoadingSkeleton variant="cards" label="Loading conversation" />
+              ) : null}
+              {chats.isError || (conversationId && history.isError) ? (
+                <div role="alert">
+                  <p>Could not load your conversation.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void chats.refetch();
+                      if (conversationId) void history.refetch();
+                    }}
+                  >
+                    Retry conversation
+                  </button>
+                </div>
+              ) : null}
+              {!chatBusy &&
+              !conversationId &&
+              !report.isPending &&
+              !report.data ? (
+                <div className="ai-chat-welcome">
+                  <h3>What would you like to work on?</h3>
+                  <p>Ask about lectures, plans or what needs attention.</p>
+                  <div className="ai-suggestions">
+                    {[
+                      'Which subjects need attention?',
+                      'What should we focus on next?',
+                      'Summarise student understanding gaps.',
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        disabled={!canSend}
+                        onClick={() => setQuestion(prompt)}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {conversationId && history.data?.earlierMessages ? (
+                <p className="ai-chat-note">Showing the latest 100 messages.</p>
+              ) : null}
+              {conversationId &&
+                history.data?.messages.map((message) => (
                   <article
                     className={`ai-chat-message ai-chat-${message.role}`}
                     key={message.id}
@@ -318,13 +330,58 @@ export function AiInsights({
                     <div>{message.content}</div>
                   </article>
                 ))}
-              </div>
-            ) : null}
+              {report.isPending ? (
+                <>
+                  <article className="ai-chat-message ai-chat-user">
+                    <strong>You</strong>
+                    <div>
+                      {report.variables.ask || 'Generate an academic report'}
+                    </div>
+                  </article>
+                  <div className="ai-thinking" role="status">
+                    <span aria-hidden="true">● ● ●</span> Mirai AI is preparing
+                    a response…
+                  </div>
+                </>
+              ) : null}
+              {report.isError ? (
+                <p className="form-error" role="alert">
+                  {report.error.message} Your message is still below; you can
+                  try again.
+                </p>
+              ) : null}
+              {report.data && !report.isPending ? (
+                <article className="ai-chat-result">
+                  {report.data.mode === 'data' ||
+                  !report.data.conversationId ||
+                  !history.data?.messages.some(
+                    (m) =>
+                      m.role === 'assistant' && m.content === report.data?.text,
+                  ) ? (
+                    <div className="ai-chat-message ai-chat-assistant">
+                      <strong>Mirai AI</strong>
+                      <div>{report.data.text}</div>
+                    </div>
+                  ) : null}
+                  {report.data.incomplete ? (
+                    <p role="alert">
+                      This response is incomplete. Try a more focused question.
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => downloadReport(report.data!)}
+                  >
+                    Download report
+                  </button>
+                </article>
+              ) : null}
+            </div>
             <form
+              className="ai-composer"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (question.trim())
-                  report.mutate({ useAi: true, ask: question.trim() });
+                send();
               }}
             >
               <label htmlFor="ai-question">Message Mirai AI</label>
@@ -332,213 +389,188 @@ export function AiInsights({
                 id="ai-question"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing
+                  ) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
                 maxLength={2000}
-                rows={3}
-                placeholder="Ask a question or continue the conversation…"
-                disabled={
-                  !data.ai.ready ||
-                  report.isPending ||
-                  Boolean(
-                    conversationId && (history.isPending || history.isError),
-                  )
-                }
+                rows={2}
+                placeholder="Ask a question or follow up…"
+                disabled={!canSend}
               />
-              <div className="ai-actions">
-                <button
-                  type="button"
-                  disabled={
-                    !data.ai.ready ||
-                    report.isPending ||
-                    Boolean(
-                      conversationId && (history.isPending || history.isError),
-                    ) ||
-                    !data.subjects.length
-                  }
-                  onClick={() => report.mutate({ useAi: true })}
-                >
-                  Generate AI report
-                </button>
-                <button
-                  type="submit"
-                  disabled={
-                    !data.ai.ready ||
-                    report.isPending ||
-                    Boolean(
-                      conversationId && (history.isPending || history.isError),
-                    ) ||
-                    !question.trim() ||
-                    !data.subjects.length
-                  }
-                >
-                  Send
-                </button>
+              <div className="ai-composer-footer">
+                <span>
+                  {data.ai.ready
+                    ? 'Enter to send · Shift + Enter for a new line'
+                    : 'AI is not connected yet. Data reports are available.'}
+                </span>
+                <div className="ai-actions">
+                  <button
+                    type="button"
+                    disabled={!canSend}
+                    onClick={() => report.mutate({ useAi: true })}
+                  >
+                    Generate AI report
+                  </button>
+                  <button type="submit" disabled={!canSend || !question.trim()}>
+                    Send
+                  </button>
+                </div>
               </div>
             </form>
           </div>
-          {report.isPending ? (
-            <div role="status">
-              <LoadingSkeleton variant="cards" label="Preparing your report" />
-            </div>
-          ) : null}
-          {report.isError ? (
-            <p className="form-error" role="alert">
-              {report.error.message}
-            </p>
-          ) : null}
-          {report.data && !report.isPending ? (
-            <article className="ai-report">
-              <header>
-                <div>
-                  <p className="ai-eyebrow">
-                    {report.data.mode === 'ai'
-                      ? 'AI ANALYSIS · REVIEW SUGGESTIONS'
-                      : 'DATA REPORT'}
-                  </p>
-                  <h3>Academic report</h3>
-                  <p>{new Date(report.data.generatedAt).toLocaleString()}</p>
+          <details className="ai-academic-context">
+            <summary>Academic context and priorities</summary>
+            <div className="ai-metrics">
+              {[
+                ['Subjects', data.summary.subjects],
+                ['Need attention', data.summary.attention],
+                ['Overdue topics', data.summary.overdueTopics],
+                ['Missing logs', data.summary.missingLogs],
+                [
+                  'Need-help responses',
+                  `${data.summary.needsHelp} / ${data.summary.reviews}`,
+                ],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => downloadReport(report.data!)}
-                >
-                  Download report
-                </button>
-              </header>
-              {report.data.incomplete ? (
-                <p role="alert">
-                  This AI response is incomplete. Narrow the subject scope and
-                  try again.
-                </p>
-              ) : null}
-              {report.data.mode === 'data' || !report.data.conversationId ? (
-                <div className="ai-report-text">{report.data.text}</div>
-              ) : (
-                <p>Saved in your conversation above.</p>
-              )}
-            </article>
-          ) : null}
-          {!data.subjects.length ? (
-            <p className="empty-copy">
-              No subjects are available in your assigned scope.
-            </p>
-          ) : (
-            <div className="ai-subjects">
-              <h3>Subject priorities</h3>
-              {data.subjects.map((subject) => (
-                <article key={subject.id} className="ai-subject">
-                  <header>
-                    <div>
-                      <small>
-                        {subject.code} · {subject.batch} · {subject.campus.name}
-                      </small>
-                      <h4>{subject.name}</h4>
-                      <p>
-                        {subject.teachers.join(', ') || 'Faculty not assigned'}
-                      </p>
-                    </div>
-                    <strong>
-                      {subject.completion === null
-                        ? 'No plan'
-                        : `${subject.completion}% covered`}
-                    </strong>
-                  </header>
-                  {subject.issues.length ? (
-                    <ul>
-                      {subject.issues.map((issue) => (
-                        <li key={issue}>{issue}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No issues detected in recorded plans and logs.</p>
-                  )}
-                  <p>
-                    <strong>Next in plan:</strong>{' '}
-                    {subject.nextTopics.join(' → ') ||
-                      'No remaining topics recorded'}
-                  </p>
-                  {subject.exams.map((exam) => (
-                    <p key={exam.name}>
-                      <strong>{exam.name}</strong> · {exam.date} ·{' '}
-                      {exam.scopeTopics
-                        ? `${exam.incompleteTopics}/${exam.scopeTopics} scope topics incomplete`
-                        : 'Exam scope missing'}
-                    </p>
-                  ))}
-                  <div className="ai-actions">
-                    <button
-                      type="button"
-                      onClick={() => onOpen('lesson-plans')}
-                    >
-                      Review lesson plans
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onOpen('planned-dates')}
-                    >
-                      Manage planned dates
-                    </button>
-                    {canLog && subject.missingLogs ? (
-                      <button
-                        type="button"
-                        onClick={() => onOpen('daily-logging')}
-                      >
-                        Update lecture logs
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
               ))}
             </div>
-          )}
-          <div className="ai-detail-grid">
-            <section>
-              <h3>Student understanding gaps</h3>
-              <p>
-                {data.summary.needsHelp} need-help responses ·{' '}
-                {data.summary.reviews} reviews total
+            {!data.subjects.length ? (
+              <p className="empty-copy">
+                No subjects are available in your assigned scope.
               </p>
-              {data.recentGaps.length ? (
-                data.recentGaps.map((gap, index) => (
-                  <article
-                    className="ai-detail"
-                    key={`${gap.session.id}-${index}`}
-                  >
-                    <strong>{subjectName(gap.session.offeringId)}</strong>
-                    <small>
-                      {new Date(gap.session.startsAt).toLocaleString()}
-                    </small>
-                    <p>{gap.unclearTopics}</p>
+            ) : (
+              <div className="ai-subjects">
+                <h3>Subject priorities</h3>
+                {data.subjects.map((subject) => (
+                  <article key={subject.id} className="ai-subject">
+                    <header>
+                      <div>
+                        <small>
+                          {subject.code} · {subject.batch} ·{' '}
+                          {subject.campus.name}
+                        </small>
+                        <h4>{subject.name}</h4>
+                        <p>
+                          {subject.teachers.join(', ') ||
+                            'Faculty not assigned'}
+                        </p>
+                      </div>
+                      <strong>
+                        {subject.completion === null
+                          ? 'No plan'
+                          : `${subject.completion}% covered`}
+                      </strong>
+                    </header>
+                    {subject.issues.length ? (
+                      <ul>
+                        {subject.issues.map((issue) => (
+                          <li key={issue}>{issue}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No issues detected in recorded plans and logs.</p>
+                    )}
+                    <p>
+                      <strong>Next in plan:</strong>{' '}
+                      {subject.nextTopics.join(' → ') ||
+                        'No remaining topics recorded'}
+                    </p>
+                    {subject.exams.map((exam) => (
+                      <p key={exam.name}>
+                        <strong>{exam.name}</strong> · {exam.date} ·{' '}
+                        {exam.scopeTopics
+                          ? `${exam.incompleteTopics}/${exam.scopeTopics} scope topics incomplete`
+                          : 'Exam scope missing'}
+                      </p>
+                    ))}
+                    <div className="ai-actions">
+                      <button
+                        type="button"
+                        onClick={() => onOpen('lesson-plans')}
+                      >
+                        Review lesson plans
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpen('planned-dates')}
+                      >
+                        Manage planned dates
+                      </button>
+                      {canLog && subject.missingLogs ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpen('daily-logging')}
+                        >
+                          Update lecture logs
+                        </button>
+                      ) : null}
+                    </div>
                   </article>
-                ))
-              ) : (
-                <p>No understanding gaps have been submitted in this scope.</p>
-              )}
-            </section>
-            <section>
-              <h3>Upcoming lectures</h3>
-              {data.upcomingLectures.length ? (
-                data.upcomingLectures.map((lecture) => (
-                  <article className="ai-detail" key={lecture.id}>
-                    <strong>{subjectName(lecture.offeringId)}</strong>
-                    <p>{new Date(lecture.startsAt).toLocaleString()}</p>
-                  </article>
-                ))
-              ) : (
-                <p>No upcoming lectures are scheduled in this scope.</p>
-              )}
-            </section>
-          </div>
-          <details className="ai-coverage">
-            <summary>Report context and coverage</summary>
-            <p>{data.coverage.note}</p>
-            <p>
-              {data.coverage.recentLecturesIncluded} of{' '}
-              {data.coverage.pastLectures} past lectures detailed ·{' '}
-              {data.coverage.upcomingIncluded} of{' '}
-              {data.coverage.upcomingLectures} upcoming lectures ·{' '}
-              {data.coverage.feedbackGapsIncluded} of{' '}
-              {data.coverage.feedbackGaps} understanding gaps
-            </p>
+                ))}
+              </div>
+            )}
+            <div className="ai-detail-grid">
+              <section>
+                <h3>Student understanding gaps</h3>
+                <p>
+                  {data.summary.needsHelp} need-help responses ·{' '}
+                  {data.summary.reviews} reviews total
+                </p>
+                {data.recentGaps.length ? (
+                  data.recentGaps.map((gap, index) => (
+                    <article
+                      className="ai-detail"
+                      key={`${gap.session.id}-${index}`}
+                    >
+                      <strong>{subjectName(gap.session.offeringId)}</strong>
+                      <small>
+                        {new Date(gap.session.startsAt).toLocaleString()}
+                      </small>
+                      <p>{gap.unclearTopics}</p>
+                    </article>
+                  ))
+                ) : (
+                  <p>
+                    No understanding gaps have been submitted in this scope.
+                  </p>
+                )}
+              </section>
+              <section>
+                <h3>Upcoming lectures</h3>
+                {data.upcomingLectures.length ? (
+                  data.upcomingLectures.map((lecture) => (
+                    <article className="ai-detail" key={lecture.id}>
+                      <strong>{subjectName(lecture.offeringId)}</strong>
+                      <p>{new Date(lecture.startsAt).toLocaleString()}</p>
+                    </article>
+                  ))
+                ) : (
+                  <p>No upcoming lectures are scheduled in this scope.</p>
+                )}
+              </section>
+            </div>
+            <details className="ai-coverage">
+              <summary>Report context and coverage</summary>
+              <p>{data.coverage.note}</p>
+              <p>
+                {data.coverage.recentLecturesIncluded} of{' '}
+                {data.coverage.pastLectures} past lectures detailed ·{' '}
+                {data.coverage.upcomingIncluded} of{' '}
+                {data.coverage.upcomingLectures} upcoming lectures ·{' '}
+                {data.coverage.feedbackGapsIncluded} of{' '}
+                {data.coverage.feedbackGaps} understanding gaps
+              </p>
+            </details>
           </details>
         </>
       ) : null}
