@@ -198,9 +198,7 @@ export function AiInsights({
     <section className="ai-workspace">
       <header className="ai-heading">
         <div>
-          <p className="ai-eyebrow">ACADEMIC INTELLIGENCE</p>
           <h2>AI insights</h2>
-          <p>Progress, priorities and the next teaching steps.</p>
         </div>
         <div className="ai-actions">
           <button

@@ -9294,3 +9294,19 @@ body:has(.auth-shell) {
 .ai-markdown code { font-size:.9em; background:#f5f7fa; }
 .ai-markdown blockquote { margin:16px 0; padding-left:16px; border-left:3px solid #ccd8ec; }
 .ai-markdown a { color:#2459ce; text-decoration:underline; }
+
+/* Give the conversation the space previously occupied by account chrome. */
+.dashboard-ai-focus .dashboard-content { width:100%; max-width:none; padding:16px clamp(12px,2vw,28px); }
+.dashboard-ai-focus .ai-workspace { gap:12px; }
+.dashboard-ai-focus .ai-heading { gap:12px; min-height:44px; }
+.dashboard-ai-focus .ai-heading h2 { margin:0; font-size:22px; font-weight:600; }
+.dashboard-ai-focus .ai-heading button { min-height:36px; padding:8px 12px; font-size:12px; }
+.dashboard-ai-focus .ai-conversation { height:calc(100dvh - 100px); min-height:420px; border-radius:14px; }
+.dashboard-ai-focus .ai-transcript { padding:clamp(16px,2vw,28px); }
+.dashboard-ai-focus .ai-composer { margin-bottom:12px; padding:12px; }
+.dashboard-ai-focus .ai-composer textarea { min-height:48px; }
+@media (max-width:640px) {
+  .dashboard-ai-focus .ai-conversation { height:calc(100dvh - 190px); min-height:360px; }
+  .dashboard-ai-focus .ai-heading .ai-actions { width:auto; }
+  .dashboard-ai-focus .ai-heading h2 { font-size:19px; }
+}

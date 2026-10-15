@@ -1355,7 +1355,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
   return (
     <main
-      className={`dashboard-shell ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
+      className={`dashboard-shell ${activeView === 'ai-insights' ? 'dashboard-ai-focus' : ''} ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
     >
       <aside className="app-sidebar">
         <button
@@ -1455,42 +1455,44 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       </aside>
 
       <div className="dashboard-main">
-        <header className="topbar">
-          <div className="topbar-title">
-            <div>
-              <p className="eyebrow">Mirai Tracker</p>
-              <strong>
-                {selectedCampus?.name ?? 'Course progression'} ·{' '}
-                {activeViewLabel}
-              </strong>
+        {activeView !== 'ai-insights' ? (
+          <header className="topbar">
+            <div className="topbar-title">
+              <div>
+                <p className="eyebrow">Mirai Tracker</p>
+                <strong>
+                  {selectedCampus?.name ?? 'Course progression'} ·{' '}
+                  {activeViewLabel}
+                </strong>
+              </div>
             </div>
-          </div>
-          <div className="topbar-actions">
-            <div className="role-list" aria-label="Assigned roles">
-              {roles.map((role) => (
-                <span key={role}>{roleLabels[role]}</span>
-              ))}
-            </div>
-            {selectedCampus ? (
+            <div className="topbar-actions">
+              <div className="role-list" aria-label="Assigned roles">
+                {roles.map((role) => (
+                  <span key={role}>{roleLabels[role]}</span>
+                ))}
+              </div>
+              {selectedCampus ? (
+                <button
+                  type="button"
+                  className="campus-switcher"
+                  onClick={() => setIsLeavingDashboard(true)}
+                  disabled={isLeavingDashboard}
+                >
+                  <span>{selectedCampus.name}</span>
+                  <small>Change campus</small>
+                </button>
+              ) : null}
               <button
-                type="button"
-                className="campus-switcher"
-                onClick={() => setIsLeavingDashboard(true)}
-                disabled={isLeavingDashboard}
+                className="secondary-button"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
               >
-                <span>{selectedCampus.name}</span>
-                <small>Change campus</small>
+                Sign out
               </button>
-            ) : null}
-            <button
-              className="secondary-button"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-            >
-              Sign out
-            </button>
-          </div>
-        </header>
+            </div>
+          </header>
+        ) : null}
 
         <div className="dashboard-content" aria-live="polite">
           <RequestRecovery />
