@@ -1,3 +1,4 @@
+import { CourseProgressImport } from './CourseProgressImport';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { ImportCounts, ImportPreview, importApi } from './imports';
@@ -12,6 +13,29 @@ const countLabels: Array<[keyof ImportCounts, string]> = [
 ];
 
 export function SemesterImport() {
+  const [mode, setMode] = useState('setup');
+  return (
+    <>
+      <div className="import-mode-picker" aria-label="Import type">
+        <button
+          className={mode === 'setup' ? 'selected' : ''}
+          onClick={() => setMode('setup')}
+        >
+          Semester setup
+        </button>
+        <button
+          className={mode === 'progress' ? 'selected' : ''}
+          onClick={() => setMode('progress')}
+        >
+          Existing course progress
+        </button>
+      </div>
+      {mode === 'setup' ? <SemesterSetupImport /> : <CourseProgressImport />}
+    </>
+  );
+}
+
+function SemesterSetupImport() {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -61,7 +85,9 @@ export function SemesterImport() {
           <span className="feature-number">01</span>
           <h3>Choose semester data</h3>
           <p>
-            Maximum 5 MB. Use the supplied column names and YYYY-MM-DD dates.
+            For semester dates, batches and subjects, use the supplied template
+            (maximum 5 MB). Already tracking completed lessons? Choose Existing
+            course progress above.
           </p>
           <label className="file-picker">
             <span className="file-picker-label">CSV or Excel file</span>

@@ -152,20 +152,26 @@ export function SemesterSetup({
 
                 <div className="calendar-preview">
                   <div className="subheading-row">
-                    <h3>Upcoming calendar decisions</h3>
+                    <h3>Full semester calendar</h3>
                     <span>
-                      {calendar.data.semester.workingSaturdayRule.replaceAll(
-                        '_',
-                        ' ',
-                      )}
+                      {calendar.data.semester.startDate} –{' '}
+                      {calendar.data.semester.endDate}
                     </span>
                   </div>
-                  {calendar.data.days
-                    .filter((day) => day.override || day.weekday === 'SATURDAY')
-                    .slice(0, 8)
-                    .map((day) => (
+                  <div
+                    className="schedule-date-list"
+                    tabIndex={0}
+                    role="region"
+                    aria-label="All semester dates"
+                  >
+                    {calendar.data.days.map((day) => (
                       <div className="calendar-row" key={day.date}>
-                        <time>{day.date}</time>
+                        <time dateTime={day.date}>
+                          {day.date}
+                          <small className="calendar-weekday">
+                            {day.weekday.toLowerCase()}
+                          </small>
+                        </time>
                         <span>
                           {day.override?.title ??
                             day.reason.replaceAll('_', ' ')}
@@ -175,6 +181,7 @@ export function SemesterSetup({
                         </b>
                       </div>
                     ))}
+                  </div>
                 </div>
 
                 <div className="setup-forms">

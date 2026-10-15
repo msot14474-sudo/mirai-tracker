@@ -80,6 +80,10 @@ export function TimetableSetup({
       <div className="workspace-heading">
         <div>
           <h2 id="timetable-title">Weekly timetable</h2>
+          <p className="schedule-help">
+            Choose a subject, set when it meets each week, and review its class
+            dates.
+          </p>
         </div>
         <div className="timetable-filters">
           <label>
@@ -137,11 +141,11 @@ export function TimetableSetup({
       <div className="timetable-layout">
         <div className="offering-list" aria-label="Subject offerings">
           <div className="subheading-row">
-            <h3>Subjects and batches</h3>
+            <h3>1. Choose a subject</h3>
             <span>
               {selectionIsLoading
                 ? 'Loading…'
-                : `${offerings.data?.offerings.length ?? 0} offerings`}
+                : `${offerings.data?.offerings.length ?? 0} subjects`}
             </span>
           </div>
           {selectionIsLoading ? (
@@ -163,7 +167,7 @@ export function TimetableSetup({
                 </span>
                 <small>
                   {formatMinutes(offering.weeklyPlannedMinutes)} weekly ·{' '}
-                  {offering.generatedSessions} sessions
+                  {offering.generatedSessions} classes
                 </small>
               </button>
             ))
@@ -172,7 +176,7 @@ export function TimetableSetup({
           semesterId &&
           offerings.data?.offerings.length === 0 ? (
             <p className="empty-copy">
-              No subject offerings are attached to this semester yet.
+              No subjects have been added to this semester yet.
             </p>
           ) : null}
         </div>
@@ -185,12 +189,10 @@ export function TimetableSetup({
             offerings.isError ? null : !offeringId ? (
             <div className="empty-state">
               <span>01</span>
-              <h3>
-                {semesterId ? 'No subject offerings' : 'Select a semester'}
-              </h3>
+              <h3>{semesterId ? 'No subjects' : 'Select a semester'}</h3>
               <p>
                 {semesterId
-                  ? 'This semester has no subject offerings yet.'
+                  ? 'Add subjects and batches through Semester import first.'
                   : 'Choose a semester to view its timetable.'}
               </p>
             </div>
@@ -205,6 +207,7 @@ export function TimetableSetup({
             </p>
           ) : detail.data ? (
             <TimetableDetail
+              key={offeringId}
               detail={detail.data}
               offeringId={offeringId}
               onChanged={refresh}
@@ -236,17 +239,23 @@ function TimetableDetail({
 
   return (
     <>
+      <div className="schedule-selection">
+        <strong>{detail.subject.name}</strong>
+        <span>
+          {detail.batch.name} · {detail.semester.name}
+        </span>
+      </div>
       <div className="timetable-summary">
         <div>
-          <span>Weekly teaching</span>
+          <span>Hours per week</span>
           <strong>{formatMinutes(detail.summary.weeklyPlannedMinutes)}</strong>
         </div>
         <div>
-          <span>Dated sessions</span>
+          <span>Scheduled classes</span>
           <strong>{detail.summary.generatedSessions}</strong>
         </div>
         <div>
-          <span>Semester teaching</span>
+          <span>Total teaching hours</span>
           <strong>
             {formatMinutes(detail.summary.semesterPlannedMinutes)}
           </strong>
@@ -255,21 +264,26 @@ function TimetableDetail({
 
       <div className="timetable-grid">
         <EntryForm
+          key={offeringId}
           detail={detail}
           offeringId={offeringId}
           onChanged={onChanged}
         />
         <div className="weekly-slots">
           <div className="subheading-row">
-            <h3>Weekly slots</h3>
+            <h3>Weekly schedule</h3>
             <button
               className="text-button"
               onClick={() => generate.mutate()}
-              disabled={generate.isPending}
+              disabled={generate.isPending || archive.isPending}
             >
-              Regenerate dates
+              Update class dates
             </button>
           </div>
+          <p className="schedule-help">
+            Your recurring classes. Update class dates after changing the
+            semester calendar.
+          </p>
           {detail.entries
             .filter((entry) => entry.active)
             .map((entry) => (
@@ -286,12 +300,14 @@ function TimetableDetail({
                   onClick={() => archive.mutate(entry.id)}
                   disabled={archive.isPending}
                 >
-                  Archive
+                  Stop repeating
                 </button>
               </div>
             ))}
           {!detail.entries.some((entry) => entry.active) ? (
-            <p className="empty-copy">No weekly slot has been added.</p>
+            <p className="empty-copy">
+              No weekly classes yet. Add the day and time for this subject.
+            </p>
           ) : null}
           {generate.error || archive.error ? (
             <p className="form-error" role="alert">
@@ -303,22 +319,29 @@ function TimetableDetail({
 
       <div className="session-preview">
         <div className="subheading-row">
-          <h3>Generated teaching dates</h3>
+          <h3>3. Review class dates</h3>
           <span>{detail.semester.campus.timezone}</span>
         </div>
-        {detail.sessions.slice(0, 12).map((session) => (
-          <div className="session-row" key={session.id}>
-            <time>{session.sessionDate}</time>
-            <span>
-              {localTime(session.startsAt, detail.semester.campus.timezone)}–
-              {localTime(session.endsAt, detail.semester.campus.timezone)}
-            </span>
-            <b>{session.plannedMinutes} min</b>
-          </div>
-        ))}
+        <div
+          className="schedule-date-list"
+          tabIndex={0}
+          role="region"
+          aria-label="All scheduled class dates"
+        >
+          {detail.sessions.map((session) => (
+            <div className="session-row" key={session.id}>
+              <time>{session.sessionDate}</time>
+              <span>
+                {localTime(session.startsAt, detail.semester.campus.timezone)}–
+                {localTime(session.endsAt, detail.semester.campus.timezone)}
+              </span>
+              <b>{session.plannedMinutes} min</b>
+            </div>
+          ))}
+        </div>
         {detail.sessions.length === 0 ? (
           <p className="empty-copy">
-            Add a weekly slot to generate dated sessions.
+            Save a weekly class above to see all its teaching dates here.
           </p>
         ) : null}
       </div>
@@ -361,9 +384,13 @@ function EntryForm({
 
   return (
     <form className="setup-card timetable-form" onSubmit={submit}>
-      <h3>Add weekly slot</h3>
+      <h3>2. Add a weekly class</h3>
+      <p className="schedule-help">
+        This class repeats every {weekdayLabels[weekday]} between the dates
+        below. Closed days are skipped automatically.
+      </p>
       <label>
-        Day
+        Day of the week
         <select
           value={weekday}
           onChange={(event) => setWeekday(Number(event.target.value))}
@@ -377,7 +404,7 @@ function EntryForm({
       </label>
       <div className="field-pair">
         <label>
-          Starts
+          Start time
           <input
             type="time"
             value={startTime}
@@ -386,7 +413,7 @@ function EntryForm({
           />
         </label>
         <label>
-          Ends
+          End time
           <input
             type="time"
             value={endTime}
@@ -397,18 +424,22 @@ function EntryForm({
       </div>
       <div className="field-pair">
         <label>
-          Effective from
+          Repeat from
           <input
             type="date"
+            min={detail.semester.startDate}
+            max={effectiveTo}
             value={effectiveFrom}
             onChange={(event) => setEffectiveFrom(event.target.value)}
             required
           />
         </label>
         <label>
-          Effective to
+          Repeat until
           <input
             type="date"
+            min={effectiveFrom}
+            max={detail.semester.endDate}
             value={effectiveTo}
             onChange={(event) => setEffectiveTo(event.target.value)}
             required
@@ -416,12 +447,12 @@ function EntryForm({
         </label>
       </div>
       <label>
-        Faculty
+        Teacher (optional)
         <select
           value={facultyAssignmentId}
           onChange={(event) => setFacultyAssignmentId(event.target.value)}
         >
-          <option value="">Unassigned</option>
+          <option value="">Choose later</option>
           {detail.facultyAssignments
             .filter((assignment) => assignment.active)
             .map((assignment) => (
@@ -436,8 +467,13 @@ function EntryForm({
           {mutation.error.message}
         </p>
       ) : null}
+      {mutation.isSuccess ? (
+        <p role="status" className="schedule-help">
+          Weekly class saved. Review the class dates below.
+        </p>
+      ) : null}
       <button disabled={mutation.isPending}>
-        {mutation.isPending ? 'Generating sessions…' : 'Add and generate'}
+        {mutation.isPending ? 'Saving schedule…' : 'Save weekly class'}
       </button>
     </form>
   );

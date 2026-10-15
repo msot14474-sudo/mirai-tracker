@@ -169,8 +169,8 @@ describe('TimetableSetup', () => {
     installFetchMock();
     renderTimetable();
 
-    expect(await screen.findByText('Foundations')).toBeInTheDocument();
-    expect(await screen.findByText('Weekly teaching')).toBeInTheDocument();
+    expect((await screen.findAllByText('Foundations'))[0]).toBeInTheDocument();
+    expect(await screen.findByText('Hours per week')).toBeInTheDocument();
     expect(screen.getAllByText('2h').length).toBeGreaterThan(0);
     expect(screen.getByText('20h')).toBeInTheDocument();
     expect(screen.getByText('2026-01-05')).toBeInTheDocument();
@@ -184,20 +184,20 @@ describe('TimetableSetup', () => {
     });
     renderTimetable();
 
-    await screen.findByRole('heading', { name: 'Add weekly slot' });
-    fireEvent.change(screen.getByLabelText('Day'), {
+    await screen.findByRole('heading', { name: '2. Add a weekly class' });
+    fireEvent.change(screen.getByLabelText('Day of the week'), {
       target: { value: '4' },
     });
-    fireEvent.change(screen.getByLabelText('Starts'), {
+    fireEvent.change(screen.getByLabelText('Start time'), {
       target: { value: '14:00' },
     });
-    fireEvent.change(screen.getByLabelText('Ends'), {
+    fireEvent.change(screen.getByLabelText('End time'), {
       target: { value: '15:30' },
     });
-    fireEvent.change(screen.getByLabelText('Faculty'), {
+    fireEvent.change(screen.getByLabelText('Teacher (optional)'), {
       target: { value: 'assignment-a' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add and generate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save weekly class' }));
 
     await waitFor(() =>
       expect(submitted).toEqual({

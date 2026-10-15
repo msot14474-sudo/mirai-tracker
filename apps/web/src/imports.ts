@@ -54,9 +54,14 @@ async function messageFrom(response: Response) {
   return body?.message ?? 'The import request could not be completed.';
 }
 
-async function upload<T>(path: string, file: File): Promise<T> {
+export async function upload<T>(
+  path: string,
+  file: File,
+  fields: Record<string, string> = {},
+): Promise<T> {
   const body = new FormData();
   body.append('file', file);
+  Object.entries(fields).forEach(([key, value]) => body.append(key, value));
   const response = await apiFetch(`${apiUrl}${path}`, {
     method: 'POST',
     credentials: 'include',

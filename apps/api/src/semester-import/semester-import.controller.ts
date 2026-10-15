@@ -1,6 +1,7 @@
 import { UserRole } from '@prisma/client';
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
@@ -21,6 +22,11 @@ import {
 } from './semester-import.template';
 import { UploadedImportFile } from './semester-import.types';
 
+import {
+  ProgressImportService,
+  mappingSchema,
+} from './progress-import.service';
+
 const managers = [UserRole.ADMIN, UserRole.PROGRAM_MANAGER] as const;
 const upload = FileInterceptor('file', {
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
@@ -29,7 +35,52 @@ const upload = FileInterceptor('file', {
 @Controller('imports')
 @Roles(...managers)
 export class SemesterImportController {
-  constructor(private readonly imports: SemesterImportService) {}
+  constructor(
+    private readonly imports: SemesterImportService,
+    private readonly progress: ProgressImportService,
+  ) {}
+
+  @Post('progress/inspect')
+  @UseInterceptors(upload)
+  inspectProgress(
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('useAi') useAi: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progress.inspect(requiredFile(file), useAi === 'true', user);
+  }
+
+  @Post('progress/preview')
+  @UseInterceptors(upload)
+  previewProgress(
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('offeringId') offeringId: string,
+    @Body('mapping') mapping: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progress.preview(
+      requiredFile(file),
+      parseId(offeringId),
+      parseMapping(mapping),
+      user,
+    );
+  }
+
+  @Post('progress')
+  @UseInterceptors(upload)
+  importProgress(
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('offeringId') offeringId: string,
+    @Body('mapping') mapping: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progress.execute(
+      requiredFile(file),
+      parseId(offeringId),
+      parseMapping(mapping),
+      user,
+    );
+  }
 
   @Get('template')
   async template(@Query('format') format = 'xlsx') {
@@ -104,4 +155,14 @@ function parseId(value: string) {
   const result = uuidSchema.safeParse(value);
   if (!result.success) throw new BadRequestException('Invalid import job id.');
   return result.data;
+}
+
+function parseMapping(value: string) {
+  try {
+    return mappingSchema.parse(JSON.parse(value));
+  } catch {
+    throw new BadRequestException(
+      'Check the selected worksheet and column mapping.',
+    );
+  }
 }

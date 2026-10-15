@@ -9388,3 +9388,26 @@ body:has(.auth-shell) {
 .access-close-create { display:block; margin-left:auto; background:white; color:#536682; border:1px solid #d8e2f0; border-radius:8px; padding:7px 12px; cursor:pointer; }
 .faculty-access-workspace .managed-accounts { margin-top:0; }
 @media (max-width:640px) { .access-directory-actions { flex-wrap:wrap; gap:8px; } .access-create-panel { padding:12px; } }
+
+/* Keep the schedule readable at narrow workspace widths. */
+.schedule-help { color: #65748c; font-size: .84rem; line-height: 1.6; margin: .45rem 0 1rem; }
+.schedule-selection { display: grid; gap: .3rem; margin-bottom: 1rem; }
+.schedule-selection span { color: #65748c; font-size: .82rem; }
+.schedule-date-list { max-height: 24rem; overflow: auto; scrollbar-gutter: stable; }
+.calendar-weekday { display: block; text-transform: capitalize; margin-top: .2rem; }
+.timetable-detail { container-type: inline-size; }
+.timetable-form .field-pair > label, .timetable-form input, .timetable-form select { min-width: 0; max-width: 100%; }
+.timetable-grid { align-items: start; }
+@container (max-width: 640px) { .timetable-grid { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 480px) { .timetable-form .field-pair { grid-template-columns: minmax(0,1fr); } }
+
+.import-mode-picker { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
+.import-mode-picker button { background: white; color: #34558b; border: 1px solid #d8e2f3; }
+.import-mode-picker button.selected { background: #2458d7; color: white; }
+.progress-import { display: grid; gap: 1rem; }
+.progress-import-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 1rem; min-width: 0; }
+.progress-mapping-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,230px),1fr)); gap: 1rem; }
+.progress-preview-table { max-height: 28rem; overflow: auto; margin-block: 1rem; }
+.progress-preview-table table { width:100%; border-collapse: collapse; font-size: .85rem; }
+.progress-preview-table th,.progress-preview-table td { padding:.7rem; text-align:left; border-bottom:1px solid #e4eaf4; }
+.progress-import pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .8rem; }

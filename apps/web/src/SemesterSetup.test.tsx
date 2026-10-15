@@ -101,3 +101,49 @@ describe('SemesterSetup subjects', () => {
     );
   });
 });
+
+it('shows all semester dates, including ordinary weekdays after the first eight days', async () => {
+  const semester = {
+    id: 'term',
+    campusId: 'campus-a',
+    name: 'Term',
+    startDate: '2026-09-01',
+    endDate: '2026-09-10',
+    workingSaturdayRule: 'NONE',
+    status: 'ACTIVE',
+  };
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.endsWith('/academic/campuses'))
+      return json([
+        { id: 'campus-a', name: 'Campus', code: 'C', timezone: 'Asia/Kolkata' },
+      ]);
+    if (url.endsWith('/semesters')) return json([semester]);
+    if (url.endsWith('/calendar'))
+      return json({
+        semester,
+        summary: { totalDays: 10, workingDays: 10, nonWorkingDays: 0 },
+        days: Array.from({ length: 10 }, (_, i) => ({
+          date: `2026-09-${String(i + 1).padStart(2, '0')}`,
+          weekday: 'MONDAY',
+          working: true,
+          reason: 'WEEKDAY',
+          override: null,
+        })),
+        exams: [],
+      });
+    if (url.endsWith('/subjects')) return json([]);
+    throw new Error(url);
+  });
+  renderSetup();
+  fireEvent.click(await screen.findByRole('button', { name: /Term 2026/ }));
+  await screen.findByRole('region', { name: 'All semester dates' });
+  expect(
+    document.querySelector('time[datetime="2026-09-10"]'),
+  ).toBeInTheDocument();
+  expect(
+    screen
+      .getByRole('region', { name: 'All semester dates' })
+      .querySelectorAll('time'),
+  ).toHaveLength(10);
+});
