@@ -1,0 +1,304 @@
+import { ForbiddenException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { REQUIRED_ROLES_KEY } from '../auth/auth.constants';
+import { PrismaService } from '../database/prisma.service';
+import { RedisService } from '../redis/redis.service';
+import { AiContextService, insightScope } from './ai-context.service';
+import { AiInsightsService } from './ai-insights.service';
+import { AiInsightsController } from './ai-insights.controller';
+const user = (role: UserRole): AuthenticatedUser => ({
+  id: 'u',
+  name: 'Test',
+  email: 'private@example.test',
+  roles: [{ role, campusId: 'campus-a' }],
+  staffProfileId: 'staff-a',
+  studentProfile: null,
+});
+function setup(withPlan = true) {
+  const offering = {
+    id: 'offering-a',
+    subject: { code: 'DSA', name: 'Data Structures' },
+    batch: {
+      name: 'Batch A',
+      semester: {
+        name: 'Semester 1',
+        campus: { id: 'campus-a', name: 'Hi-Tech', timezone: 'Asia/Kolkata' },
+        examWindows: [],
+      },
+    },
+    faculty: [],
+    lessonPlans: withPlan
+      ? [
+          {
+            version: 1,
+            status: 'ACTIVE',
+            units: [
+              {
+                title: 'Linear structures',
+                topics: [
+                  {
+                    id: 't1',
+                    title: 'Arrays',
+                    plannedMinutes: 100,
+                    currentCompletionPercentage: 50,
+                    status: 'IN_PROGRESS',
+                    examScopes: [],
+                  },
+                  {
+                    id: 't2',
+                    title: 'Lists',
+                    plannedMinutes: 100,
+                    currentCompletionPercentage: 0,
+                    status: 'NOT_STARTED',
+                    examScopes: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ]
+      : [],
+    scheduleVersions: [
+      {
+        entries: [{ topicId: 't1', plannedFinishDate: new Date('2020-01-01') }],
+      },
+    ],
+  };
+  const db = {
+    subjectOffering: { findMany: jest.fn().mockResolvedValue([offering]) },
+    scheduledSession: {
+      groupBy: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            offeringId: 'offering-a',
+            status: 'COMPLETED',
+            _count: { _all: 2 },
+          },
+        ])
+        .mockResolvedValueOnce([
+          { offeringId: 'offering-a', _count: { _all: 1 } },
+        ]),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
+    lectureReview: {
+      groupBy: jest.fn().mockResolvedValue([
+        { understood: false, _count: { _all: 3 } },
+        { understood: true, _count: { _all: 2 } },
+      ]),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+  return { db, context: new AiContextService(db as unknown as PrismaService) };
+}
+afterEach(() => {
+  jest.restoreAllMocks();
+  delete process.env.AI_PROVIDER;
+  delete process.env.AI_MODEL;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.OLLAMA_API_KEY;
+});
+it('restricts campus managers and faculty; students cannot use the service', () => {
+  expect(insightScope(user('ADMIN'))).toEqual({});
+  expect(insightScope(user('CAMPUS_MANAGER'))).toEqual({
+    OR: [{ batch: { semester: { campusId: { in: ['campus-a'] } } } }],
+  });
+  expect(insightScope(user('FACULTY'))).toEqual({
+    OR: [{ faculty: { some: { staffProfileId: 'staff-a', active: true } } }],
+  });
+  expect(() => insightScope(user('STUDENT'))).toThrow(ForbiddenException);
+  expect(
+    Reflect.getMetadata(REQUIRED_ROLES_KEY, AiInsightsController),
+  ).not.toContain('STUDENT');
+});
+it('intersects client filters with authorization and scopes every dependent query', async () => {
+  const { db, context } = setup();
+  await context.snapshot(user('CAMPUS_MANAGER'), {
+    campusId: 'foreign-campus',
+    offeringId: 'foreign-subject',
+  });
+  const query = db.subjectOffering.findMany.mock.calls[0][0];
+  expect(query.where.AND[0]).toEqual(insightScope(user('CAMPUS_MANAGER')));
+  expect(query.where.AND[1].batch.semester.campusId).toBe('foreign-campus');
+  expect(
+    db.scheduledSession.findMany.mock.calls[0][0].where.offeringId.in,
+  ).toEqual(['offering-a']);
+  expect(
+    db.lectureReview.findMany.mock.calls[0][0].where.session.offeringId.in,
+  ).toEqual(['offering-a']);
+  expect(
+    db.lectureReview.findMany.mock.calls[0][0].select.student,
+  ).toBeUndefined();
+});
+it('calculates overdue work, weighted coverage, missing logs and feedback without guessing', async () => {
+  const { context } = setup();
+  const result = await context.snapshot(user('ADMIN'));
+  expect(result.subjects[0]!.completion).toBe(25);
+  expect(result.subjects[0]!.overdueTopics).toBe(1);
+  expect(result.subjects[0]!.nextTopics).toEqual(['Arrays', 'Lists']);
+  expect(result.summary).toMatchObject({
+    missingLogs: 1,
+    needsHelp: 3,
+    reviews: 5,
+    attention: 1,
+  });
+  expect(JSON.stringify(result)).not.toContain('private@example.test');
+});
+it('handles missing lesson plans without breaking the dashboard', async () => {
+  const { context } = setup(false);
+  const result = await context.snapshot(user('ADMIN'));
+  expect(result.subjects[0]!.completion).toBeNull();
+  expect(result.subjects[0]!.issues).toContain('Add a lesson plan.');
+});
+it('generates a real data report without provider credentials or Redis', async () => {
+  const { context } = setup();
+  const redis = {
+    get: jest.fn().mockResolvedValue(null),
+    setWithExpiry: jest.fn().mockResolvedValue(undefined),
+    incrementWithExpiry: jest.fn(),
+  };
+  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const report = await svc.generate(user('ADMIN'), {});
+  expect(report.mode).toBe('data');
+  expect(report.text).toContain('Arrays');
+  expect(report.text).toContain('3 understanding-gap responses');
+  expect(redis.incrementWithExpiry).not.toHaveBeenCalled();
+});
+it('rejects unconfigured AI clearly instead of labelling data rules as AI', async () => {
+  const { context } = setup();
+  const svc = new AiInsightsService(context, {} as RedisService);
+  await expect(
+    svc.generate(user('ADMIN'), {}, 'What next?', true),
+  ).rejects.toThrow('AI is not connected');
+});
+it('calls the configured provider with server context and no tools or storage', async () => {
+  process.env.AI_PROVIDER = 'openai';
+  process.env.AI_MODEL = 'configured-model';
+  process.env.OPENAI_API_KEY = 'test-only';
+  const fetcher = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        status: 'completed',
+        output: [
+          {
+            content: [
+              {
+                type: 'output_text',
+                text: 'Focus on Arrays [DSA, Batch A].',
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+  );
+  const { context } = setup();
+  const svc = new AiInsightsService(context, {
+    get: jest.fn().mockResolvedValue(null),
+    setWithExpiry: jest.fn().mockResolvedValue(undefined),
+    incrementWithExpiry: jest.fn().mockResolvedValue(1),
+  } as unknown as RedisService);
+  const report = await svc.generate(user('FACULTY'), {}, 'What next?', true);
+  expect(report.mode).toBe('ai');
+  const sent = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
+  expect(sent.store).toBe(false);
+  expect(sent.tools).toBeUndefined();
+  expect(sent.instructions).toContain('untrusted data');
+  expect(sent.input).toContain('Arrays');
+  expect(sent.input).not.toContain('private@example.test');
+});
+it('protects provider failures and limits without leaking raw responses', async () => {
+  process.env.AI_PROVIDER = 'openai';
+  process.env.AI_MODEL = 'configured-model';
+  process.env.OPENAI_API_KEY = 'test-only';
+  const { context } = setup();
+  const redis = {
+    get: jest.fn().mockResolvedValue(null),
+    setWithExpiry: jest.fn().mockResolvedValue(undefined),
+    incrementWithExpiry: jest.fn().mockResolvedValue(21),
+  };
+  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const fetcher = jest
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(new Response('secret diagnostic', { status: 401 }));
+  await expect(
+    svc.generate(user('FACULTY'), {}, 'What next?', true),
+  ).rejects.toThrow('limit reached');
+  expect(fetcher).not.toHaveBeenCalled();
+  const other = setup();
+  const failing = new AiInsightsService(other.context, {
+    get: jest.fn().mockResolvedValue(null),
+    setWithExpiry: jest.fn().mockResolvedValue(undefined),
+    incrementWithExpiry: jest.fn().mockResolvedValue(1),
+  } as unknown as RedisService);
+  await expect(
+    failing.generate(user('FACULTY'), {}, 'What next?', true),
+  ).rejects.toThrow('AI could not finish');
+});
+
+it('uses Ollama cloud with the efficient default and only returns the final answer', async () => {
+  process.env.OLLAMA_API_KEY = 'test-ollama-key';
+  const fetcher = jest
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          done: true,
+          done_reason: 'stop',
+          message: {
+            content: 'Focus on Arrays.',
+            thinking: 'private reasoning',
+          },
+        }),
+      ),
+    );
+  const { context } = setup();
+  const redis = {
+    get: jest.fn().mockResolvedValue(null),
+    setWithExpiry: jest.fn().mockResolvedValue(undefined),
+    incrementWithExpiry: jest.fn().mockResolvedValue(1),
+  };
+  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  expect(svc.configuration()).toEqual({ ready: true, provider: 'ollama' });
+  const report = await svc.generate(user('FACULTY'), {}, 'What next?', true);
+  expect(fetcher.mock.calls[0]![0]).toBe('https://ollama.com/api/chat');
+  const request = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
+  expect(request).toMatchObject({
+    model: 'gpt-oss:20b',
+    stream: false,
+    think: 'low',
+    options: { num_predict: 1200 },
+  });
+  expect(report.text).toBe('Focus on Arrays.');
+  expect(JSON.stringify(report)).not.toContain('private reasoning');
+  expect(redis.setWithExpiry).toHaveBeenCalledWith(
+    expect.stringMatching(/^ai:report:v1:/),
+    expect.any(String),
+    300,
+  );
+});
+it('reuses cached AI output only after collecting fresh authorized context', async () => {
+  process.env.OLLAMA_API_KEY = 'test-only';
+  const { context } = setup();
+  const snapshot = jest.spyOn(context, 'snapshot');
+  const fetcher = jest.spyOn(globalThis, 'fetch');
+  const redis = {
+    get: jest
+      .fn()
+      .mockResolvedValue(
+        JSON.stringify({
+          text: 'Cached report',
+          generatedAt: '2026-10-15T10:00:00Z',
+        }),
+      ),
+    incrementWithExpiry: jest.fn(),
+  };
+  const svc = new AiInsightsService(context, redis as unknown as RedisService);
+  const report = await svc.generate(user('FACULTY'), {}, 'What next?', true);
+  expect(report.text).toBe('Cached report');
+  expect(snapshot).toHaveBeenCalledWith(user('FACULTY'), {});
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(redis.incrementWithExpiry).not.toHaveBeenCalled();
+});

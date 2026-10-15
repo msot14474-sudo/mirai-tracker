@@ -1,3 +1,4 @@
+import { AiInsightsModule } from './ai-insights/ai-insights.module';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditModule } from './audit/audit.module';
@@ -21,6 +22,7 @@ import { SafeHttpExceptionFilter } from './security/http-exception.filter';
 
 @Module({
   imports: [
+    AiInsightsModule,
     DatabaseModule,
     RedisModule,
     AuthModule,

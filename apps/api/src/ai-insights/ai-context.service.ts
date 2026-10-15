@@ -1,0 +1,335 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../database/prisma.service';
+import { AuthenticatedUser } from '../auth/auth.types';
+
+export function insightScope(
+  user: AuthenticatedUser,
+): Prisma.SubjectOfferingWhereInput {
+  if (
+    user.roles.some((r) => r.role === 'ADMIN' || r.role === 'PROGRAM_MANAGER')
+  )
+    return {};
+  const scopes: Prisma.SubjectOfferingWhereInput[] = [];
+  const campuses = user.roles
+    .filter((r) => r.role === 'CAMPUS_MANAGER' && r.campusId)
+    .map((r) => r.campusId!);
+  if (campuses.length)
+    scopes.push({ batch: { semester: { campusId: { in: campuses } } } });
+  if (user.staffProfileId && user.roles.some((r) => r.role === 'FACULTY'))
+    scopes.push({
+      faculty: { some: { staffProfileId: user.staffProfileId, active: true } },
+    });
+  if (!scopes.length)
+    throw new ForbiddenException(
+      'AI insights are available to administrators, campus managers and assigned faculty.',
+    );
+  return { OR: scopes };
+}
+export type InsightFilter = { campusId?: string; offeringId?: string };
+
+@Injectable()
+export class AiContextService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async snapshot(user: AuthenticatedUser, filter: InsightFilter = {}) {
+    const now = new Date();
+    const offerings = await this.prisma.subjectOffering.findMany({
+      where: {
+        AND: [
+          insightScope(user),
+          {
+            ...(filter.campusId
+              ? { batch: { semester: { campusId: filter.campusId } } }
+              : {}),
+            ...(filter.offeringId ? { id: filter.offeringId } : {}),
+            status: { in: ['ACTIVE', 'COMPLETE'] },
+          },
+        ],
+      },
+      take: 1001,
+      orderBy: { id: 'asc' },
+      include: {
+        subject: { select: { name: true, code: true } },
+        batch: {
+          select: {
+            name: true,
+            semester: {
+              select: {
+                name: true,
+                campus: { select: { id: true, name: true, timezone: true } },
+                examWindows: {
+                  select: {
+                    id: true,
+                    name: true,
+                    startDate: true,
+                    syllabusDeadline: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        faculty: {
+          where: { active: true },
+          select: {
+            staffProfile: { select: { user: { select: { name: true } } } },
+          },
+        },
+        lessonPlans: {
+          where: { status: { in: ['ACTIVE', 'DRAFT'] } },
+          orderBy: { version: 'desc' },
+          include: {
+            units: {
+              orderBy: { sequence: 'asc' },
+              include: {
+                topics: {
+                  orderBy: { sequence: 'asc' },
+                  select: {
+                    id: true,
+                    title: true,
+                    plannedMinutes: true,
+                    status: true,
+                    currentCompletionPercentage: true,
+                    examScopes: { select: { examWindowId: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        scheduleVersions: {
+          orderBy: { version: 'desc' },
+          take: 1,
+          include: {
+            entries: { select: { topicId: true, plannedFinishDate: true } },
+          },
+        },
+      },
+    });
+    if (offerings.length > 1000)
+      throw new BadRequestException(
+        'Select a campus or subject to analyse a smaller scope.',
+      );
+    const ids = offerings.map((o) => o.id);
+    const sessionScope = { offeringId: { in: ids } };
+    const pastScope = {
+      ...sessionScope,
+      endsAt: { lte: now },
+      status: {
+        in: ['SCHEDULED', 'COMPLETED'] as ('SCHEDULED' | 'COMPLETED')[],
+      },
+    };
+    const [
+      sessionCounts,
+      missingLogs,
+      feedbackCounts,
+      recentLectures,
+      upcomingLectures,
+      recentGaps,
+      totalPast,
+      totalUpcoming,
+    ] = await Promise.all([
+      this.prisma.scheduledSession.groupBy({
+        by: ['offeringId', 'status'],
+        where: sessionScope,
+        _count: { _all: true },
+      }),
+      this.prisma.scheduledSession.groupBy({
+        by: ['offeringId'],
+        where: { ...pastScope, logs: { none: {} } },
+        _count: { _all: true },
+      }),
+      this.prisma.lectureReview.groupBy({
+        by: ['understood'],
+        where: { session: sessionScope },
+        _count: { _all: true },
+      }),
+      this.prisma.scheduledSession.findMany({
+        where: pastScope,
+        orderBy: [{ endsAt: 'desc' }, { id: 'desc' }],
+        take: 80,
+        select: {
+          id: true,
+          offeringId: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          logs: {
+            orderBy: { revision: 'desc' },
+            take: 1,
+            select: {
+              coveredSummary: true,
+              leftOverSummary: true,
+              classworkStatus: true,
+              homeworkStatus: true,
+            },
+          },
+        },
+      }),
+      this.prisma.scheduledSession.findMany({
+        where: { ...sessionScope, startsAt: { gt: now }, status: 'SCHEDULED' },
+        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+        take: 20,
+        select: { id: true, offeringId: true, startsAt: true, endsAt: true },
+      }),
+      this.prisma.lectureReview.findMany({
+        where: { understood: false, session: sessionScope },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        take: 50,
+        select: {
+          unclearTopics: true,
+          updatedAt: true,
+          session: { select: { id: true, offeringId: true, startsAt: true } },
+        },
+      }),
+      this.prisma.scheduledSession.count({ where: pastScope }),
+      this.prisma.scheduledSession.count({
+        where: { ...sessionScope, startsAt: { gt: now }, status: 'SCHEDULED' },
+      }),
+    ]);
+    const subjects = offerings.map((o) => {
+      const plan =
+        o.lessonPlans.find((p) => p.status === 'ACTIVE') ?? o.lessonPlans[0];
+      const dates = new Map(
+        o.scheduleVersions[0]?.entries.map((e) => [
+          e.topicId,
+          e.plannedFinishDate.toISOString().slice(0, 10),
+        ]) ?? [],
+      );
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: o.batch.semester.campus.timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(now);
+      const topics =
+        plan?.units.flatMap((u) =>
+          u.topics.map((t) => ({
+            id: t.id,
+            unit: u.title,
+            title: t.title,
+            minutes: t.plannedMinutes,
+            completion: Number(t.currentCompletionPercentage),
+            status: t.status,
+            finishDate: dates.get(t.id) ?? null,
+            examIds: t.examScopes.map((e) => e.examWindowId),
+          })),
+        ) ?? [];
+      const minutes = topics.reduce((a, t) => a + t.minutes, 0);
+      const completedMinutes = topics.reduce(
+        (a, t) => a + (t.minutes * t.completion) / 100,
+        0,
+      );
+      const overdue = topics.filter(
+        (t) =>
+          t.finishDate &&
+          t.finishDate < today &&
+          t.completion < 100 &&
+          t.status !== 'SKIPPED',
+      );
+      const unlogged =
+        missingLogs.find((m) => m.offeringId === o.id)?._count._all ?? 0;
+      const issues: string[] = [];
+      if (!plan) issues.push('Add a lesson plan.');
+      else if (plan.status !== 'ACTIVE')
+        issues.push('Review and activate the draft lesson plan.');
+      if (!o.scheduleVersions.length)
+        issues.push('Calculate planned topic dates.');
+      if (overdue.length)
+        issues.push(
+          `Replan ${overdue.length} overdue topic${overdue.length === 1 ? '' : 's'}.`,
+        );
+      if (unlogged)
+        issues.push(
+          `Follow up on ${unlogged} lecture${unlogged === 1 ? '' : 's'} without logs.`,
+        );
+      if (!o.faculty.length) issues.push('Assign a faculty member.');
+      const recentHelp = recentGaps.filter(
+        (g) => g.session.offeringId === o.id,
+      ).length;
+      if (recentHelp)
+        issues.push(
+          `Review ${recentHelp} recent student understanding-gap responses.`,
+        );
+      const exams = o.batch.semester.examWindows
+        .filter((e) => e.startDate.toISOString().slice(0, 10) >= today)
+        .map((e) => {
+          const scoped = topics.filter((t) => t.examIds.includes(e.id));
+          return {
+            name: e.name,
+            date: e.startDate.toISOString().slice(0, 10),
+            syllabusDeadline: e.syllabusDeadline.toISOString().slice(0, 10),
+            scopeTopics: scoped.length,
+            incompleteTopics: scoped.filter((t) => t.completion < 100).length,
+          };
+        });
+      for (const e of exams)
+        if (e.syllabusDeadline <= today && e.incompleteTopics)
+          issues.push(
+            `${e.name}: ${e.incompleteTopics} exam topics remain at the syllabus deadline.`,
+          );
+      return {
+        id: o.id,
+        code: o.subject.code,
+        name: o.subject.name,
+        batch: o.batch.name,
+        campus: o.batch.semester.campus,
+        semester: o.batch.semester.name,
+        teachers: o.faculty.map((f) => f.staffProfile.user.name),
+        plan: plan ? { version: plan.version, status: plan.status } : null,
+        completion: minutes
+          ? Math.round((completedMinutes / minutes) * 100)
+          : null,
+        plannedMinutes: minutes,
+        overdueTopics: overdue.length,
+        missingLogs: unlogged,
+        topics,
+        nextTopics: topics
+          .filter((t) => t.completion < 100 && t.status !== 'SKIPPED')
+          .slice(0, 3)
+          .map((t) => t.title),
+        issues,
+        exams,
+        sessions: sessionCounts
+          .filter((s) => s.offeringId === o.id)
+          .map((s) => ({ status: s.status, count: s._count._all })),
+      };
+    });
+    const needsHelp =
+      feedbackCounts.find((f) => !f.understood)?._count._all ?? 0;
+    return {
+      generatedAt: now.toISOString(),
+      scope: filter.campusId
+        ? 'Selected campus · permitted subjects'
+        : 'All permitted subjects',
+      coverage: {
+        subjects: subjects.length,
+        pastLectures: totalPast,
+        recentLecturesIncluded: recentLectures.length,
+        upcomingLectures: totalUpcoming,
+        upcomingIncluded: upcomingLectures.length,
+        feedbackGaps: needsHelp,
+        feedbackGapsIncluded: recentGaps.length,
+        note: 'All permitted active/completed subjects, current plans and aggregate lecture/feedback totals. Detailed context includes the latest 80 past lectures, next 20 lectures and 50 recent understanding gaps. Select a subject for deeper focus. Missing logs are not proof that a class was missed.',
+      },
+      summary: {
+        subjects: subjects.length,
+        attention: subjects.filter((s) => s.issues.length).length,
+        overdueTopics: subjects.reduce((a, s) => a + s.overdueTopics, 0),
+        missingLogs: subjects.reduce((a, s) => a + s.missingLogs, 0),
+        needsHelp,
+        reviews: feedbackCounts.reduce((a, f) => a + f._count._all, 0),
+      },
+      subjects,
+      recentLectures,
+      upcomingLectures,
+      recentGaps,
+    };
+  }
+}
+export type InsightSnapshot = Awaited<ReturnType<AiContextService['snapshot']>>;

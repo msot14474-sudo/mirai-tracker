@@ -61,6 +61,9 @@ const SessionLoggingWorkspace = lazy(() =>
   })),
 );
 
+const AiInsights = lazy(() =>
+  import('./AiInsights').then((m) => ({ default: m.AiInsights })),
+);
 const ProgressDashboard = lazy(() =>
   import('./ProgressDashboard').then((module) => ({
     default: module.ProgressDashboard,
@@ -924,6 +927,7 @@ function LoginScreen() {
 }
 
 type DashboardView =
+  | 'ai-insights'
   | 'overview'
   | 'student-view'
   | 'alerts'
@@ -1221,6 +1225,11 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     ...(canViewProgressDashboard
       ? [
           {
+            id: 'ai-insights' as const,
+            label: 'AI insights',
+            icon: 'progress' as const,
+          },
+          {
             id: 'progress' as const,
             label: 'Progress',
             icon: 'progress' as const,
@@ -1270,6 +1279,15 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         return <StudentOverview />;
       case 'alerts':
         return <AlertCenter />;
+      case 'ai-insights':
+        return (
+          <AiInsights
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+            canLog={canLogSessions}
+            onOpen={openView}
+          />
+        );
       case 'progress':
         return <ProgressDashboard scope={progressScope} />;
       case 'exam-readiness':

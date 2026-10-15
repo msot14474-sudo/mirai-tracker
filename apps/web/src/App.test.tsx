@@ -400,6 +400,9 @@ describe('App authentication', () => {
       screen.queryByRole('heading', { name: 'My course progress' }),
     ).not.toBeInTheDocument();
 
+    expect(
+      screen.queryByRole('button', { name: 'AI insights' }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'My course progress' }));
     expect(
       await screen.findByRole('heading', { name: 'My course progress' }),
@@ -634,6 +637,9 @@ describe('App authentication', () => {
       screen.queryByRole('heading', { name: 'Semester import' }),
     ).not.toBeInTheDocument();
 
+    expect(
+      screen.getByRole('button', { name: 'AI insights' }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'User access' }));
     expect(
       await screen.findByRole('heading', {
