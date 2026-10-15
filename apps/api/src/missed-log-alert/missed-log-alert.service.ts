@@ -102,9 +102,18 @@ export class MissedLogAlertService {
     return { type, processedAt: now, ...result };
   }
 
-  async listMine(user: AuthenticatedUser) {
+  async listMine(user: AuthenticatedUser, campusId?: string) {
     const alerts = await this.prisma.missedLogAlert.findMany({
-      where: { recipientUserId: user.id },
+      where: {
+        recipientUserId: user.id,
+        ...(campusId
+          ? {
+              scheduledSession: {
+                offering: { batch: { semester: { campusId } } },
+              },
+            }
+          : {}),
+      },
       include: {
         deliveries: { orderBy: { createdAt: 'asc' } },
         scheduledSession: {

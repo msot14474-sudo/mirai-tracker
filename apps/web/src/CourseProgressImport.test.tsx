@@ -28,7 +28,7 @@ it('requires a reviewed preview and invalidates it when the mapping changes', as
     .spyOn(globalThis, 'fetch')
     .mockImplementation(async (input) => {
       const url = String(input);
-      const data = url.endsWith('/lesson-plans/offerings')
+      const data = url.endsWith('/lesson-plans/offerings?campusId=campus-a')
         ? [
             {
               id: 'subject',
@@ -81,7 +81,7 @@ it('requires a reviewed preview and invalidates it when the mapping changes', as
         })
       }
     >
-      <CourseProgressImport />
+      <CourseProgressImport campusId="campus-a" />
     </QueryClientProvider>,
   );
   await screen.findByText('Web · A · Term · Campus');

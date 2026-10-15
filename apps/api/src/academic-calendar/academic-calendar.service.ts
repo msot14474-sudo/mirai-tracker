@@ -55,10 +55,20 @@ export class AcademicCalendarService {
     });
   }
 
-  listSubjects(user: AuthenticatedUser) {
+  listSubjects(user: AuthenticatedUser, campusId?: string) {
     this.access.assertGlobalManager(user);
     return this.prisma.subject.findMany({
-      where: { active: true },
+      where: {
+        active: true,
+        ...(campusId
+          ? {
+              OR: [
+                { campusId },
+                { offerings: { some: { batch: { semester: { campusId } } } } },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         code: true,
@@ -75,6 +85,7 @@ export class AcademicCalendarService {
     try {
       return await this.prisma.subject.create({
         data: {
+          ...(input.campusId ? { campusId: input.campusId } : {}),
           code: input.code,
           name: input.name,
           description: input.description,

@@ -74,7 +74,11 @@ export class SessionLogService {
     private readonly schedules: TopicScheduleService,
   ) {}
 
-  async listForDate(dateText: string, user: AuthenticatedUser) {
+  async listForDate(
+    dateText: string,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
     const staffProfileId = assertFaculty(user);
     const date = parseIsoDate(dateText);
     const assignmentScope: Prisma.FacultyAssignmentWhereInput = {
@@ -86,7 +90,10 @@ export class SessionLogService {
     const sessions = await this.prisma.scheduledSession.findMany({
       where: {
         sessionDate: date,
-        offering: { faculty: { some: assignmentScope } },
+        offering: {
+          faculty: { some: assignmentScope },
+          ...(campusId ? { batch: { semester: { campusId } } } : {}),
+        },
       },
       include: sessionInclude,
       orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
@@ -103,7 +110,10 @@ export class SessionLogService {
             ScheduledSessionStatus.COMPLETED,
           ],
         },
-        offering: { faculty: { some: assignmentScope } },
+        offering: {
+          faculty: { some: assignmentScope },
+          ...(campusId ? { batch: { semester: { campusId } } } : {}),
+        },
       },
       select: {
         id: true,

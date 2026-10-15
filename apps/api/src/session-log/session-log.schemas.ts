@@ -16,6 +16,7 @@ const optionalText = (max: number) =>
 
 export const sessionLogDateQuerySchema = z.object({
   date: isoDateSchema,
+  campusId: z.string().uuid().optional(),
 });
 
 export const createSessionLogSchema = z

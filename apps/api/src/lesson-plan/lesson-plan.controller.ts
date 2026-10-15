@@ -67,8 +67,11 @@ export class LessonPlanController {
   }
 
   @Get('offerings')
-  offerings(@CurrentUser() user: AuthenticatedUser) {
-    return this.plans.listOfferings(user);
+  offerings(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.plans.listOfferings(user, campusId ? id(campusId) : undefined);
   }
 
   @Get('offerings/:offeringId')

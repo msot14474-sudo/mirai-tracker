@@ -27,9 +27,10 @@ export class ExportService {
     private readonly progress: ProgressService,
   ) {}
 
-  async history(user: AuthenticatedUser) {
+  async history(user: AuthenticatedUser, campusId?: string) {
     this.access.assertGlobalManager(user);
     return this.prisma.exportJob.findMany({
+      ...(campusId ? { where: { campusId } } : {}),
       orderBy: { createdAt: 'desc' },
       take: 20,
       include: {
@@ -41,7 +42,11 @@ export class ExportService {
   async generate(request: ExportRequest, user: AuthenticatedUser) {
     this.access.assertGlobalManager(user);
     const job = await this.prisma.exportJob.create({
-      data: { type: request.type, requestedById: user.id },
+      data: {
+        type: request.type,
+        requestedById: user.id,
+        ...(request.campusId ? { campusId: request.campusId } : {}),
+      },
     });
 
     try {
@@ -96,18 +101,26 @@ export class ExportService {
   private async build(request: ExportRequest, user: AuthenticatedUser) {
     switch (request.type) {
       case ExportType.CAMPUS_PROGRESS:
-        return this.campusProgress(request.asOf, user);
+        return this.campusProgress(request.asOf, user, request.campusId);
       case ExportType.SUBJECT_PROGRESS:
-        return this.subjectProgress(request.asOf, user);
+        return this.subjectProgress(request.asOf, user, request.campusId);
       case ExportType.VISITING_FACULTY_HONORARIUM:
-        return this.visitingFaculty(request.month, request.ratePerLecture);
+        return this.visitingFaculty(
+          request.month,
+          request.ratePerLecture,
+          request.campusId,
+        );
       case ExportType.FULL_DATA:
-        return this.fullData();
+        return this.fullData(request.campusId);
     }
   }
 
-  private async campusProgress(asOf: string, user: AuthenticatedUser) {
-    const dashboard = await this.progress.dashboard(asOf, user);
+  private async campusProgress(
+    asOf: string,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
+    const dashboard = await this.progress.dashboard(asOf, user, campusId);
     const csv = buildCsv(dashboard.campuses, [
       { header: 'as_of_date', value: () => asOf },
       { header: 'campus_code', value: (row) => row.code },
@@ -140,17 +153,28 @@ export class ExportService {
     return report(`mirai-campus-progress-${asOf}.csv`, csv);
   }
 
-  private async subjectProgress(asOf: string, user: AuthenticatedUser) {
-    const { subjects } = await this.progress.list(asOf, user);
+  private async subjectProgress(
+    asOf: string,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
+    const { subjects } = await this.progress.list(asOf, user, campusId);
     const csv = buildCsv(subjects, subjectProgressColumns(asOf));
     return report(`mirai-subject-progress-${asOf}.csv`, csv);
   }
 
-  private async visitingFaculty(month: string, ratePerLecture: number) {
+  private async visitingFaculty(
+    month: string,
+    ratePerLecture: number,
+    campusId?: string,
+  ) {
     const { start, end } = monthRange(month);
     const sessions = await this.prisma.scheduledSession.findMany({
       where: {
         sessionDate: { gte: start, lt: end },
+        ...(campusId
+          ? { offering: { batch: { semester: { campusId } } } }
+          : {}),
         facultyAssignment: {
           is: {
             OR: [
@@ -242,11 +266,14 @@ export class ExportService {
     return report(`mirai-visiting-faculty-${month}.csv`, csv);
   }
 
-  private async fullData() {
+  private async fullData(campusId?: string) {
     const datasets = await Promise.all([
       dataset(
         'users',
         this.prisma.user.findMany({
+          ...(campusId
+            ? { where: { roleAssignments: { some: { campusId } } } }
+            : {}),
           select: {
             id: true,
             name: true,
@@ -258,43 +285,241 @@ export class ExportService {
           },
         }),
       ),
-      dataset('role_assignments', this.prisma.roleAssignment.findMany()),
-      dataset('staff_profiles', this.prisma.staffProfile.findMany()),
-      dataset('student_profiles', this.prisma.studentProfile.findMany()),
-      dataset('campuses', this.prisma.campus.findMany()),
-      dataset('tracks', this.prisma.track.findMany()),
-      dataset('semesters', this.prisma.semester.findMany()),
-      dataset('calendar_days', this.prisma.calendarDayOverride.findMany()),
-      dataset('exam_windows', this.prisma.examWindow.findMany()),
-      dataset('batches', this.prisma.batch.findMany()),
-      dataset('subjects', this.prisma.subject.findMany()),
-      dataset('subject_offerings', this.prisma.subjectOffering.findMany()),
-      dataset('faculty_assignments', this.prisma.facultyAssignment.findMany()),
-      dataset('timetable_entries', this.prisma.timetableEntry.findMany()),
-      dataset('scheduled_sessions', this.prisma.scheduledSession.findMany()),
-      dataset('lesson_plans', this.prisma.lessonPlan.findMany()),
-      dataset('units', this.prisma.unit.findMany()),
-      dataset('topics', this.prisma.topic.findMany()),
-      dataset('exam_scopes', this.prisma.examScope.findMany()),
+      dataset(
+        'role_assignments',
+        this.prisma.roleAssignment.findMany({
+          where: campusId ? { campusId } : {},
+        }),
+      ),
+      dataset(
+        'staff_profiles',
+        this.prisma.staffProfile.findMany({
+          where: campusId
+            ? { user: { roleAssignments: { some: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'student_profiles',
+        this.prisma.studentProfile.findMany({
+          where: campusId ? { batch: { semester: { campusId } } } : {},
+        }),
+      ),
+      dataset(
+        'campuses',
+        this.prisma.campus.findMany({
+          where: campusId ? { id: campusId } : {},
+        }),
+      ),
+      dataset(
+        'tracks',
+        this.prisma.track.findMany({
+          where: campusId
+            ? { batches: { some: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'semesters',
+        this.prisma.semester.findMany({ where: campusId ? { campusId } : {} }),
+      ),
+      dataset(
+        'calendar_days',
+        this.prisma.calendarDayOverride.findMany({
+          where: campusId ? { semester: { campusId } } : {},
+        }),
+      ),
+      dataset(
+        'exam_windows',
+        this.prisma.examWindow.findMany({
+          where: campusId ? { semester: { campusId } } : {},
+        }),
+      ),
+      dataset(
+        'batches',
+        this.prisma.batch.findMany({
+          where: campusId ? { semester: { campusId } } : {},
+        }),
+      ),
+      dataset(
+        'subjects',
+        this.prisma.subject.findMany({
+          where: campusId
+            ? {
+                OR: [
+                  { campusId },
+                  {
+                    offerings: { some: { batch: { semester: { campusId } } } },
+                  },
+                ],
+              }
+            : {},
+        }),
+      ),
+      dataset(
+        'subject_offerings',
+        this.prisma.subjectOffering.findMany({
+          where: campusId ? { batch: { semester: { campusId } } } : {},
+        }),
+      ),
+      dataset(
+        'faculty_assignments',
+        this.prisma.facultyAssignment.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'timetable_entries',
+        this.prisma.timetableEntry.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'scheduled_sessions',
+        this.prisma.scheduledSession.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'lesson_plans',
+        this.prisma.lessonPlan.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'units',
+        this.prisma.unit.findMany({
+          where: campusId
+            ? {
+                lessonPlan: { offering: { batch: { semester: { campusId } } } },
+              }
+            : {},
+        }),
+      ),
+      dataset(
+        'topics',
+        this.prisma.topic.findMany({
+          where: campusId
+            ? {
+                unit: {
+                  lessonPlan: {
+                    offering: { batch: { semester: { campusId } } },
+                  },
+                },
+              }
+            : {},
+        }),
+      ),
+      dataset(
+        'exam_scopes',
+        this.prisma.examScope.findMany({
+          where: campusId ? { examWindow: { semester: { campusId } } } : {},
+        }),
+      ),
       dataset(
         'topic_schedule_versions',
-        this.prisma.topicScheduleVersion.findMany(),
+        this.prisma.topicScheduleVersion.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
       ),
-      dataset('topic_schedules', this.prisma.topicSchedule.findMany()),
-      dataset('session_logs', this.prisma.sessionLog.findMany()),
+      dataset(
+        'topic_schedules',
+        this.prisma.topicSchedule.findMany({
+          where: campusId
+            ? {
+                scheduleVersion: {
+                  offering: { batch: { semester: { campusId } } },
+                },
+              }
+            : {},
+        }),
+      ),
+      dataset(
+        'session_logs',
+        this.prisma.sessionLog.findMany({
+          where: campusId
+            ? {
+                scheduledSession: {
+                  offering: { batch: { semester: { campusId } } },
+                },
+              }
+            : {},
+        }),
+      ),
       dataset(
         'session_topic_updates',
-        this.prisma.sessionTopicUpdate.findMany(),
+        this.prisma.sessionTopicUpdate.findMany({
+          where: campusId
+            ? {
+                sessionLog: {
+                  scheduledSession: {
+                    offering: { batch: { semester: { campusId } } },
+                  },
+                },
+              }
+            : {},
+        }),
       ),
-      dataset('progress_snapshots', this.prisma.progressSnapshot.findMany()),
-      dataset('missed_log_alerts', this.prisma.missedLogAlert.findMany()),
+      dataset(
+        'progress_snapshots',
+        this.prisma.progressSnapshot.findMany({
+          where: campusId
+            ? { offering: { batch: { semester: { campusId } } } }
+            : {},
+        }),
+      ),
+      dataset(
+        'missed_log_alerts',
+        this.prisma.missedLogAlert.findMany({
+          where: campusId
+            ? {
+                scheduledSession: {
+                  offering: { batch: { semester: { campusId } } },
+                },
+              }
+            : {},
+        }),
+      ),
       dataset(
         'notification_deliveries',
-        this.prisma.notificationDelivery.findMany(),
+        this.prisma.notificationDelivery.findMany({
+          where: campusId
+            ? {
+                alert: {
+                  scheduledSession: {
+                    offering: { batch: { semester: { campusId } } },
+                  },
+                },
+              }
+            : {},
+        }),
       ),
-      dataset('import_jobs', this.prisma.importJob.findMany()),
-      dataset('import_errors', this.prisma.importError.findMany()),
-      dataset('audit_events', this.prisma.auditEvent.findMany()),
+      dataset(
+        'import_jobs',
+        this.prisma.importJob.findMany({ where: campusId ? { campusId } : {} }),
+      ),
+      dataset(
+        'import_errors',
+        this.prisma.importError.findMany({
+          where: campusId ? { importJob: { campusId } } : {},
+        }),
+      ),
+      dataset(
+        'audit_events',
+        this.prisma.auditEvent.findMany({
+          where: campusId ? { campusId } : {},
+        }),
+      ),
     ]);
     const rows = datasets.flat();
     const csv = buildCsv(rows, [

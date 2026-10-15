@@ -317,3 +317,25 @@ function csv(examName: string) {
 function date(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
 }
+
+it('intersects the selected campus with faculty permissions', async () => {
+  const { service, prisma } = setup();
+  prisma.subjectOffering.findMany.mockResolvedValue([]);
+  await service.listOfferings(faculty, 'campus-b');
+  expect(prisma.subjectOffering.findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: {
+        AND: [
+          {
+            OR: [
+              {
+                faculty: { some: { staffProfileId: 'staff-a', active: true } },
+              },
+            ],
+          },
+          { batch: { semester: { campusId: 'campus-b' } } },
+        ],
+      },
+    }),
+  );
+});

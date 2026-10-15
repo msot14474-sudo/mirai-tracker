@@ -52,8 +52,14 @@ export class AcademicCalendarController {
   }
 
   @Get('subjects')
-  subjects(@CurrentUser() user: AuthenticatedUser) {
-    return this.calendar.listSubjects(user);
+  subjects(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.calendar.listSubjects(
+      user,
+      campusId ? id(campusId) : undefined,
+    );
   }
 
   @Post('subjects')

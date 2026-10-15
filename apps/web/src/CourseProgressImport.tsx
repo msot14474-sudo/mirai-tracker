@@ -46,7 +46,7 @@ const fields = [
   ['taughtDate', 'Date taught'],
 ] as const;
 
-export function CourseProgressImport() {
+export function CourseProgressImport({ campusId }: { campusId?: string }) {
   const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [offeringId, setOfferingId] = useState('');
@@ -54,8 +54,8 @@ export function CourseProgressImport() {
   const [mapping, setMapping] = useState<Mapping | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const offerings = useQuery({
-    queryKey: ['lesson-plans', 'offerings'],
-    queryFn: lessonPlanApi.offerings,
+    queryKey: ['lesson-plans', 'offerings', campusId],
+    queryFn: () => lessonPlanApi.offerings(campusId),
   });
   const inspect = useMutation({
     mutationFn: (useAi: boolean) =>
@@ -72,6 +72,7 @@ export function CourseProgressImport() {
     mutationFn: () =>
       upload<Preview>('/imports/progress/preview', file!, {
         offeringId,
+        ...(campusId ? { campusId } : {}),
         mapping: JSON.stringify(mapping),
       }),
     onSuccess: setPreview,
@@ -80,6 +81,7 @@ export function CourseProgressImport() {
     mutationFn: () =>
       upload('/imports/progress', file!, {
         offeringId,
+        ...(campusId ? { campusId } : {}),
         mapping: JSON.stringify(mapping),
       }),
     onSuccess: async () => {
@@ -174,10 +176,7 @@ export function CourseProgressImport() {
               Match columns with AI
             </button>
           </div>
-          <p className="schedule-help">
-            AI matching sends a small sample to your configured AI service.
-            Review the suggested columns before importing.
-          </p>
+
           {mapping && inspection ? (
             <>
               <h3>3. Check the columns</h3>

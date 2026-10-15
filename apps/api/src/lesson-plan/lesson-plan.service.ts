@@ -36,8 +36,15 @@ export class LessonPlanService {
     private readonly access: AccessPolicyService,
   ) {}
 
-  async listOfferings(user: AuthenticatedUser) {
-    const where = this.offeringScope(user);
+  async listOfferings(user: AuthenticatedUser, campusId?: string) {
+    const where = campusId
+      ? {
+          AND: [
+            this.offeringScope(user),
+            { batch: { semester: { campusId } } },
+          ],
+        }
+      : this.offeringScope(user);
     const offerings = await this.prisma.subjectOffering.findMany({
       where,
       include: {

@@ -126,12 +126,10 @@ it('saves source completion and planned dates atomically without inventing lectu
     $queryRaw: jest.fn(),
     lessonPlan: {
       count: jest.fn().mockResolvedValue(0),
-      create: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'plan',
-          units: [{ topics: [{ id: 'topic' }] }],
-        }),
+      create: jest.fn().mockResolvedValue({
+        id: 'plan',
+        units: [{ topics: [{ id: 'topic' }] }],
+      }),
     },
     topicScheduleVersion: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -141,17 +139,15 @@ it('saves source completion and planned dates atomically without inventing lectu
   };
   const prisma = {
     subjectOffering: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({
-          lessonPlans: [],
-          batch: {
-            semester: {
-              startDate: new Date('2026-01-01'),
-              endDate: new Date('2026-12-31'),
-            },
+      findUnique: jest.fn().mockResolvedValue({
+        lessonPlans: [],
+        batch: {
+          semester: {
+            startDate: new Date('2026-01-01'),
+            endDate: new Date('2026-12-31'),
           },
-        }),
+        },
+      }),
     },
     $transaction: jest.fn(async (fn) => fn(tx)),
   };
@@ -188,4 +184,63 @@ it('saves source completion and planned dates atomically without inventing lectu
     plannedStartDate: new Date('2026-08-24'),
   });
   expect(tx.auditEvent.create).toHaveBeenCalled();
+});
+
+it('returns automatic columns when AI dependencies are unavailable', async () => {
+  const service = new ProgressImportService(
+    {} as PrismaService,
+    { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,
+    {
+      incrementWithExpiry: jest.fn().mockRejectedValue(new Error('offline')),
+    } as unknown as RedisService,
+  );
+  const buffer = Buffer.from('Topic,Planned hr,Status\nHTML,1.5,Completed');
+  const result = await service.inspect(
+    {
+      buffer,
+      originalname: 'progress.csv',
+      mimetype: 'text/csv',
+      size: buffer.length,
+    },
+    true,
+    { id: 'actor' } as AuthenticatedUser,
+  );
+  expect(result.matching).toBe('automatic');
+  expect(result.mapping.topic).toBe(0);
+  expect(result.mapping.hours).toBe(1);
+  expect(result.sheets[0]?.rows[1]?.[0]).toBe('HTML');
+});
+
+it('keeps reading a file if the AI provider rejects the request', async () => {
+  const old = process.env.OLLAMA_API_KEY;
+  process.env.OLLAMA_API_KEY = 'test-only';
+  const fetch = jest
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(new Response(null, { status: 503 }));
+  try {
+    const service = new ProgressImportService(
+      {} as PrismaService,
+      { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,
+      {
+        incrementWithExpiry: jest.fn().mockResolvedValue(1),
+      } as unknown as RedisService,
+    );
+    const buffer = Buffer.from('Topic,Planned hr\nHTML,1.5');
+    const result = await service.inspect(
+      {
+        buffer,
+        originalname: 'progress.csv',
+        mimetype: 'text/csv',
+        size: buffer.length,
+      },
+      true,
+      { id: 'actor' } as AuthenticatedUser,
+    );
+    expect(result.matching).toBe('automatic');
+    expect(result.mapping.hours).toBe(1);
+  } finally {
+    fetch.mockRestore();
+    if (old === undefined) delete process.env.OLLAMA_API_KEY;
+    else process.env.OLLAMA_API_KEY = old;
+  }
 });

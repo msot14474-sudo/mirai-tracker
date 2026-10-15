@@ -136,7 +136,10 @@ async function upload<T>(path: string, file: File) {
 }
 
 export const lessonPlanApi = {
-  offerings: () => api<LessonPlanOffering[]>('/lesson-plans/offerings'),
+  offerings: (campusId?: string) =>
+    api<LessonPlanOffering[]>(
+      `/lesson-plans/offerings${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+    ),
   offering: (offeringId: string) =>
     api<LessonPlanDetail>(`/lesson-plans/offerings/${offeringId}`),
   preview: (offeringId: string, file: File) =>

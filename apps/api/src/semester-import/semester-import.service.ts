@@ -31,20 +31,49 @@ export class SemesterImportService {
     private readonly access: AccessPolicyService,
   ) {}
 
-  async preview(file: UploadedImportFile, user: AuthenticatedUser) {
-    this.access.assertGlobalManager(user);
-    return publicPreview(await parseAndValidateSemesterImport(file));
+  private async checkCampus(preview: SemesterImportPreview, campusId?: string) {
+    if (!campusId) return;
+    const campus = await this.prisma.campus.findUnique({
+      where: { id: campusId },
+      select: { code: true },
+    });
+    if (!campus) throw new BadRequestException('Choose a valid campus.');
+    if (
+      [...preview.data.setupRows, ...preview.data.calendarRows].some(
+        (row) => row.campusCode !== campus.code,
+      )
+    )
+      throw new BadRequestException(
+        'This file contains another campus. Use the selected campus code in your file or change campus first.',
+      );
   }
 
-  async execute(file: UploadedImportFile, user: AuthenticatedUser) {
+  async preview(
+    file: UploadedImportFile,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
     this.access.assertGlobalManager(user);
     const preview = await parseAndValidateSemesterImport(file);
+    await this.checkCampus(preview, campusId);
+    return publicPreview(preview);
+  }
+
+  async execute(
+    file: UploadedImportFile,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
+    this.access.assertGlobalManager(user);
+    const preview = await parseAndValidateSemesterImport(file);
+    await this.checkCampus(preview, campusId);
     const failedRows = Math.min(
       countFailedRows(preview.issues),
       preview.counts.rows,
     );
     const job = await this.prisma.importJob.create({
       data: {
+        ...(campusId ? { campusId } : {}),
         type: ImportType.FULL_SEMESTER,
         status: preview.valid ? JobStatus.PROCESSING : JobStatus.FAILED,
         uploadedById: user.id,
@@ -136,10 +165,13 @@ export class SemesterImportService {
     };
   }
 
-  async listJobs(user: AuthenticatedUser) {
+  async listJobs(user: AuthenticatedUser, campusId?: string) {
     this.access.assertGlobalManager(user);
     return this.prisma.importJob.findMany({
-      where: { type: ImportType.FULL_SEMESTER },
+      where: {
+        type: ImportType.FULL_SEMESTER,
+        ...(campusId ? { campusId } : {}),
+      },
       select: {
         id: true,
         fileName: true,

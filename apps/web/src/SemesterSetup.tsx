@@ -69,7 +69,7 @@ export function SemesterSetup({
       </div>
 
       {setupView === 'subjects' ? (
-        <SubjectSetup />
+        <SubjectSetup campusId={campusId} />
       ) : (
         <div className="semester-layout">
           <div>
@@ -219,19 +219,20 @@ export function SemesterSetup({
   );
 }
 
-function SubjectSetup() {
+function SubjectSetup({ campusId }: { campusId: string }) {
   const queryClient = useQueryClient();
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [savedSubject, setSavedSubject] = useState('');
   const subjects = useQuery({
-    queryKey: ['academic', 'subjects'],
-    queryFn: academicApi.subjects,
+    queryKey: ['academic', 'subjects', campusId],
+    queryFn: () => academicApi.subjects(campusId),
   });
   const mutation = useMutation({
     mutationFn: () =>
       academicApi.createSubject({
+        campusId,
         code,
         name,
         description: description.trim() || null,

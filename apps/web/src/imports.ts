@@ -72,16 +72,25 @@ export async function upload<T>(
 }
 
 export const importApi = {
-  preview: (file: File) => upload<ImportPreview>('/imports/preview', file),
-  execute: (file: File) =>
+  preview: (file: File, campusId?: string) =>
+    upload<ImportPreview>(
+      '/imports/preview',
+      file,
+      campusId ? { campusId } : {},
+    ),
+  execute: (file: File, campusId?: string) =>
     upload<{ job: ImportJob; counts?: ImportCounts; preview?: ImportPreview }>(
       '/imports',
       file,
+      campusId ? { campusId } : {},
     ),
-  jobs: async () => {
-    const response = await apiFetch(`${apiUrl}/imports`, {
-      credentials: 'include',
-    });
+  jobs: async (campusId?: string) => {
+    const response = await apiFetch(
+      `${apiUrl}/imports${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+      {
+        credentials: 'include',
+      },
+    );
     if (!response.ok) throw new Error(await messageFrom(response));
     return response.json() as Promise<ImportJob[]>;
   },

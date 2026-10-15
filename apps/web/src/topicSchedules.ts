@@ -137,7 +137,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const topicScheduleApi = {
-  offerings: () => api<TopicScheduleOffering[]>('/topic-schedules/offerings'),
+  offerings: (campusId?: string) =>
+    api<TopicScheduleOffering[]>(
+      `/topic-schedules/offerings${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+    ),
   offering: (offeringId: string) =>
     api<TopicScheduleDetail>(`/topic-schedules/offerings/${offeringId}`),
   calculate: (offeringId: string) =>

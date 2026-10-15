@@ -18,12 +18,18 @@ const statusLabels: Record<ProgressStatus, string> = {
   COMPLETE: 'COMPLETE',
 };
 
-export function ProgressDashboard({ scope }: { scope: 'faculty' | 'manager' }) {
+export function ProgressDashboard({
+  scope,
+  campusId,
+}: {
+  scope: 'faculty' | 'manager';
+  campusId?: string;
+}) {
   const [asOfDate, setAsOfDate] = useState(today());
   const [search, setSearch] = useState('');
   const dashboard = useQuery({
-    queryKey: ['progress-dashboard', asOfDate],
-    queryFn: () => progressApi.dashboard(asOfDate),
+    queryKey: ['progress-dashboard', asOfDate, campusId],
+    queryFn: () => progressApi.dashboard(asOfDate, campusId),
   });
   const visibleSubjects = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();

@@ -17,11 +17,11 @@ const examTypeLabels: Record<ExamReadinessExam['type'], string> = {
   OTHER: 'Exam',
 };
 
-export function ExamReadinessView() {
+export function ExamReadinessView({ campusId }: { campusId?: string }) {
   const [asOfDate, setAsOfDate] = useState(today());
   const readiness = useQuery({
-    queryKey: ['exam-readiness', asOfDate],
-    queryFn: () => examReadinessApi.list(asOfDate),
+    queryKey: ['exam-readiness', asOfDate, campusId],
+    queryFn: () => examReadinessApi.list(asOfDate, campusId),
   });
   const exams = readiness.data?.exams ?? [];
 

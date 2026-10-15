@@ -284,6 +284,8 @@ model Campus {
   createdAt       DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
   roleAssignments RoleAssignment[]
+  exportJobs      ExportJob[]
+  subjects        Subject[]
   semesters       Semester[]
   importJobs      ImportJob[]
   auditEvents     AuditEvent[]
@@ -372,6 +374,8 @@ model Batch {
 }
 
 model Subject {
+  campusId    String? @db.Uuid
+  campus      Campus? @relation(fields: [campusId], references: [id], onDelete: Restrict)
   id          String            @id @default(uuid()) @db.Uuid
   code        String            @unique @db.VarChar(64)
   name        String            @db.VarChar(200)
@@ -380,6 +384,7 @@ model Subject {
   createdAt   DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
   offerings   SubjectOffering[]
+  @@index([campusId])
 }
 
 model SubjectOffering {
@@ -710,6 +715,8 @@ model ImportError {
 }
 
 model ExportJob {
+  campusId      String? @db.Uuid
+  campus        Campus? @relation(fields: [campusId], references: [id], onDelete: SetNull)
   id            String     @id @default(uuid()) @db.Uuid
   type          ExportType
   status        JobStatus  @default(PROCESSING)

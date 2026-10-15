@@ -54,9 +54,12 @@ async function messageFrom(response: Response) {
 }
 
 export const examReadinessApi = {
-  list: async (asOfDate: string): Promise<ExamReadinessData> => {
+  list: async (
+    asOfDate: string,
+    campusId?: string,
+  ): Promise<ExamReadinessData> => {
     const response = await apiFetch(
-      `${apiUrl}/progress/exam-readiness?asOf=${encodeURIComponent(asOfDate)}`,
+      `${apiUrl}/progress/exam-readiness?asOf=${encodeURIComponent(asOfDate)}${campusId ? '&campusId=' + encodeURIComponent(campusId) : ''}`,
       { credentials: 'include' },
     );
     if (!response.ok) throw new Error(await messageFrom(response));

@@ -62,9 +62,12 @@ async function messageFrom(response: Response) {
 }
 
 export const progressApi = {
-  dashboard: async (asOfDate: string): Promise<ProgressDashboardData> => {
+  dashboard: async (
+    asOfDate: string,
+    campusId?: string,
+  ): Promise<ProgressDashboardData> => {
     const response = await apiFetch(
-      `${apiUrl}/progress/dashboard?asOf=${encodeURIComponent(asOfDate)}`,
+      `${apiUrl}/progress/dashboard?asOf=${encodeURIComponent(asOfDate)}${campusId ? '&campusId=' + encodeURIComponent(campusId) : ''}`,
       { credentials: 'include' },
     );
     if (!response.ok) throw new Error(await messageFrom(response));

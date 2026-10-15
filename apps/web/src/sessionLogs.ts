@@ -97,9 +97,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const sessionLogApi = {
-  forDate: (date: string) =>
+  forDate: (date: string, campusId?: string) =>
     api<SessionLogDay>(
-      `/session-logs/sessions?date=${encodeURIComponent(date)}`,
+      `/session-logs/sessions?date=${encodeURIComponent(date)}${campusId ? '&campusId=' + encodeURIComponent(campusId) : ''}`,
     ),
   create: (sessionId: string, input: SessionLogInput) =>
     api(`/session-logs/sessions/${sessionId}/logs`, {

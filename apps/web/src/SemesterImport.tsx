@@ -12,7 +12,7 @@ const countLabels: Array<[keyof ImportCounts, string]> = [
   ['calendarDays', 'Calendar days'],
 ];
 
-export function SemesterImport() {
+export function SemesterImport({ campusId }: { campusId?: string }) {
   const [mode, setMode] = useState('setup');
   return (
     <>
@@ -30,28 +30,34 @@ export function SemesterImport() {
           Existing course progress
         </button>
       </div>
-      {mode === 'setup' ? <SemesterSetupImport /> : <CourseProgressImport />}
+      {mode === 'setup' ? (
+        <SemesterSetupImport campusId={campusId} />
+      ) : (
+        <CourseProgressImport campusId={campusId} />
+      )}
     </>
   );
 }
 
-function SemesterSetupImport() {
+function SemesterSetupImport({ campusId }: { campusId?: string }) {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const jobs = useQuery({
-    queryKey: ['imports', 'jobs'],
-    queryFn: importApi.jobs,
+    queryKey: ['imports', 'jobs', campusId],
+    queryFn: () => importApi.jobs(campusId),
   });
   const previewMutation = useMutation({
-    mutationFn: (selected: File) => importApi.preview(selected),
+    mutationFn: (selected: File) => importApi.preview(selected, campusId),
     onSuccess: setPreview,
   });
   const importMutation = useMutation({
-    mutationFn: (selected: File) => importApi.execute(selected),
+    mutationFn: (selected: File) => importApi.execute(selected, campusId),
     onSuccess: async (result) => {
       if (result.preview) setPreview(result.preview);
-      await queryClient.invalidateQueries({ queryKey: ['imports', 'jobs'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['imports', 'jobs', campusId],
+      });
       await queryClient.invalidateQueries({ queryKey: ['academic'] });
     },
   });

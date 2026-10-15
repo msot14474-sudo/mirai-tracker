@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Get,
+  Query,
   Param,
   Patch,
   Post,
@@ -31,8 +32,14 @@ export class TopicScheduleController {
   constructor(private readonly schedules: TopicScheduleService) {}
 
   @Get('offerings')
-  offerings(@CurrentUser() user: AuthenticatedUser) {
-    return this.schedules.listOfferings(user);
+  offerings(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.schedules.listOfferings(
+      user,
+      campusId ? id(campusId) : undefined,
+    );
   }
 
   @Get('offerings/:offeringId')

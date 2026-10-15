@@ -54,6 +54,7 @@ export class SemesterImportController {
   @UseInterceptors(upload)
   previewProgress(
     @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('campusId') campusId: string,
     @Body('offeringId') offeringId: string,
     @Body('mapping') mapping: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -63,6 +64,7 @@ export class SemesterImportController {
       parseId(offeringId),
       parseMapping(mapping),
       user,
+      campusId ? parseId(campusId) : undefined,
     );
   }
 
@@ -70,6 +72,7 @@ export class SemesterImportController {
   @UseInterceptors(upload)
   importProgress(
     @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('campusId') campusId: string,
     @Body('offeringId') offeringId: string,
     @Body('mapping') mapping: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -79,6 +82,7 @@ export class SemesterImportController {
       parseId(offeringId),
       parseMapping(mapping),
       user,
+      campusId ? parseId(campusId) : undefined,
     );
   }
 
@@ -107,23 +111,39 @@ export class SemesterImportController {
   @UseInterceptors(upload)
   preview(
     @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('campusId') campusId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.imports.preview(requiredFile(file), user);
+    return this.imports.preview(
+      requiredFile(file),
+      user,
+      campusId ? parseId(campusId) : undefined,
+    );
   }
 
   @Post()
   @UseInterceptors(upload)
   execute(
     @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('campusId') campusId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.imports.execute(requiredFile(file), user);
+    return this.imports.execute(
+      requiredFile(file),
+      user,
+      campusId ? parseId(campusId) : undefined,
+    );
   }
 
   @Get()
-  jobs(@CurrentUser() user: AuthenticatedUser) {
-    return this.imports.listJobs(user);
+  jobs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.imports.listJobs(
+      user,
+      campusId ? parseId(campusId) : undefined,
+    );
   }
 
   @Get(':jobId/errors.csv')

@@ -38,8 +38,8 @@ export class ProgressController {
     @Query() query: unknown,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const { asOf } = parse(progressDateQuerySchema, query);
-    return this.progress.examReadiness(asOf, user);
+    const { asOf, campusId } = parse(progressDateQuerySchema, query);
+    return this.progress.examReadiness(asOf, user, campusId);
   }
 
   @Get('dashboard')
@@ -50,14 +50,14 @@ export class ProgressController {
     UserRole.FACULTY,
   )
   dashboard(@Query() query: unknown, @CurrentUser() user: AuthenticatedUser) {
-    const { asOf } = parse(progressDateQuerySchema, query);
-    return this.progress.dashboard(asOf, user);
+    const { asOf, campusId } = parse(progressDateQuerySchema, query);
+    return this.progress.dashboard(asOf, user, campusId);
   }
 
   @Get('subjects')
   subjects(@Query() query: unknown, @CurrentUser() user: AuthenticatedUser) {
-    const { asOf } = parse(progressDateQuerySchema, query);
-    return this.progress.list(asOf, user);
+    const { asOf, campusId } = parse(progressDateQuerySchema, query);
+    return this.progress.list(asOf, user, campusId);
   }
 
   @Get('subjects/:offeringId')
@@ -66,7 +66,7 @@ export class ProgressController {
     @Query() query: unknown,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const { asOf } = parse(progressDateQuerySchema, query);
+    const { asOf, campusId } = parse(progressDateQuerySchema, query);
     return this.progress.subject(id(offeringId), asOf, user);
   }
 
@@ -82,7 +82,7 @@ export class ProgressController {
     @Query() query: unknown,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const { asOf } = parse(progressDateQuerySchema, query);
+    const { asOf, campusId } = parse(progressDateQuerySchema, query);
     return this.progress.snapshot(id(offeringId), asOf, user);
   }
 }

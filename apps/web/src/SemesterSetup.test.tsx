@@ -51,7 +51,7 @@ describe('SemesterSetup subjects', () => {
         return json([]);
       }
       if (
-        url.endsWith('/academic/subjects') &&
+        url.endsWith('/academic/subjects?campusId=campus-a') &&
         (init?.method ?? 'GET') === 'GET'
       ) {
         return json(subjects);
@@ -88,6 +88,7 @@ describe('SemesterSetup subjects', () => {
 
     await waitFor(() =>
       expect(submitted).toEqual({
+        campusId: 'campus-a',
         code: 'cs-dsa',
         name: 'Data Structures and Algorithms',
         description: 'Core subject',

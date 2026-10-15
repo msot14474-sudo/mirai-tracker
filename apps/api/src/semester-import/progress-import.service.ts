@@ -328,31 +328,32 @@ export class ProgressImportService {
     this.access.assertGlobalManager(user);
     const sheets = await progressSheets(file);
     let mapping = suggestMapping(sheets);
+    let matching: 'automatic' | 'ai' = 'automatic';
     if (useAi) {
-      const count = await this.redis
-        .incrementWithExpiry(`progress-mapping:user:${user.id}`, 3600)
-        .catch(() => {
-          throw new ServiceUnavailableException(
-            'AI matching is temporarily unavailable. Choose the columns manually.',
-          );
-        });
-      if (count > 20)
-        throw new HttpException(
-          'AI matching limit reached. Choose columns manually or try later.',
-          429,
-        );
-      if (!process.env.OLLAMA_API_KEY)
-        throw new ServiceUnavailableException(
-          'AI mapping is not connected. You can choose the columns manually.',
-        );
       try {
+        const count = await this.redis
+          .incrementWithExpiry(`progress-mapping:user:${user.id}`, 3600)
+          .catch(() => {
+            throw new ServiceUnavailableException(
+              'AI matching is temporarily unavailable. Choose the columns manually.',
+            );
+          });
+        if (count > 20)
+          throw new HttpException(
+            'AI matching limit reached. Choose columns manually or try later.',
+            429,
+          );
+        if (!process.env.OLLAMA_API_KEY)
+          throw new ServiceUnavailableException(
+            'AI mapping is not connected. You can choose the columns manually.',
+          );
         const response = await fetch('https://ollama.com/api/chat', {
           method: 'POST',
           headers: {
             Authorization: 'Bearer ' + process.env.OLLAMA_API_KEY,
             'Content-Type': 'application/json',
           },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(12000),
           body: JSON.stringify({
             model: process.env.AI_MODEL || 'gpt-oss:20b',
             stream: false,
@@ -386,10 +387,10 @@ export class ProgressImportService {
         mapping = mappingSchema.parse(
           JSON.parse(result.message?.content || ''),
         );
+        matching = 'ai';
       } catch {
-        throw new ServiceUnavailableException(
-          'AI could not map this file. Choose the columns manually or try again.',
-        );
+        // Optional AI must never prevent reading or manually mapping a valid file.
+        mapping = suggestMapping(sheets);
       }
     }
     return {
@@ -399,6 +400,7 @@ export class ProgressImportService {
         totalRows: s.rows.length,
       })),
       mapping,
+      matching,
     };
   }
   async preview(
@@ -406,6 +408,7 @@ export class ProgressImportService {
     offeringId: string,
     mapping: Mapping,
     user: AuthenticatedUser,
+    campusId?: string,
   ) {
     this.access.assertGlobalManager(user);
     const offering = await this.prisma.subjectOffering.findUnique({
@@ -415,6 +418,10 @@ export class ProgressImportService {
         lessonPlans: { select: { id: true } },
       },
     });
+    if (campusId && offering?.batch.semester.campusId !== campusId)
+      throw new BadRequestException(
+        'Choose a subject from the selected campus.',
+      );
     if (!offering)
       throw new BadRequestException('Choose a subject and batch first.');
     if (offering.lessonPlans.length)
@@ -434,8 +441,15 @@ export class ProgressImportService {
     offeringId: string,
     mapping: Mapping,
     user: AuthenticatedUser,
+    campusId?: string,
   ) {
-    const preview = await this.preview(file, offeringId, mapping, user);
+    const preview = await this.preview(
+      file,
+      offeringId,
+      mapping,
+      user,
+      campusId,
+    );
     if (!preview.valid) throw new BadRequestException(preview.issues);
     return this.prisma.$transaction(
       async (tx) => {

@@ -38,34 +38,16 @@ export class FacultyAccessService {
     this.access.assertCanManageCampus(actor, campusId);
     const globalManager = this.access.isGlobalManager(actor);
     const accounts = await this.prisma.user.findMany({
-      where: globalManager
-        ? {
-            OR: [
-              { id: actor.id },
-              {
-                roleAssignments: {
-                  some: {
-                    OR: [
-                      { campusId },
-                      {
-                        role: {
-                          in: [UserRole.ADMIN, UserRole.PROGRAM_MANAGER],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            ],
-          }
-        : {
-            roleAssignments: {
-              some: {
-                campusId,
-                role: { in: [UserRole.FACULTY, UserRole.STUDENT] },
-              },
-            },
+      where: {
+        roleAssignments: {
+          some: {
+            campusId,
+            ...(globalManager
+              ? {}
+              : { role: { in: [UserRole.FACULTY, UserRole.STUDENT] } }),
           },
+        },
+      },
       select: {
         id: true,
         name: true,

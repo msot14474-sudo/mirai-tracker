@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { alertApi, MissedLogAlert } from './alerts';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
-export function AlertCenter() {
+export function AlertCenter({ campusId }: { campusId?: string }) {
   const feed = useQuery({
-    queryKey: ['missed-log-alerts'],
-    queryFn: alertApi.mine,
+    queryKey: ['missed-log-alerts', campusId],
+    queryFn: () => alertApi.mine(campusId),
     refetchInterval: 60_000,
   });
 

@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Get,
+  Query,
   Headers,
   HttpCode,
   Post,
@@ -28,8 +29,13 @@ export class MissedLogAlertController {
 
   @Get('me')
   @Roles(UserRole.FACULTY, UserRole.CAMPUS_MANAGER)
-  mine(@CurrentUser() user: AuthenticatedUser) {
-    return this.alerts.listMine(user);
+  mine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    if (campusId && !z.string().uuid().safeParse(campusId).success)
+      throw new BadRequestException('Invalid campus.');
+    return this.alerts.listMine(user, campusId);
   }
 
   @Post('test-email')

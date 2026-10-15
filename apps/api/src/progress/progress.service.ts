@@ -97,8 +97,8 @@ export class ProgressService {
     private readonly access: AccessPolicyService,
   ) {}
 
-  async list(asOfDate: string, user: AuthenticatedUser) {
-    const offerings = await this.findOfferings(user);
+  async list(asOfDate: string, user: AuthenticatedUser, campusId?: string) {
+    const offerings = await this.findOfferings(user, campusId);
 
     return {
       asOfDate,
@@ -108,8 +108,12 @@ export class ProgressService {
     };
   }
 
-  async dashboard(asOfDate: string, user: AuthenticatedUser) {
-    const { subjects } = await this.list(asOfDate, user);
+  async dashboard(
+    asOfDate: string,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
+    const { subjects } = await this.list(asOfDate, user, campusId);
     if (subjects.length === 0) {
       return {
         asOfDate,
@@ -129,8 +133,12 @@ export class ProgressService {
     };
   }
 
-  async examReadiness(asOfDate: string, user: AuthenticatedUser) {
-    const offerings = await this.findOfferings(user);
+  async examReadiness(
+    asOfDate: string,
+    user: AuthenticatedUser,
+    campusId?: string,
+  ) {
+    const offerings = await this.findOfferings(user, campusId);
     return calculateExamReadinessView(offerings, asOfDate);
   }
 
@@ -237,11 +245,12 @@ export class ProgressService {
     return scopes.length ? { OR: scopes } : { id: { in: [] } };
   }
 
-  private findOfferings(user: AuthenticatedUser) {
+  private findOfferings(user: AuthenticatedUser, campusId?: string) {
     return this.prisma.subjectOffering.findMany({
       where: {
         AND: [
           this.offeringScope(user),
+          ...(campusId ? [{ batch: { semester: { campusId } } }] : []),
           {
             status: {
               in: [

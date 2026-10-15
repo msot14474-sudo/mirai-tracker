@@ -25,8 +25,8 @@ export class SessionLogController {
 
   @Get('sessions')
   sessions(@Query() query: unknown, @CurrentUser() user: AuthenticatedUser) {
-    const { date } = parse(sessionLogDateQuerySchema, query);
-    return this.logs.listForDate(date, user);
+    const { date, campusId } = parse(sessionLogDateQuerySchema, query);
+    return this.logs.listForDate(date, user, campusId);
   }
 
   @Post('sessions/:sessionId/logs')

@@ -27,11 +27,11 @@ const workStatuses: Array<{ value: WorkStatus; label: string }> = [
   { value: 'NOT_APPLICABLE', label: 'Not applicable' },
 ];
 
-export function SessionLoggingWorkspace() {
+export function SessionLoggingWorkspace({ campusId }: { campusId?: string }) {
   const [date, setDate] = useState(today());
   const day = useQuery({
-    queryKey: ['session-logs', date],
-    queryFn: () => sessionLogApi.forDate(date),
+    queryKey: ['session-logs', date, campusId],
+    queryFn: () => sessionLogApi.forDate(date, campusId),
   });
 
   return (
@@ -122,7 +122,7 @@ function SessionLogCard({
       sessionLogApi.create(session.id, input),
     onSuccess: async (_result, input) => {
       setSavedSeconds(input.clientElapsedSeconds ?? null);
-      await queryClient.invalidateQueries({ queryKey: ['session-logs', date] });
+      await queryClient.invalidateQueries({ queryKey: ['session-logs'] });
     },
   });
 

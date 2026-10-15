@@ -515,6 +515,7 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'User access' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add new' }));
     expect(
       await screen.findByRole('button', { name: 'Administrator' }),
     ).toBeInTheDocument();

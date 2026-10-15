@@ -9,11 +9,11 @@ import {
 } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
-export function LessonPlanWorkspace() {
+export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
   const [offeringId, setOfferingId] = useState('');
   const offerings = useQuery({
-    queryKey: ['lesson-plans', 'offerings'],
-    queryFn: lessonPlanApi.offerings,
+    queryKey: ['lesson-plans', 'offerings', campusId],
+    queryFn: () => lessonPlanApi.offerings(campusId),
     staleTime: 60_000,
   });
   const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';

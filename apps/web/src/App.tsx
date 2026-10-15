@@ -1279,7 +1279,12 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'student-view':
         return <StudentOverview />;
       case 'alerts':
-        return <AlertCenter />;
+        return (
+          <AlertCenter
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'ai-insights':
         return (
           <AiInsights
@@ -1290,18 +1295,45 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           />
         );
       case 'progress':
-        return <ProgressDashboard scope={progressScope} />;
+        return (
+          <ProgressDashboard
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+            scope={progressScope}
+          />
+        );
       case 'exam-readiness':
-        return <ExamReadinessView />;
+        return (
+          <ExamReadinessView
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'exports':
-        return <ExportCenter />;
+        return (
+          <ExportCenter
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'academic-setup':
-        return <SemesterSetup initialCampusId={selectedCampusId} />;
+        return (
+          <SemesterSetup
+            key={selectedCampusId}
+            initialCampusId={selectedCampusId}
+          />
+        );
       case 'semester-import':
-        return <SemesterImport />;
+        return (
+          <SemesterImport
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'faculty-access':
         return (
           <FacultyAccessWorkspace
+            key={selectedCampusId}
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
             currentUserId={user.id}
@@ -1316,16 +1348,32 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'timetable':
         return (
           <TimetableSetup
+            key={selectedCampusId}
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
           />
         );
       case 'lesson-plans':
-        return <LessonPlanWorkspace />;
+        return (
+          <LessonPlanWorkspace
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'planned-dates':
-        return <TopicScheduleWorkspace />;
+        return (
+          <TopicScheduleWorkspace
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'daily-logging':
-        return <SessionLoggingWorkspace />;
+        return (
+          <SessionLoggingWorkspace
+            key={selectedCampusId}
+            campusId={selectedCampusId || undefined}
+          />
+        );
       case 'account':
         return (
           <AccountWorkspace
@@ -1542,7 +1590,7 @@ async function warmLessonPlanWorkspace(queryClient: QueryClient) {
     const { lessonPlanApi } = await import('./lessonPlans');
     const offerings = await queryClient.fetchQuery({
       queryKey: ['lesson-plans', 'offerings'],
-      queryFn: lessonPlanApi.offerings,
+      queryFn: () => lessonPlanApi.offerings(),
       staleTime: 60_000,
     });
     const firstOffering = offerings[0];
@@ -1563,7 +1611,7 @@ async function warmTopicScheduleWorkspace(queryClient: QueryClient) {
     const { topicScheduleApi } = await import('./topicSchedules');
     const offerings = await queryClient.fetchQuery({
       queryKey: ['topic-schedules', 'offerings'],
-      queryFn: topicScheduleApi.offerings,
+      queryFn: () => topicScheduleApi.offerings(),
       staleTime: 60_000,
     });
     const firstOffering = offerings[0];

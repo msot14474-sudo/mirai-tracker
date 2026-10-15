@@ -4,11 +4,11 @@ import { formatTeachingTime } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
 
-export function TopicScheduleWorkspace() {
+export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
   const [offeringId, setOfferingId] = useState('');
   const offerings = useQuery({
-    queryKey: ['topic-schedules', 'offerings'],
-    queryFn: topicScheduleApi.offerings,
+    queryKey: ['topic-schedules', 'offerings', campusId],
+    queryFn: () => topicScheduleApi.offerings(campusId),
     staleTime: 60_000,
   });
   const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';

@@ -41,10 +41,13 @@ async function messageFrom(response: Response) {
 }
 
 export const alertApi = {
-  mine: async (): Promise<MissedLogAlertFeed> => {
-    const response = await apiFetch(`${apiUrl}/missed-log-alerts/me`, {
-      credentials: 'include',
-    });
+  mine: async (campusId?: string): Promise<MissedLogAlertFeed> => {
+    const response = await apiFetch(
+      `${apiUrl}/missed-log-alerts/me${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+      {
+        credentials: 'include',
+      },
+    );
     if (!response.ok) throw new Error(await messageFrom(response));
     return response.json() as Promise<MissedLogAlertFeed>;
   },

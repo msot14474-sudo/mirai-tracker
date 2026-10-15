@@ -10,15 +10,15 @@ const typeLabels: Record<ExportRequest['type'], string> = {
   VISITING_FACULTY_HONORARIUM: 'Visiting faculty honorarium',
 };
 
-export function ExportCenter() {
+export function ExportCenter({ campusId }: { campusId?: string }) {
   const queryClient = useQueryClient();
   const [asOf, setAsOf] = useState(today());
   const [month, setMonth] = useState(today().slice(0, 7));
   const [ratePerLecture, setRatePerLecture] = useState('1500');
   const [downloaded, setDownloaded] = useState('');
   const history = useQuery({
-    queryKey: ['exports'],
-    queryFn: exportApi.history,
+    queryKey: ['exports', campusId],
+    queryFn: () => exportApi.history(campusId),
   });
   const createExport = useMutation({
     mutationFn: exportApi.download,
@@ -31,7 +31,7 @@ export function ExportCenter() {
 
   function download(request: ExportRequest) {
     setDownloaded('');
-    createExport.mutate(request);
+    createExport.mutate({ ...request, campusId });
   }
 
   return (

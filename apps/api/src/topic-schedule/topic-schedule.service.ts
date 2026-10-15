@@ -37,9 +37,16 @@ export class TopicScheduleService {
     private readonly access: AccessPolicyService,
   ) {}
 
-  async listOfferings(user: AuthenticatedUser) {
+  async listOfferings(user: AuthenticatedUser, campusId?: string) {
     const offerings = await this.prisma.subjectOffering.findMany({
-      where: this.offeringScope(user),
+      where: campusId
+        ? {
+            AND: [
+              this.offeringScope(user),
+              { batch: { semester: { campusId } } },
+            ],
+          }
+        : this.offeringScope(user),
       include: {
         subject: { select: { id: true, code: true, name: true } },
         batch: {

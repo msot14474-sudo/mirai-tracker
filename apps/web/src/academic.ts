@@ -85,8 +85,12 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const academicApi = {
   campuses: () => api<Campus[]>('/academic/campuses'),
-  subjects: () => api<Subject[]>('/academic/subjects'),
+  subjects: (campusId?: string) =>
+    api<Subject[]>(
+      `/academic/subjects${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+    ),
   createSubject: (input: {
+    campusId?: string;
     code: string;
     name: string;
     description: string | null;

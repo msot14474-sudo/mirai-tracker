@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Get,
+  Query,
   Post,
   StreamableFile,
 } from '@nestjs/common';
@@ -19,8 +20,14 @@ export class ExportController {
   constructor(private readonly exports: ExportService) {}
 
   @Get()
-  history(@CurrentUser() user: AuthenticatedUser) {
-    return this.exports.history(user);
+  history(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.exports.history(
+      user,
+      campusId ? parse(z.string().uuid(), campusId) : undefined,
+    );
   }
 
   @Post()

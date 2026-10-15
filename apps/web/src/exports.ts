@@ -5,7 +5,7 @@ export type ExportType =
   | 'SUBJECT_PROGRESS'
   | 'VISITING_FACULTY_HONORARIUM';
 
-export type ExportRequest =
+type ExportRequestBody =
   | { type: 'FULL_DATA' }
   | { type: 'CAMPUS_PROGRESS'; asOf: string }
   | { type: 'SUBJECT_PROGRESS'; asOf: string }
@@ -14,6 +14,8 @@ export type ExportRequest =
       month: string;
       ratePerLecture: number;
     };
+
+export type ExportRequest = ExportRequestBody & { campusId?: string };
 
 export type ExportJob = {
   id: string;
@@ -36,10 +38,13 @@ async function errorMessage(response: Response) {
 }
 
 export const exportApi = {
-  history: async (): Promise<ExportJob[]> => {
-    const response = await apiFetch(`${apiUrl}/exports`, {
-      credentials: 'include',
-    });
+  history: async (campusId?: string): Promise<ExportJob[]> => {
+    const response = await apiFetch(
+      `${apiUrl}/exports${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+      {
+        credentials: 'include',
+      },
+    );
     if (!response.ok) throw new Error(await errorMessage(response));
     return response.json() as Promise<ExportJob[]>;
   },

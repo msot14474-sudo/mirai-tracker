@@ -491,3 +491,20 @@ function schedule(topicId: string, plannedFinishDate: string) {
 function date(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
 }
+
+it('filters the campus before aggregating progress', async () => {
+  const { service, prisma } = setup();
+  prisma.subjectOffering.findMany.mockResolvedValue([]);
+  const result = await service.dashboard('2026-10-16', faculty, 'campus-b');
+  expect(prisma.subjectOffering.findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: {
+        AND: expect.arrayContaining([
+          { batch: { semester: { campusId: 'campus-b' } } },
+        ]),
+      },
+    }),
+  );
+  expect(result.subjects).toEqual([]);
+  expect(result.summary).toBeNull();
+});
