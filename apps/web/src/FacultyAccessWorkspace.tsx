@@ -32,6 +32,8 @@ export function FacultyAccessWorkspace({
     queryFn: academicApi.campuses,
   });
   const [campusId, setCampusId] = useState(initialCampusId);
+  const [showCreate, setShowCreate] = useState(false);
+  const [accountFilter, setAccountFilter] = useState('ALL');
   const [accountType, setAccountType] = useState<AccountType>('FACULTY');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [revokeAccountId, setRevokeAccountId] = useState('');
@@ -207,223 +209,11 @@ export function FacultyAccessWorkspace({
         </label>
       </div>
 
-      {canCreateCampusManagers || canCreateAdministrators ? (
-        <div className="access-type-tabs" aria-label="Account type">
-          <button
-            type="button"
-            aria-pressed={accountType === 'FACULTY'}
-            onClick={() => chooseAccountType('FACULTY')}
-          >
-            Faculty
-          </button>
-          {canCreateCampusManagers ? (
-            <button
-              type="button"
-              aria-pressed={accountType === 'CAMPUS_MANAGER'}
-              onClick={() => chooseAccountType('CAMPUS_MANAGER')}
-            >
-              Campus Manager
-            </button>
-          ) : null}
-          {canCreateAdministrators ? (
-            <button
-              type="button"
-              aria-pressed={accountType === 'ADMIN'}
-              onClick={() => chooseAccountType('ADMIN')}
-            >
-              Administrator
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
       {campuses.isError || detail.isError ? (
         <p className="form-error" role="alert">
           {campuses.error?.message ?? detail.error?.message}
         </p>
       ) : null}
-
-      <div
-        className={`faculty-access-layout${isFaculty ? '' : ' single-column'}`}
-      >
-        <form
-          ref={form}
-          className="setup-card faculty-access-form"
-          onSubmit={submit}
-        >
-          <div>
-            <h3>{formTitle}</h3>
-            {!isFaculty ? (
-              <p className="access-scope-copy">
-                {accountType === 'ADMIN'
-                  ? 'Global access across all campuses'
-                  : (selectedCampus?.name ?? 'Selected campus')}
-              </p>
-            ) : null}
-          </div>
-
-          <label>
-            Full name
-            <input name="name" minLength={2} maxLength={160} required />
-          </label>
-          <div className="field-pair">
-            <label>
-              Login email
-              <input name="email" type="email" autoComplete="off" required />
-            </label>
-            <label>
-              Different OTP email{' '}
-              <span className="optional-label">Optional</span>
-              <input name="notificationEmail" type="email" autoComplete="off" />
-            </label>
-          </div>
-
-          {isFaculty ? (
-            <>
-              <div className="field-pair">
-                <label>
-                  Employee code
-                  <input
-                    name="employeeCode"
-                    minLength={2}
-                    maxLength={64}
-                    required
-                  />
-                </label>
-                <label>
-                  Faculty type
-                  <select name="staffType" defaultValue="REGULAR">
-                    <option value="REGULAR">Regular</option>
-                    <option value="VISITING">Visiting</option>
-                  </select>
-                </label>
-              </div>
-
-              <fieldset className="faculty-offering-picker">
-                <legend>Subject access</legend>
-                <div>
-                  {detail.data?.offerings.map((offering) => (
-                    <label key={offering.id}>
-                      <input
-                        type="checkbox"
-                        name="offeringIds"
-                        value={offering.id}
-                      />
-                      <span>
-                        <strong>{offering.subject.code}</strong>
-                        {offering.subject.name} - {offering.batch.code}
-                        <small>{offering.batch.semester.name}</small>
-                      </span>
-                    </label>
-                  ))}
-                  {detail.data?.offerings.length === 0 ? (
-                    <p className="empty-copy">
-                      Create a semester and subject offering first.
-                    </p>
-                  ) : null}
-                </div>
-              </fieldset>
-            </>
-          ) : null}
-
-          <label>
-            Account password
-            <input
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              minLength={12}
-              maxLength={256}
-              required
-            />
-            <small>Use at least 12 characters and share it privately.</small>
-          </label>
-
-          {mutationError ? (
-            <p className="form-error" role="alert">
-              {mutationError.message}
-            </p>
-          ) : null}
-          {createFaculty.isSuccess ? (
-            <p className="form-success" role="status">
-              Faculty access created.
-            </p>
-          ) : null}
-          {createAccount.isSuccess ? (
-            <p className="form-success" role="status">
-              {accountType === 'ADMIN'
-                ? 'Administrator access created.'
-                : 'Campus Manager access created.'}
-            </p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={(accountType !== 'ADMIN' && !campusId) || isPending}
-          >
-            {isPending ? 'Creating access...' : createLabel}
-          </button>
-        </form>
-
-        {isFaculty ? (
-          <div className="faculty-directory">
-            <div className="subheading-row">
-              <div>
-                <h3>Campus faculty</h3>
-              </div>
-              <span>{detail.data?.faculty.length ?? 0} people</span>
-            </div>
-
-            {detail.isLoading ? (
-              <LoadingSkeleton variant="list" label="Loading faculty" />
-            ) : null}
-            <div className="faculty-directory-list">
-              {detail.data?.faculty.map((faculty) => (
-                <article key={faculty.id}>
-                  <header>
-                    <div>
-                      <strong>{faculty.user.name}</strong>
-                      <span>
-                        {faculty.employeeCode} -{' '}
-                        {faculty.staffType === 'VISITING'
-                          ? 'Visiting'
-                          : 'Regular'}
-                      </span>
-                    </div>
-                    <b
-                      className={
-                        faculty.user.status === 'ACTIVE' ? 'active' : 'inactive'
-                      }
-                    >
-                      {faculty.user.status}
-                    </b>
-                  </header>
-                  <p>{faculty.user.email}</p>
-                  <small>
-                    OTP: {faculty.user.notificationEmail ?? faculty.user.email}
-                  </small>
-                  <div className="faculty-subject-tags">
-                    {faculty.facultyAssignments.map((assignment) => (
-                      <span key={assignment.id}>
-                        {assignment.offering.subject.code} -{' '}
-                        {assignment.offering.batch.code}
-                      </span>
-                    ))}
-                    {faculty.facultyAssignments.length === 0 ? (
-                      <span>Not assigned to a subject yet</span>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-            {detail.data?.faculty.length === 0 ? (
-              <div className="empty-state faculty-empty-state">
-                <span>01</span>
-                <h3>Add the first faculty member</h3>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
 
       <section
         className="managed-accounts"
@@ -432,11 +222,35 @@ export function FacultyAccessWorkspace({
         <div className="subheading-row managed-accounts-heading">
           <div>
             <p className="workspace-kicker">Account controls</p>
-            <h3 id="managed-accounts-title">Managed accounts</h3>
+            <h3 id="managed-accounts-title">People with access</h3>
           </div>
-          <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
+          <div className="access-directory-actions">
+            <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreate(true);
+                setSelectedAccountId('');
+              }}
+            >
+              Add new
+            </button>
+          </div>
         </div>
 
+        <label className="access-role-filter">
+          Role
+          <select
+            value={accountFilter}
+            onChange={(e) => setAccountFilter(e.target.value)}
+          >
+            <option value="ALL">All roles</option>
+            <option value="FACULTY">Faculty</option>
+            <option value="CAMPUS_MANAGER">Campus managers</option>
+            <option value="ADMIN">Administrators</option>
+            <option value="STUDENT">Students</option>
+          </select>
+        </label>
         {accounts.isLoading ? (
           <LoadingSkeleton variant="list" label="Loading managed accounts" />
         ) : accounts.isError ? (
@@ -446,43 +260,57 @@ export function FacultyAccessWorkspace({
         ) : (
           <div className="managed-accounts-layout">
             <div className="managed-account-list">
-              {accounts.data?.accounts?.map((account) => (
-                <button
-                  type="button"
-                  key={account.id}
-                  className={
-                    selectedAccountId === account.id ? 'active' : undefined
-                  }
-                  onClick={() => {
-                    setSelectedAccountId(account.id);
-                    updateAccount.reset();
-                  }}
-                >
-                  <span className="managed-account-avatar" aria-hidden="true">
-                    {account.name
-                      .split(/\s+/)
-                      .map((part) => part[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </span>
-                  <span className="managed-account-identity">
-                    <strong>
-                      {account.name}
-                      {account.id === currentUserId ? <small>You</small> : null}
-                    </strong>
-                    <span>{account.email}</span>
-                    <small>{accountRoleLabel(account)}</small>
-                  </span>
-                  <b
+              {accounts.data?.accounts
+                ?.filter(
+                  (account) =>
+                    accountFilter === 'ALL' ||
+                    account.roleAssignments.some(
+                      (assignment) =>
+                        assignment.role === accountFilter ||
+                        (accountFilter === 'ADMIN' &&
+                          assignment.role === 'PROGRAM_MANAGER'),
+                    ),
+                )
+                .map((account) => (
+                  <button
+                    type="button"
+                    key={account.id}
                     className={
-                      account.status === 'ACTIVE' ? 'active' : 'inactive'
+                      selectedAccountId === account.id ? 'active' : undefined
                     }
+                    onClick={() => {
+                      setShowCreate(false);
+                      setSelectedAccountId(account.id);
+                      updateAccount.reset();
+                    }}
                   >
-                    {account.status}
-                  </b>
-                </button>
-              ))}
+                    <span className="managed-account-avatar" aria-hidden="true">
+                      {account.name
+                        .split(/\s+/)
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </span>
+                    <span className="managed-account-identity">
+                      <strong>
+                        {account.name}
+                        {account.id === currentUserId ? (
+                          <small>You</small>
+                        ) : null}
+                      </strong>
+                      <span>{account.email}</span>
+                      <small>{accountRoleLabel(account)}</small>
+                    </span>
+                    <b
+                      className={
+                        account.status === 'ACTIVE' ? 'active' : 'inactive'
+                      }
+                    >
+                      {account.status}
+                    </b>
+                  </button>
+                ))}
               {accounts.data?.accounts?.length === 0 ? (
                 <p className="empty-copy">
                   No manageable accounts in this campus.
@@ -490,7 +318,178 @@ export function FacultyAccessWorkspace({
               ) : null}
             </div>
 
-            {selectedAccount ? (
+            {showCreate ? (
+              <div className="access-create-panel">
+                <button
+                  type="button"
+                  className="access-close-create"
+                  disabled={isPending}
+                  onClick={() => setShowCreate(false)}
+                >
+                  Close
+                </button>
+                {canCreateCampusManagers || canCreateAdministrators ? (
+                  <div className="access-type-tabs" aria-label="Account type">
+                    <button
+                      type="button"
+                      aria-pressed={accountType === 'FACULTY'}
+                      onClick={() => chooseAccountType('FACULTY')}
+                    >
+                      Faculty
+                    </button>
+                    {canCreateCampusManagers ? (
+                      <button
+                        type="button"
+                        aria-pressed={accountType === 'CAMPUS_MANAGER'}
+                        onClick={() => chooseAccountType('CAMPUS_MANAGER')}
+                      >
+                        Campus Manager
+                      </button>
+                    ) : null}
+                    {canCreateAdministrators ? (
+                      <button
+                        type="button"
+                        aria-pressed={accountType === 'ADMIN'}
+                        onClick={() => chooseAccountType('ADMIN')}
+                      >
+                        Administrator
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <form
+                  ref={form}
+                  className="setup-card faculty-access-form"
+                  onSubmit={submit}
+                >
+                  <div>
+                    <h3>{formTitle}</h3>
+                    {!isFaculty ? (
+                      <p className="access-scope-copy">
+                        {accountType === 'ADMIN'
+                          ? 'Global access across all campuses'
+                          : (selectedCampus?.name ?? 'Selected campus')}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <label>
+                    Full name
+                    <input name="name" minLength={2} maxLength={160} required />
+                  </label>
+                  <div className="field-pair">
+                    <label>
+                      Login email
+                      <input
+                        name="email"
+                        type="email"
+                        autoComplete="off"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Different OTP email{' '}
+                      <span className="optional-label">Optional</span>
+                      <input
+                        name="notificationEmail"
+                        type="email"
+                        autoComplete="off"
+                      />
+                    </label>
+                  </div>
+
+                  {isFaculty ? (
+                    <>
+                      <div className="field-pair">
+                        <label>
+                          Employee code
+                          <input
+                            name="employeeCode"
+                            minLength={2}
+                            maxLength={64}
+                            required
+                          />
+                        </label>
+                        <label>
+                          Faculty type
+                          <select name="staffType" defaultValue="REGULAR">
+                            <option value="REGULAR">Regular</option>
+                            <option value="VISITING">Visiting</option>
+                          </select>
+                        </label>
+                      </div>
+
+                      <fieldset className="faculty-offering-picker">
+                        <legend>Subject access</legend>
+                        <div>
+                          {detail.data?.offerings.map((offering) => (
+                            <label key={offering.id}>
+                              <input
+                                type="checkbox"
+                                name="offeringIds"
+                                value={offering.id}
+                              />
+                              <span>
+                                <strong>{offering.subject.code}</strong>
+                                {offering.subject.name} - {offering.batch.code}
+                                <small>{offering.batch.semester.name}</small>
+                              </span>
+                            </label>
+                          ))}
+                          {detail.data?.offerings.length === 0 ? (
+                            <p className="empty-copy">
+                              Create a semester and subject offering first.
+                            </p>
+                          ) : null}
+                        </div>
+                      </fieldset>
+                    </>
+                  ) : null}
+
+                  <label>
+                    Account password
+                    <input
+                      name="password"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={12}
+                      maxLength={256}
+                      required
+                    />
+                    <small>
+                      Use at least 12 characters and share it privately.
+                    </small>
+                  </label>
+
+                  {mutationError ? (
+                    <p className="form-error" role="alert">
+                      {mutationError.message}
+                    </p>
+                  ) : null}
+                  {createFaculty.isSuccess ? (
+                    <p className="form-success" role="status">
+                      Faculty access created.
+                    </p>
+                  ) : null}
+                  {createAccount.isSuccess ? (
+                    <p className="form-success" role="status">
+                      {accountType === 'ADMIN'
+                        ? 'Administrator access created.'
+                        : 'Campus Manager access created.'}
+                    </p>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={
+                      (accountType !== 'ADMIN' && !campusId) || isPending
+                    }
+                  >
+                    {isPending ? 'Creating access...' : createLabel}
+                  </button>
+                </form>
+              </div>
+            ) : selectedAccount ? (
               <form
                 key={selectedAccount.id + selectedAccount.status}
                 className="managed-account-editor"

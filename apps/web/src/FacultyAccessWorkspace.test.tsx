@@ -86,6 +86,10 @@ describe('FacultyAccessWorkspace', () => {
     expect(
       await screen.findByRole('heading', { name: 'User access' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Add faculty' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add new' }));
     const offering = await screen.findByLabelText(/CS-DSA/);
     fireEvent.change(screen.getByLabelText('Full name'), {
       target: { value: 'Dr Asha' },
@@ -163,7 +167,10 @@ describe('FacultyAccessWorkspace', () => {
     });
     await screen.findByRole('heading', { name: 'User access' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Campus Manager' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add new' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Campus Manager' }),
+    );
     fireEvent.change(screen.getByLabelText('Full name'), {
       target: { value: 'New Campus Manager' },
     });
