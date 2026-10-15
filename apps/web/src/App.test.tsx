@@ -306,6 +306,24 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
+      if (url.includes('/ai-insights'))
+        return new Response(
+          JSON.stringify({
+            generatedAt: '2026-10-16T00:00:00Z',
+            summary: {
+              subjects: 0,
+              attention: 0,
+              overdueTopics: 0,
+              missingLogs: 0,
+              needsHelp: 0,
+              reviews: 0,
+            },
+            coverage: { pastLectures: 0, upcomingLectures: 0 },
+            subjects: [],
+          }),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+
       if (
         url.endsWith('/topic-schedules/offerings') ||
         url.endsWith('/academic/campuses')

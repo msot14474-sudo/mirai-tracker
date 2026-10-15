@@ -1,3 +1,4 @@
+import { CampusAnalytics } from './CampusAnalytics';
 import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { advanceSessionGeneration, apiUrl, sessionExpiredEvent } from './http';
 import { RequestRecovery, AppErrorBoundary } from './RequestRecovery';
@@ -1340,13 +1341,21 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       default:
         return (
           <>
-            <CampusOverview
-              user={user}
-              campus={selectedCampus}
-              roleLabel={primaryRoleLabel}
-              workspaces={navigation}
-              onOpen={openView}
-            />
+            {canViewProgressDashboard ? (
+              <CampusAnalytics
+                campusId={selectedCampusId || undefined}
+                campusName={selectedCampus?.name}
+                name={user.name}
+              />
+            ) : (
+              <CampusOverview
+                user={user}
+                campus={selectedCampus}
+                roleLabel={primaryRoleLabel}
+                workspaces={navigation}
+                onOpen={openView}
+              />
+            )}
             {canViewStudentOverview ? <StudentLectureFeedback /> : null}
           </>
         );
