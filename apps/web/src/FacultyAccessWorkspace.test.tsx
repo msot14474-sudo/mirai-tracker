@@ -184,7 +184,7 @@ describe('FacultyAccessWorkspace', () => {
       screen.getByRole('button', { name: 'Create campus manager' }),
     );
     expect(
-      await screen.findByText('Campus Manager access created.'),
+      await screen.findByText('Campus Manager access assigned.'),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Administrator' }));
@@ -201,7 +201,7 @@ describe('FacultyAccessWorkspace', () => {
       screen.getByRole('button', { name: 'Create administrator' }),
     );
     expect(
-      await screen.findByText('Administrator access created.'),
+      await screen.findByText('Administrator access assigned.'),
     ).toBeInTheDocument();
 
     await waitFor(() => {
