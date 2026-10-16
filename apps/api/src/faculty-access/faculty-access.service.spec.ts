@@ -461,4 +461,40 @@ describe('FacultyAccessService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userUpdate).not.toHaveBeenCalled();
   });
+  it('lists global administrators for global managers but keeps campus managers scoped', async () => {
+    userFindMany.mockResolvedValue([]);
+    access.isGlobalManager.mockReturnValue(true);
+    await service().accounts(campusId, programManager);
+    expect(userFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          roleAssignments: {
+            some: {
+              OR: [
+                { campusId },
+                {
+                  campusId: null,
+                  role: { in: [UserRole.ADMIN, UserRole.PROGRAM_MANAGER] },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
+    access.isGlobalManager.mockReturnValue(false);
+    await service().accounts(campusId, actor);
+    expect(userFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          roleAssignments: {
+            some: {
+              campusId,
+              role: { in: [UserRole.FACULTY, UserRole.STUDENT] },
+            },
+          },
+        },
+      }),
+    );
+  });
 });

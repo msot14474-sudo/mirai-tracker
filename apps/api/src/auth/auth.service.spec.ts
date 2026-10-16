@@ -293,6 +293,16 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('blocks an existing session after access is removed', async () => {
+    findUnique.mockResolvedValueOnce(await activeUser(UserStatus.SUSPENDED));
+    const auth = service();
+    const token = 'removed-access-session';
+    const key = findSessionKey(auth, token);
+    store.set(key, 'user-a');
+    await expect(auth.userForSession(token)).resolves.toBeNull();
+    expect(redis.delete).toHaveBeenCalledWith(key);
+  });
+
   it('reloads current roles for every valid session', async () => {
     const record = await activeUser();
     const {

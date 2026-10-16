@@ -285,44 +285,108 @@ export function FacultyAccessWorkspace({
                     ),
                 )
                 .map((account) => (
-                  <button
-                    type="button"
-                    key={account.id}
-                    className={
-                      selectedAccountId === account.id ? 'active' : undefined
-                    }
-                    onClick={() => {
-                      setShowCreate(false);
-                      setSelectedAccountId(account.id);
-                      updateAccount.reset();
-                    }}
-                  >
-                    <span className="managed-account-avatar" aria-hidden="true">
-                      {account.name
-                        .split(/\s+/)
-                        .map((part) => part[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </span>
-                    <span className="managed-account-identity">
-                      <strong>
-                        {account.name}
-                        {account.id === currentUserId ? (
-                          <small>You</small>
-                        ) : null}
-                      </strong>
-                      <span>{account.email}</span>
-                      <small>{accountRoleLabel(account)}</small>
-                    </span>
-                    <b
+                  <div key={account.id} className="managed-account-row">
+                    <button
+                      type="button"
                       className={
-                        account.status === 'ACTIVE' ? 'active' : 'inactive'
+                        selectedAccountId === account.id ? 'active' : undefined
                       }
+                      onClick={() => {
+                        setShowCreate(false);
+                        setSelectedAccountId(account.id);
+                        updateAccount.reset();
+                      }}
                     >
-                      {account.status}
-                    </b>
-                  </button>
+                      <span
+                        className="managed-account-avatar"
+                        aria-hidden="true"
+                      >
+                        {account.name
+                          .split(/\s+/)
+                          .map((part) => part[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </span>
+                      <span className="managed-account-identity">
+                        <strong>
+                          {account.name}
+                          {account.id === currentUserId ? (
+                            <small>You</small>
+                          ) : null}
+                        </strong>
+                        <span>{account.email}</span>
+                        <small>{accountRoleLabel(account)}</small>
+                      </span>
+                      <b
+                        className={
+                          account.status === 'ACTIVE' ? 'active' : 'inactive'
+                        }
+                      >
+                        {account.status}
+                      </b>
+                    </button>
+                    {account.status === 'SUSPENDED' ||
+                    account.status === 'ARCHIVED' ? (
+                      <small className="account-access-note">
+                        Access removed
+                      </small>
+                    ) : account.id === currentUserId ? (
+                      <small className="account-access-note">
+                        Another administrator can remove your access.
+                      </small>
+                    ) : revokeAccountId === account.id ? (
+                      <div
+                        className="access-revoke"
+                        role="group"
+                        aria-label={`Remove access for ${account.name}`}
+                      >
+                        <p>
+                          Remove access for {account.name}? Sign-in and existing
+                          sessions will be blocked. Academic records are kept.
+                        </p>
+                        <button
+                          type="button"
+                          disabled={updateAccount.isPending}
+                          onClick={() =>
+                            updateAccount.mutate({
+                              userId: account.id,
+                              input: { status: 'SUSPENDED' },
+                            })
+                          }
+                        >
+                          {updateAccount.isPending
+                            ? 'Removing…'
+                            : 'Confirm remove access'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={updateAccount.isPending}
+                          onClick={() => setRevokeAccountId('')}
+                        >
+                          Cancel
+                        </button>
+                        {updateAccount.error ? (
+                          <p className="form-error" role="alert">
+                            {updateAccount.error.message}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <button
+                        className="account-remove-button"
+                        type="button"
+                        aria-label={`Remove access for ${account.name}`}
+                        disabled={updateAccount.isPending}
+                        onClick={() => {
+                          updateAccount.reset();
+                          setRevokeAccountId(account.id);
+                        }}
+                      >
+                        Remove access
+                      </button>
+                    )}
+                  </div>
                 ))}
               {accounts.data?.accounts?.length === 0 ? (
                 <p className="empty-copy">
@@ -609,48 +673,9 @@ export function FacultyAccessWorkspace({
                     Account changes saved securely.
                   </p>
                 ) : null}
-                {selectedAccount.id !== currentUserId &&
-                selectedAccount.status === 'ACTIVE' ? (
-                  <div className="access-revoke">
-                    {revokeAccountId === selectedAccount.id ? (
-                      <>
-                        <p>
-                          Delete access for {selectedAccount.name}? This blocks
-                          sign-in across the app. Academic records are kept.
-                        </p>
-                        <button
-                          type="button"
-                          disabled={updateAccount.isPending}
-                          onClick={() =>
-                            updateAccount.mutate({
-                              userId: selectedAccount.id,
-                              input: { status: 'SUSPENDED' },
-                            })
-                          }
-                        >
-                          Confirm delete access
-                        </button>
-                        <button
-                          type="button"
-                          disabled={updateAccount.isPending}
-                          onClick={() => setRevokeAccountId('')}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={updateAccount.isPending}
-                        onClick={() => setRevokeAccountId(selectedAccount.id)}
-                      >
-                        Delete access
-                      </button>
-                    )}
-                  </div>
-                ) : selectedAccount.status === 'SUSPENDED' ? (
+                {selectedAccount.status === 'SUSPENDED' ? (
                   <p role="status">
-                    Access revoked. This account cannot sign in.
+                    Access removed. This account cannot sign in.
                   </p>
                 ) : null}
                 <button type="submit" disabled={updateAccount.isPending}>

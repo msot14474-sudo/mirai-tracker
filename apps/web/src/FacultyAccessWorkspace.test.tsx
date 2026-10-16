@@ -23,6 +23,7 @@ function response(value: unknown) {
 
 function renderWorkspace(
   props: {
+    currentUserId?: string;
     canCreateCampusManagers?: boolean;
     canCreateAdministrators?: boolean;
   } = {},
@@ -285,7 +286,9 @@ describe('FacultyAccessWorkspace', () => {
     });
 
     renderWorkspace();
-    fireEvent.click(await screen.findByRole('button', { name: /Student One/ }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Student One/ }),
+    );
     fireEvent.change(screen.getByLabelText(/New password/), {
       target: { value: 'a-new-student-password' },
     });
@@ -303,12 +306,14 @@ describe('FacultyAccessWorkspace', () => {
       email: 'student@example.edu',
       password: 'a-new-student-password',
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Delete access' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove access for Student One' }),
+    );
     expect(
       requests.filter((request) => request.method === 'PATCH'),
     ).toHaveLength(1);
     fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm delete access' }),
+      screen.getByRole('button', { name: 'Confirm remove access' }),
     );
     await waitFor(() =>
       expect(
@@ -318,4 +323,75 @@ describe('FacultyAccessWorkspace', () => {
     const revoked = requests.filter((request) => request.method === 'PATCH')[1];
     expect(JSON.parse(revoked!.body!)).toEqual({ status: 'SUSPENDED' });
   });
+  it.each(['FACULTY', 'CAMPUS_MANAGER', 'ADMIN', 'STUDENT'])(
+    'removes %s access directly from the directory after confirmation',
+    async (role) => {
+      let status = 'ACTIVE';
+      const patches: unknown[] = [];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (init?.method === 'PATCH') {
+          patches.push(JSON.parse(String(init.body)));
+          status = 'SUSPENDED';
+          return response({
+            account: { id: 'target' },
+            passwordChanged: false,
+          });
+        }
+        if (url.endsWith('/academic/campuses'))
+          return response([
+            {
+              id: 'campus-a',
+              name: 'Campus',
+              code: 'A',
+              timezone: 'Asia/Kolkata',
+            },
+          ]);
+        if (url.endsWith('/accounts'))
+          return response({
+            accounts: [
+              {
+                id: 'target',
+                name: 'Test Person',
+                email: 'person@example.edu',
+                status,
+                roleAssignments: [
+                  { role, campusId: 'campus-a', campus: { name: 'Campus' } },
+                ],
+                staffProfile: null,
+                studentProfile: null,
+              },
+            ],
+          });
+        return response({
+          campus: { id: 'campus-a' },
+          faculty: [],
+          offerings: [],
+        });
+      });
+      renderWorkspace({
+        currentUserId: 'actor',
+        canCreateAdministrators: true,
+      });
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: 'Remove access for Test Person',
+        }),
+      );
+      expect(patches).toEqual([]);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(patches).toEqual([]);
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Remove access for Test Person' }),
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Confirm remove access' }),
+      );
+      await waitFor(() => expect(patches).toEqual([{ status: 'SUSPENDED' }]));
+      expect(await screen.findByText('Access removed')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Remove access for Test Person' }),
+      ).not.toBeInTheDocument();
+    },
+  );
 });

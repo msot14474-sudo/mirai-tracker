@@ -8336,7 +8336,7 @@ textarea:focus {
   background: #f7f9fd;
 }
 
-.managed-account-list > button {
+.managed-account-row > button:first-child {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -8352,8 +8352,8 @@ textarea:focus {
   text-align: left;
 }
 
-.managed-account-list > button:hover,
-.managed-account-list > button:focus-visible {
+.managed-account-row > button:first-child:hover,
+.managed-account-row > button:first-child:focus-visible {
   border-color: #c7d7f7;
   background: #fff;
   box-shadow: 0 0.6rem 1.4rem rgba(33, 72, 153, 0.08);
@@ -8361,7 +8361,7 @@ textarea:focus {
   transform: translateY(-1px);
 }
 
-.managed-account-list > button.active {
+.managed-account-row > button:first-child.active {
   border-color: #88aaf1;
   background: #eef4ff;
   box-shadow: inset 0.2rem 0 #2862db;
@@ -9411,3 +9411,9 @@ body:has(.auth-shell) {
 .progress-preview-table table { width:100%; border-collapse: collapse; font-size: .85rem; }
 .progress-preview-table th,.progress-preview-table td { padding:.7rem; text-align:left; border-bottom:1px solid #e4eaf4; }
 .progress-import pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .8rem; }
+
+.managed-account-row { min-width: 0; padding-bottom: .65rem; border-bottom: 1px solid #e3e8ef; }
+.managed-account-row .account-remove-button,
+.managed-account-row .access-revoke button { width: auto; min-height: 2rem; margin: .35rem .6rem 0; padding: .4rem .65rem; border: 1px solid #efc7c3; border-radius: .5rem; background: #fff; color: #a12b25; box-shadow: none; font-size: .8rem; }
+.managed-account-row .access-revoke { margin: .5rem; padding-top: .5rem; }
+.account-access-note { display: block; margin: .35rem .85rem; color: #62728b; font-size: .75rem; }

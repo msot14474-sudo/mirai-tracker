@@ -40,12 +40,17 @@ export class FacultyAccessService {
     const accounts = await this.prisma.user.findMany({
       where: {
         roleAssignments: {
-          some: {
-            campusId,
-            ...(globalManager
-              ? {}
-              : { role: { in: [UserRole.FACULTY, UserRole.STUDENT] } }),
-          },
+          some: globalManager
+            ? {
+                OR: [
+                  { campusId },
+                  {
+                    campusId: null,
+                    role: { in: [UserRole.ADMIN, UserRole.PROGRAM_MANAGER] },
+                  },
+                ],
+              }
+            : { campusId, role: { in: [UserRole.FACULTY, UserRole.STUDENT] } },
         },
       },
       select: {
