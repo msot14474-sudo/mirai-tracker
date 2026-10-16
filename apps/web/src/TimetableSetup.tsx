@@ -67,6 +67,15 @@ export function TimetableSetup({
     (!offeringId && Boolean(offerings.data?.offerings.length));
 
   const refresh = async () => {
+    await Promise.all(
+      [
+        'timetable',
+        'topic-schedules',
+        'progress-dashboard',
+        'exam-readiness',
+        'student-overview',
+      ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
     await queryClient.invalidateQueries({
       queryKey: ['timetable', 'offering', offeringId],
     });

@@ -122,6 +122,15 @@ function SessionLogCard({
       sessionLogApi.create(session.id, input),
     onSuccess: async (_result, input) => {
       setSavedSeconds(input.clientElapsedSeconds ?? null);
+      await Promise.all(
+        [
+          'timetable',
+          'topic-schedules',
+          'progress-dashboard',
+          'exam-readiness',
+          'student-overview',
+        ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+      );
       await queryClient.invalidateQueries({ queryKey: ['session-logs'] });
     },
   });

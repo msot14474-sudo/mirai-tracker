@@ -122,7 +122,7 @@ function ExamCard({ exam }: { exam: ExamReadinessExam }) {
       ) : (
         <>
           <div className="exam-coverage-heading">
-            <span>In-scope coverage</span>
+            <span>Teaching hours covered</span>
             <strong>{number(exam.coveragePercentage)}%</strong>
           </div>
           <div
@@ -163,7 +163,7 @@ function SubjectReadiness({ subject }: { subject: ExamReadinessSubject }) {
           <h5>{subject.subject.name}</h5>
           <span>{subject.track.name}</span>
         </div>
-        <strong>
+        <strong aria-label="Teaching hours covered">
           {subject.coveragePercentage === null
             ? '—'
             : `${number(subject.coveragePercentage)}%`}
@@ -179,7 +179,13 @@ function SubjectReadiness({ subject }: { subject: ExamReadinessSubject }) {
           {hours(subject.hoursStillNeeded)}
         </span>
         <span>
-          <small>Scoped topics</small>
+          <small>
+            Topics completed ·{' '}
+            {subject.topicsInScope
+              ? number((subject.completedTopics / subject.topicsInScope) * 100)
+              : 0}
+            %
+          </small>
           {subject.completedTopics}/{subject.topicsInScope} complete
         </span>
       </div>
@@ -213,8 +219,18 @@ function ReadinessMetrics({ metrics }: { metrics: ExamReadinessMetrics }) {
   return (
     <dl className="exam-metrics">
       <div>
-        <dt>In-scope topics</dt>
-        <dd>{metrics.topicsInScope}</dd>
+        <dt>Topics completed</dt>
+        <dd>
+          {metrics.completedTopics} / {metrics.topicsInScope}
+        </dd>
+      </div>
+      <div>
+        <dt>Topic completion</dt>
+        <dd>
+          {metrics.topicsInScope
+            ? `${number((metrics.completedTopics / metrics.topicsInScope) * 100)}%`
+            : '—'}
+        </dd>
       </div>
       <div>
         <dt>Planned hours</dt>

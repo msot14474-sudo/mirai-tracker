@@ -166,6 +166,35 @@ describe('TimetableService', () => {
     );
   });
 
+  it('regenerates holiday capacity and recalculates each affected offering', async () => {
+    const { service, prisma, transaction, schedules } = setup();
+    prisma.subjectOffering.findMany.mockResolvedValue([{ id: 'offering-a' }]);
+    const data = offering({ timetableEntries: [entry()] });
+    data.batch.semester.calendarDays = [
+      {
+        id: 'holiday',
+        date: date('2026-01-05'),
+        type: 'HOLIDAY',
+        title: 'Holiday',
+        teachingAllowed: false,
+        notes: null,
+      },
+    ] as never;
+    prisma.subjectOffering.findUnique.mockResolvedValue(data);
+    prisma.lessonPlan.findFirst.mockResolvedValue({ id: 'plan' });
+    prisma.scheduledSession.findMany.mockResolvedValue([]);
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback(transaction),
+    );
+    await service.regenerateSemester('semester-a', manager);
+    expect(transaction.scheduledSession.create).toHaveBeenCalledTimes(12);
+    expect(schedules.calculate).toHaveBeenCalledWith(
+      'offering-a',
+      { reason: 'CALENDAR_CHANGE' },
+      manager,
+    );
+  });
+
   it('enforces campus timetable management permissions', async () => {
     const { service, prisma, access } = setup();
     prisma.subjectOffering.findUnique.mockResolvedValue(offering());
@@ -189,6 +218,7 @@ function setup() {
     },
   };
   const prisma = {
+    lessonPlan: { findFirst: jest.fn().mockResolvedValue(null) },
     semester: { findUnique: jest.fn() },
     subjectOffering: { findUnique: jest.fn(), findMany: jest.fn() },
     timetableEntry: {
@@ -201,11 +231,17 @@ function setup() {
     $transaction: jest.fn(),
   };
   const access = { assertCanManageCampus: jest.fn() };
+  const schedules = { calculate: jest.fn().mockResolvedValue({}) };
   return {
+    schedules,
     prisma,
     access,
     transaction,
-    service: new TimetableService(prisma as never, access as never),
+    service: new TimetableService(
+      prisma as never,
+      access as never,
+      schedules as never,
+    ),
   };
 }
 

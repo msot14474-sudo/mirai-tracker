@@ -55,16 +55,24 @@ export class MissedLogAlertService {
   }
 
   async processDue(type: AlertType, now = new Date()) {
-    const sessions = await this.prisma.scheduledSession.findMany({
-      where: {
-        status: ScheduledSessionStatus.SCHEDULED,
-        endsAt: { lte: now },
-        logs: { none: {} },
-      },
-      include: alertSessionInclude,
-      orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
-      take: 500,
-    });
+    const sessions: AlertSession[] = [];
+    let cursor: string | undefined;
+    while (true) {
+      const page = await this.prisma.scheduledSession.findMany({
+        where: {
+          status: ScheduledSessionStatus.SCHEDULED,
+          endsAt: { lte: now },
+          logs: { none: {} },
+        },
+        include: alertSessionInclude,
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+        take: 500,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      sessions.push(...page);
+      if (page.length < 500) break;
+      cursor = page[page.length - 1]!.id;
+    }
     const due = sessions.filter((session) =>
       isAlertDue(
         type,
@@ -237,12 +245,35 @@ export class MissedLogAlertService {
         (delivery) =>
           delivery.channel === NotificationChannel.EMAIL &&
           (delivery.status === NotificationStatus.SENT ||
-            delivery.status === NotificationStatus.DELIVERED ||
-            delivery.status === NotificationStatus.FAILED),
+            delivery.status === NotificationStatus.DELIVERED),
       )
     ) {
       return 'skipped';
     }
+
+    const emailAttempts = alert.deliveries.filter(
+      (delivery) => delivery.channel === NotificationChannel.EMAIL,
+    );
+    const latestAttempt = emailAttempts.sort(
+      (a, b) => b.attemptNumber - a.attemptNumber,
+    )[0];
+    if (
+      latestAttempt &&
+      (latestAttempt.status === NotificationStatus.QUEUED ||
+        latestAttempt.attemptNumber >= 3 ||
+        now.getTime() - latestAttempt.scheduledAt.getTime() < 5 * 60 * 1000)
+    )
+      return 'skipped';
+    const attemptNumber = (latestAttempt?.attemptNumber ?? 0) + 1;
+    const stillMissing = await this.prisma.scheduledSession.findFirst({
+      where: {
+        id: session.id,
+        status: ScheduledSessionStatus.SCHEDULED,
+        logs: { none: {} },
+      },
+      select: { id: true },
+    });
+    if (!stillMissing) return 'skipped';
 
     await this.prisma.notificationDelivery.upsert({
       where: {
@@ -264,23 +295,26 @@ export class MissedLogAlertService {
       },
       update: {},
     });
-    const emailDelivery = await this.prisma.notificationDelivery.upsert({
-      where: {
-        alertId_recipientUserId_channel_attemptNumber: {
+    // A unique attempt row claims this send across simultaneous scheduler runs.
+    let emailDelivery;
+    try {
+      emailDelivery = await this.prisma.notificationDelivery.create({
+        data: {
           alertId: alert.id,
           recipientUserId: recipient.id,
           channel: NotificationChannel.EMAIL,
-          attemptNumber: 1,
+          attemptNumber,
+          scheduledAt: now,
         },
-      },
-      create: {
-        alertId: alert.id,
-        recipientUserId: recipient.id,
-        channel: NotificationChannel.EMAIL,
-        scheduledAt: dueAt,
-      },
-      update: {},
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        return 'skipped';
+      throw error;
+    }
 
     try {
       const message = await this.email.sendMissedLog({

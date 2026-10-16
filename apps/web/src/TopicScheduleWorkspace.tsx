@@ -96,6 +96,15 @@ export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
 function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
   const queryClient = useQueryClient();
   const refresh = async () => {
+    await Promise.all(
+      [
+        'timetable',
+        'topic-schedules',
+        'progress-dashboard',
+        'exam-readiness',
+        'student-overview',
+      ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
     await queryClient.invalidateQueries({
       queryKey: ['topic-schedules', 'offering', detail.id],
     });

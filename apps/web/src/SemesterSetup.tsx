@@ -16,6 +16,7 @@ export function SemesterSetup({
 }) {
   const queryClient = useQueryClient();
   const campusId = initialCampusId;
+  const [showCreate, setShowCreate] = useState(false);
   const [semesterId, setSemesterId] = useState('');
   const [setupView, setSetupView] = useState<'semesters' | 'subjects'>(
     'semesters',
@@ -33,6 +34,15 @@ export function SemesterSetup({
   });
 
   const refreshCalendar = async () => {
+    await Promise.all(
+      [
+        'timetable',
+        'topic-schedules',
+        'progress-dashboard',
+        'exam-readiness',
+        'student-overview',
+      ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
     await queryClient.invalidateQueries({
       queryKey: ['academic', 'calendar', semesterId],
     });
@@ -48,41 +58,77 @@ export function SemesterSetup({
           <h2 id="semester-title">
             {setupView === 'semesters' ? 'Semester calendar' : 'Subjects'}
           </h2>
+          {setupView === 'semesters' && semesters.isSuccess ? (
+            <p>
+              {semesters.data.length}{' '}
+              {semesters.data.length === 1 ? 'semester' : 'semesters'} in this
+              campus
+            </p>
+          ) : null}
         </div>
+        <button
+          type="button"
+          aria-expanded={showCreate}
+          onClick={() => setShowCreate(!showCreate)}
+        >
+          {showCreate
+            ? 'Cancel'
+            : setupView === 'semesters'
+              ? 'Add semester'
+              : 'Add subject'}
+        </button>
       </div>
 
       <div className="access-type-tabs academic-setup-tabs" role="group">
         <button
           type="button"
           aria-pressed={setupView === 'semesters'}
-          onClick={() => setSetupView('semesters')}
+          onClick={() => {
+            setSetupView('semesters');
+            setShowCreate(false);
+          }}
         >
           Semesters
         </button>
         <button
           type="button"
           aria-pressed={setupView === 'subjects'}
-          onClick={() => setSetupView('subjects')}
+          onClick={() => {
+            setSetupView('subjects');
+            setShowCreate(false);
+          }}
         >
           Subjects
         </button>
       </div>
 
       {setupView === 'subjects' ? (
-        <SubjectSetup campusId={campusId} />
+        <SubjectSetup
+          campusId={campusId}
+          showCreate={showCreate}
+          onCreated={() => setShowCreate(false)}
+        />
       ) : (
         <div className="semester-layout">
           <div>
-            <CreateSemesterForm
-              campusId={campusId}
-              onCreated={(createdId) => {
-                setSemesterId(createdId);
-                void queryClient.invalidateQueries({
-                  queryKey: ['academic', 'semesters', campusId],
-                });
-              }}
-            />
+            {showCreate ? (
+              <CreateSemesterForm
+                campusId={campusId}
+                onCreated={(createdId) => {
+                  setSemesterId(createdId);
+                  setShowCreate(false);
+                  void queryClient.invalidateQueries({
+                    queryKey: ['academic', 'semesters', campusId],
+                  });
+                }}
+              />
+            ) : null}
 
+            {semesters.isError ? (
+              <p className="form-error" role="alert">
+                {semesters.error.message}
+              </p>
+            ) : null}
             <div className="semester-list" aria-label="Semesters">
               {semesters.isLoading ? (
                 <LoadingSkeleton
@@ -219,7 +265,15 @@ export function SemesterSetup({
   );
 }
 
-function SubjectSetup({ campusId }: { campusId: string }) {
+function SubjectSetup({
+  campusId,
+  showCreate,
+  onCreated,
+}: {
+  campusId: string;
+  showCreate: boolean;
+  onCreated: () => void;
+}) {
   const queryClient = useQueryClient();
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -242,6 +296,7 @@ function SubjectSetup({ campusId }: { campusId: string }) {
       setName('');
       setDescription('');
       setSavedSubject(subject.name);
+      onCreated();
       await queryClient.invalidateQueries({
         queryKey: ['academic', 'subjects'],
       });
@@ -249,56 +304,56 @@ function SubjectSetup({ campusId }: { campusId: string }) {
   });
 
   return (
-    <div className="subject-setup-layout">
-      <form
-        className="setup-card subject-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSavedSubject('');
-          mutation.mutate();
-        }}
-      >
-        <h3>Add subject</h3>
-        <label>
-          Subject code
-          <input
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="CS-DSA"
-            required
-          />
-        </label>
-        <label>
-          Subject name
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Data Structures and Algorithms"
-            required
-          />
-        </label>
-        <label>
-          Description <span className="optional-label">Optional</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-          />
-        </label>
-        {mutation.error ? (
-          <p className="form-error" role="alert">
-            {mutation.error.message}
-          </p>
-        ) : null}
-        {savedSubject ? (
-          <p className="form-success" role="status">
-            {savedSubject} added.
-          </p>
-        ) : null}
-        <button disabled={mutation.isPending}>
-          {mutation.isPending ? 'Adding…' : 'Add subject'}
-        </button>
-      </form>
+    <div
+      className={`subject-setup-layout${showCreate ? '' : ' subject-setup-list-only'}`}
+    >
+      {showCreate ? (
+        <form
+          className="setup-card subject-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSavedSubject('');
+            mutation.mutate();
+          }}
+        >
+          <h3>Add subject</h3>
+          <label>
+            Subject code
+            <input
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="CS-DSA"
+              required
+            />
+          </label>
+          <label>
+            Subject name
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Data Structures and Algorithms"
+              required
+            />
+          </label>
+          <label>
+            Description <span className="optional-label">Optional</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={4}
+            />
+          </label>
+          {mutation.error ? (
+            <p className="form-error" role="alert">
+              {mutation.error.message}
+            </p>
+          ) : null}
+
+          <button disabled={mutation.isPending}>
+            {mutation.isPending ? 'Adding…' : 'Add subject'}
+          </button>
+        </form>
+      ) : null}
 
       <section
         className="subject-catalog"
@@ -314,6 +369,11 @@ function SubjectSetup({ campusId }: { campusId: string }) {
         {subjects.isError ? (
           <p className="form-error" role="alert">
             {subjects.error.message}
+          </p>
+        ) : null}
+        {savedSubject ? (
+          <p className="form-success" role="status">
+            {savedSubject} added.
           </p>
         ) : null}
         <div className="subject-list">

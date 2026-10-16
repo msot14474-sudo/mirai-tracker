@@ -1,4 +1,9 @@
-import { Prisma, ScheduledSessionStatus } from '@prisma/client';
+import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
+import {
+  Prisma,
+  ScheduledSessionStatus,
+  ScheduleCalculationReason,
+} from '@prisma/client';
 import {
   BadRequestException,
   ConflictException,
@@ -28,6 +33,7 @@ export class TimetableService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessPolicyService,
+    private readonly schedules: TopicScheduleService,
   ) {}
 
   async listSemesterOfferings(semesterId: string, user: AuthenticatedUser) {
@@ -176,7 +182,7 @@ export class TimetableService {
         effectiveTo: parseIsoDate(input.effectiveTo),
       },
     });
-    const generation = await this.regenerateOffering(offeringId);
+    const generation = await this.regenerateOffering(offeringId, user);
     return { entry: serializeEntry(created), generation };
   }
 
@@ -219,7 +225,7 @@ export class TimetableService {
         active: true,
       },
     });
-    const generation = await this.regenerateOffering(current.offeringId);
+    const generation = await this.regenerateOffering(current.offeringId, user);
     return { entry: serializeEntry(updated), generation };
   }
 
@@ -231,13 +237,13 @@ export class TimetableService {
       where: { id: entryId },
       data: { active: false },
     });
-    return this.regenerateOffering(current.offeringId);
+    return this.regenerateOffering(current.offeringId, user);
   }
 
   async generate(offeringId: string, user: AuthenticatedUser) {
     const offering = await this.requireOffering(offeringId);
     this.access.assertCanManageCampus(user, offering.batch.semester.campusId);
-    return this.regenerateOffering(offeringId);
+    return this.regenerateOffering(offeringId, user);
   }
 
   private async validateEntry(
@@ -331,7 +337,25 @@ export class TimetableService {
     }
   }
 
-  private async regenerateOffering(offeringId: string) {
+  async regenerateSemester(semesterId: string, user: AuthenticatedUser) {
+    const offerings = await this.prisma.subjectOffering.findMany({
+      where: { batch: { semesterId } },
+      select: { id: true },
+    });
+    for (const offering of offerings) {
+      await this.regenerateOffering(
+        offering.id,
+        user,
+        ScheduleCalculationReason.CALENDAR_CHANGE,
+      );
+    }
+  }
+
+  private async regenerateOffering(
+    offeringId: string,
+    user: AuthenticatedUser,
+    reason: ScheduleCalculationReason = ScheduleCalculationReason.MANUAL_RECALCULATION,
+  ) {
     const offering = await this.requireOffering(offeringId);
     const semester = offering.batch.semester;
     const desired = buildTimetableSessions({
@@ -418,10 +442,20 @@ export class TimetableService {
         .map((session) => session.id);
       if (!staleIds.length) return 0;
       const result = await transaction.scheduledSession.deleteMany({
-        where: { id: { in: staleIds } },
+        where: {
+          id: { in: staleIds },
+          status: ScheduledSessionStatus.SCHEDULED,
+          logs: { none: {} },
+        },
       });
       return result.count;
     });
+
+    const plan = await this.prisma.lessonPlan.findFirst({
+      where: { offeringId, status: { in: ['ACTIVE', 'DRAFT'] } },
+      select: { id: true },
+    });
+    if (plan) await this.schedules.calculate(offeringId, { reason }, user);
 
     return {
       created,

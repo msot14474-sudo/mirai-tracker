@@ -490,6 +490,7 @@ describe('App authentication', () => {
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add semester' }));
     expect(
       screen.getByRole('heading', { name: 'Create semester' }),
     ).toBeInTheDocument();

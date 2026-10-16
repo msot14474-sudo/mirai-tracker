@@ -75,6 +75,8 @@ describe('SemesterSetup subjects', () => {
 
     await screen.findByRole('heading', { name: 'Subject catalog' });
     expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Subject code')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
     fireEvent.change(screen.getByLabelText('Subject code'), {
       target: { value: 'cs-dsa' },
     });
@@ -137,6 +139,12 @@ it('shows all semester dates, including ordinary weekdays after the first eight 
     throw new Error(url);
   });
   renderSetup();
+  await screen.findByText('1 semester in this campus');
+  expect(screen.queryByLabelText('Semester name')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Add semester' }));
+  expect(screen.getByLabelText('Semester name')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByLabelText('Semester name')).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button', { name: /Term 2026/ }));
   await screen.findByRole('region', { name: 'All semester dates' });
   expect(

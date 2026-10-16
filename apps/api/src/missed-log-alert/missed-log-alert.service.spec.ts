@@ -3,6 +3,7 @@ import {
   AlertType,
   NotificationChannel,
   NotificationStatus,
+  Prisma,
   ScheduledSessionStatus,
   UserRole,
   UserStatus,
@@ -135,6 +136,106 @@ describe('MissedLogAlertService', () => {
     );
   });
 
+  it('retries a failed email after the retry delay', async () => {
+    const { service, prisma, email } = setup({
+      alert: alert({
+        status: AlertStatus.FAILED,
+        deliveries: [
+          {
+            channel: NotificationChannel.EMAIL,
+            status: NotificationStatus.FAILED,
+            attemptNumber: 1,
+            scheduledAt: new Date('2026-10-08T18:30:00Z'),
+          },
+        ],
+      }),
+    });
+    prisma.scheduledSession.findMany.mockResolvedValue([session()]);
+    const result = await service.processDue(
+      AlertType.FACULTY_MISSED_LOG,
+      new Date('2026-10-08T18:36:00Z'),
+    );
+    expect(result.sent).toBe(1);
+    expect(prisma.notificationDelivery.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ attemptNumber: 2 }),
+      }),
+    );
+    expect(email.sendMissedLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops retrying after three attempts', async () => {
+    const { service, prisma, email } = setup({
+      alert: alert({
+        status: AlertStatus.FAILED,
+        deliveries: [
+          {
+            channel: NotificationChannel.EMAIL,
+            status: NotificationStatus.FAILED,
+            attemptNumber: 3,
+            scheduledAt: new Date('2026-10-08T18:30:00Z'),
+          },
+        ],
+      }),
+    });
+    prisma.scheduledSession.findMany.mockResolvedValue([session()]);
+    await service.processDue(
+      AlertType.FACULTY_MISSED_LOG,
+      new Date('2026-10-08T18:36:00Z'),
+    );
+    expect(email.sendMissedLog).not.toHaveBeenCalled();
+  });
+
+  it('does not send when the faculty has logged since the scan', async () => {
+    const { service, prisma, email } = setup();
+    prisma.scheduledSession.findMany.mockResolvedValue([session()]);
+    prisma.scheduledSession.findFirst.mockResolvedValue(null);
+    await service.processDue(
+      AlertType.FACULTY_MISSED_LOG,
+      new Date('2026-10-08T18:36:00Z'),
+    );
+    expect(email.sendMissedLog).not.toHaveBeenCalled();
+  });
+
+  it('does not send a duplicate when another scan claims the same attempt', async () => {
+    const { service, prisma, email } = setup();
+    prisma.scheduledSession.findMany.mockResolvedValue([session()]);
+    prisma.notificationDelivery.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique attempt', {
+        code: 'P2002',
+        clientVersion: '6',
+      }),
+    );
+    const result = await service.processDue(
+      AlertType.FACULTY_MISSED_LOG,
+      new Date('2026-10-08T18:36:00Z'),
+    );
+    expect(result.skipped).toBe(1);
+    expect(email.sendMissedLog).not.toHaveBeenCalled();
+  });
+
+  it('scans beyond the first 500 sessions so newer reminders are not starved', async () => {
+    const { service, prisma } = setup({
+      alert: alert({ status: AlertStatus.SENT }),
+    });
+    prisma.scheduledSession.findMany
+      .mockResolvedValueOnce(
+        Array.from({ length: 500 }, (_, i) => ({
+          ...session(),
+          id: `session-${i}`,
+        })),
+      )
+      .mockResolvedValueOnce([{ ...session(), id: 'session-500' }]);
+    const result = await service.processDue(
+      AlertType.FACULTY_MISSED_LOG,
+      new Date('2026-10-08T18:36:00Z'),
+    );
+    expect(result.scanned).toBe(501);
+    expect(prisma.scheduledSession.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: { id: 'session-499' }, skip: 1 }),
+    );
+  });
+
   it('queries only scheduled sessions with no log', async () => {
     const { service, prisma } = setup();
     prisma.scheduledSession.findMany.mockResolvedValue([]);
@@ -213,7 +314,10 @@ describe('MissedLogAlertService', () => {
 
 function setup(options: { alert?: ReturnType<typeof alert> } = {}) {
   const prisma = {
-    scheduledSession: { findMany: jest.fn() },
+    scheduledSession: {
+      findMany: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue({ id: 'session-a' }),
+    },
     roleAssignment: { findMany: jest.fn() },
     missedLogAlert: {
       upsert: jest.fn().mockResolvedValue(options.alert ?? alert()),
@@ -221,6 +325,7 @@ function setup(options: { alert?: ReturnType<typeof alert> } = {}) {
       findMany: jest.fn(),
     },
     notificationDelivery: {
+      create: jest.fn().mockResolvedValue({ id: 'delivery-email' }),
       upsert: jest
         .fn()
         .mockResolvedValueOnce({ id: 'delivery-in-app' })

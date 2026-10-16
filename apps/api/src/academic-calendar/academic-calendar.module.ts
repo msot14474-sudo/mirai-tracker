@@ -1,10 +1,11 @@
+import { TimetableModule } from '../timetable/timetable.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AcademicCalendarController } from './academic-calendar.controller';
 import { AcademicCalendarService } from './academic-calendar.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, TimetableModule],
   controllers: [AcademicCalendarController],
   providers: [AcademicCalendarService],
   exports: [AcademicCalendarService],

@@ -58,7 +58,11 @@ describe('M12 exam readiness view', () => {
     });
     const card = midHeading.closest('article')!;
 
-    expect(within(card).getByText('In-scope coverage')).toBeInTheDocument();
+    expect(
+      within(card).getByText('Teaching hours covered'),
+    ).toBeInTheDocument();
+    expect(within(card).getByText('50%')).toBeInTheDocument();
+    expect(within(card).getByText('Topic completion')).toBeInTheDocument();
     expect(within(card).getAllByText('70%').length).toBeGreaterThanOrEqual(1);
     expect(within(card).getByText('Hours still needed')).toBeInTheDocument();
     expect(within(card).getAllByText('1.5h').length).toBeGreaterThanOrEqual(1);

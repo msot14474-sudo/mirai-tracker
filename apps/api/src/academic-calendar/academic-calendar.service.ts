@@ -1,3 +1,4 @@
+import { TimetableService } from '../timetable/timetable.service';
 import { CalendarDayType, Prisma } from '@prisma/client';
 import {
   BadRequestException,
@@ -35,6 +36,7 @@ export class AcademicCalendarService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessPolicyService,
+    private readonly timetable: TimetableService,
   ) {}
 
   listAccessibleCampuses(user: AuthenticatedUser) {
@@ -223,7 +225,7 @@ export class AcademicCalendarService {
     }
 
     try {
-      return await this.prisma.semester.update({
+      const saved = await this.prisma.semester.update({
         where: { id: semesterId },
         data: {
           name: input.name,
@@ -237,6 +239,14 @@ export class AcademicCalendarService {
           status: input.status,
         },
       });
+      if (
+        input.startDate !== undefined ||
+        input.endDate !== undefined ||
+        input.workingSaturdayRule !== undefined
+      ) {
+        await this.timetable.regenerateSemester(semesterId, user);
+      }
+      return saved;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException(
@@ -303,7 +313,7 @@ export class AcademicCalendarService {
     );
 
     try {
-      return await this.prisma.calendarDayOverride.create({
+      const saved = await this.prisma.calendarDayOverride.create({
         data: {
           semesterId,
           date: parseIsoDate(input.date),
@@ -313,6 +323,8 @@ export class AcademicCalendarService {
           notes: input.notes,
         },
       });
+      await this.timetable.regenerateSemester(semesterId, user);
+      return saved;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException(
@@ -340,7 +352,7 @@ export class AcademicCalendarService {
     this.assertInsideSemester(date, current.semester);
 
     try {
-      return await this.prisma.calendarDayOverride.update({
+      const saved = await this.prisma.calendarDayOverride.update({
         where: { id: calendarDayId },
         data: {
           date: input.date ? parseIsoDate(input.date) : undefined,
@@ -353,6 +365,8 @@ export class AcademicCalendarService {
           notes: input.notes,
         },
       });
+      await this.timetable.regenerateSemester(current.semesterId, user);
+      return saved;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException(
@@ -365,11 +379,16 @@ export class AcademicCalendarService {
 
   async deleteCalendarDay(calendarDayId: string, user: AuthenticatedUser) {
     this.access.assertGlobalManager(user);
+    const current = await this.prisma.calendarDayOverride.findUnique({
+      where: { id: calendarDayId },
+    });
+    if (!current) throw new NotFoundException('Calendar day not found.');
     const result = await this.prisma.calendarDayOverride.deleteMany({
       where: { id: calendarDayId },
     });
     if (result.count === 0)
       throw new NotFoundException('Calendar day not found.');
+    await this.timetable.regenerateSemester(current.semesterId, user);
   }
 
   async createExamWindow(

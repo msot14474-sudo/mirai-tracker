@@ -66,7 +66,14 @@ describe('AcademicCalendarService', () => {
     assertGlobalManager: jest.fn(),
     assertCanViewCampus: jest.fn(),
   };
-  const service = new AcademicCalendarService(prisma as never, access as never);
+  const timetable = {
+    regenerateSemester: jest.fn().mockResolvedValue(undefined),
+  };
+  const service = new AcademicCalendarService(
+    prisma as never,
+    access as never,
+    timetable as never,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -74,6 +81,56 @@ describe('AcademicCalendarService', () => {
     prisma.campus.findUnique.mockResolvedValue({ id: 'campus-a' });
     prisma.semester.findUnique.mockResolvedValue(semester);
     prisma.examWindow.findFirst.mockResolvedValue(null);
+  });
+
+  it('regenerates the semester after holiday creation, editing and deletion', async () => {
+    const day = {
+      id: 'day-a',
+      semesterId: semester.id,
+      semester,
+      date: new Date('2026-01-05'),
+      type: CalendarDayType.HOLIDAY,
+      teachingAllowed: false,
+    };
+    prisma.calendarDayOverride.create.mockResolvedValue(day);
+    prisma.calendarDayOverride.findUnique.mockResolvedValue(day);
+    prisma.calendarDayOverride.update.mockResolvedValue(day);
+    prisma.calendarDayOverride.deleteMany.mockResolvedValue({ count: 1 });
+    await service.createCalendarDay(
+      semester.id,
+      {
+        date: '2026-01-05',
+        type: CalendarDayType.HOLIDAY,
+        title: 'Holiday',
+        teachingAllowed: false,
+      },
+      programManager,
+    );
+    await service.updateCalendarDay(
+      day.id,
+      { teachingAllowed: true, type: CalendarDayType.EVENT },
+      programManager,
+    );
+    await service.deleteCalendarDay(day.id, programManager);
+    expect(timetable.regenerateSemester).toHaveBeenCalledTimes(3);
+    expect(timetable.regenerateSemester).toHaveBeenLastCalledWith(
+      semester.id,
+      programManager,
+    );
+  });
+
+  it('regenerates when semester dates or Saturday rules change', async () => {
+    prisma.calendarDayOverride.findFirst.mockResolvedValue(null);
+    prisma.semester.update.mockResolvedValue(semester);
+    await service.updateSemester(
+      semester.id,
+      { workingSaturdayRule: WorkingSaturdayRule.ALL, endDate: '2026-04-30' },
+      programManager,
+    );
+    expect(timetable.regenerateSemester).toHaveBeenCalledWith(
+      semester.id,
+      programManager,
+    );
   });
 
   it('rejects a semester whose end date precedes its start date', async () => {
