@@ -13,12 +13,25 @@ type Mapping = {
   plannedDate: number;
   taughtDate: number;
   percentScale: 'fraction' | 'percent';
+  dateOrder?: 'day-first' | 'month-first';
 };
 type Inspection = {
-  sheets: { name: string; rows: string[][]; totalRows: number }[];
+  sheets: {
+    name: string;
+    rows: string[][];
+    totalRows: number;
+    suggestedMapping?: Mapping;
+  }[];
   mapping: Mapping;
 };
 type Preview = {
+  source?: {
+    sheet: string;
+    header: number;
+    columns: { index: number; name: string; destination: string }[];
+    rows: { row: number; values: string[]; kind: string; issue?: string }[];
+  };
+  warnings?: string[];
   valid: boolean;
   issues: string[];
   counts: {
@@ -185,7 +198,13 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   <select
                     value={mapping.sheet}
                     onChange={(e) =>
-                      update({ sheet: e.target.value, header: 1 })
+                      update(
+                        inspection.sheets.find((s) => s.name === e.target.value)
+                          ?.suggestedMapping ?? {
+                          sheet: e.target.value,
+                          header: 1,
+                        },
+                      )
                     }
                   >
                     {inspection.sheets.map((s) => (
@@ -224,6 +243,20 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   </label>
                 ))}
                 <label>
+                  Numeric date order
+                  <select
+                    value={mapping.dateOrder ?? 'day-first'}
+                    onChange={(e) =>
+                      update({
+                        dateOrder: e.target.value as Mapping['dateOrder'],
+                      })
+                    }
+                  >
+                    <option value="day-first">Day / month / year</option>
+                    <option value="month-first">Month / day / year</option>
+                  </select>
+                </label>
+                <label>
                   Completion values
                   <select
                     value={mapping.percentScale}
@@ -238,11 +271,43 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   </select>
                 </label>
               </div>
+              <h4>All {headers.length} source columns</h4>
               <p className="schedule-help">
-                All other columns are kept in topic notes. Rows marked as
-                holidays are kept as notes, without changing the campus
-                calendar. Dates must be YYYY-MM-DD or Excel date cells.
+                Check the original headings and sample values below. Extra
+                columns are saved in topic notes, including empty fields. Dates
+                such as 24-Aug-2026 are supported.
               </p>
+              <div
+                className="progress-preview-table"
+                tabIndex={0}
+                role="region"
+                aria-label="Source columns"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Column</th>
+                      <th>Source heading</th>
+                      <th>Sample value</th>
+                      <th>Saved as</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {headers.map((header, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <th>{header || 'Unnamed column'}</th>
+                        <td>{sheet?.rows[mapping.header]?.[index] || '—'}</td>
+                        <td>
+                          {fields.find(
+                            ([key]) => mapping[key] === index,
+                          )?.[1] ?? 'Topic notes'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <button disabled={!offeringId} onClick={() => validate.mutate()}>
                 Preview progress
               </button>
@@ -275,12 +340,78 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
             {preview.counts.nonTeachingRows} other source rows
           </p>
           {preview.issues.length ? (
-            <ul role="alert">
-              {preview.issues.map((issue, i) => (
-                <li key={i}>{issue}</li>
-              ))}
-            </ul>
+            <div className="progress-import-issues" role="alert">
+              <strong>
+                Import paused: {preview.issues.length} issues to correct
+              </strong>
+              <p>
+                Correct the listed rows or the selected semester dates, then
+                preview again. No data has been imported.
+              </p>
+              <ul>
+                {preview.issues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="form-success">
+              Ready to import. All source columns will be kept.
+            </p>
+          )}
+          {preview.warnings?.map((warning) => (
+            <p className="schedule-help" key={warning}>
+              {warning}
+            </p>
+          ))}
+          {preview.source ? (
+            <details open>
+              <summary>
+                Complete source data · {preview.source.columns.length} columns ·{' '}
+                {preview.source.rows.length} rows
+              </summary>
+              <div
+                className="progress-preview-table progress-source-table"
+                tabIndex={0}
+                role="region"
+                aria-label="Complete source data"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Source row</th>
+                      <th>Import result</th>
+                      {preview.source.columns.map((column) => (
+                        <th key={column.index}>
+                          {column.name}
+                          <small>{column.destination}</small>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.source.rows.map((row) => (
+                      <tr key={row.row}>
+                        <th>{row.row}</th>
+                        <td>
+                          {row.kind}
+                          {row.issue ? (
+                            <p className="form-error">{row.issue}</p>
+                          ) : null}
+                        </td>
+                        {preview.source!.columns.map((column) => (
+                          <td key={column.index}>
+                            {row.values[column.index] || '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           ) : null}
+          <h4>Lesson plan preview</h4>
           <div
             className="progress-preview-table"
             tabIndex={0}
@@ -318,7 +449,11 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
           {preview.preserved.length ? (
             <details>
               <summary>Other source rows kept as notes</summary>
-              <pre>{preview.preserved.join('\n\n')}</pre>
+              <div className="progress-source-notes">
+                {preview.preserved.map((row, index) => (
+                  <pre key={index}>{row}</pre>
+                ))}
+              </div>
             </details>
           ) : null}
           <p className="schedule-help">
@@ -327,6 +462,13 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
             lecture logs are invented. Add recurring class times in Timetable
             separately.
           </p>
+          {!preview.valid ? (
+            <p className="form-error" role="status">
+              Import is disabled until the {preview.issues.length} issues above
+              are corrected. Check the highlighted source rows and preview
+              again.
+            </p>
+          ) : null}
           <button
             disabled={!preview.valid || busy || save.isSuccess}
             onClick={() => save.mutate()}

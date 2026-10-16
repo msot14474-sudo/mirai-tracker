@@ -9417,3 +9417,12 @@ body:has(.auth-shell) {
 .managed-account-row .access-revoke button { width: auto; min-height: 2rem; margin: .35rem .6rem 0; padding: .4rem .65rem; border: 1px solid #efc7c3; border-radius: .5rem; background: #fff; color: #a12b25; box-shadow: none; font-size: .8rem; }
 .managed-account-row .access-revoke { margin: .5rem; padding-top: .5rem; }
 .account-access-note { display: block; margin: .35rem .85rem; color: #62728b; font-size: .75rem; }
+
+.progress-source-table { max-height: 28rem; overflow: auto; }
+.progress-source-table table { width: max-content; min-width: 100%; }
+.progress-source-table td, .progress-source-table th { min-width: 9rem; max-width: 24rem; white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.progress-source-table th small { display: block; font-weight: 400; color: #64748b; margin-top: .35rem; }
+.progress-import-issues { border: 1px solid #e8b9b3; border-radius: .8rem; background: #fff6f4; color: #943e34; padding: 1rem; }
+.progress-import-issues ul { max-height: 14rem; overflow-y: auto; }
+.progress-source-notes { max-height: 18rem; overflow: auto; }
+.progress-source-notes pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: .85rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }

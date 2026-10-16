@@ -24,9 +24,14 @@ export const mappingSchema = z.object({
   plannedDate: z.number().int().min(-1),
   taughtDate: z.number().int().min(-1),
   percentScale: z.enum(['fraction', 'percent']),
+  dateOrder: z.enum(['day-first', 'month-first']).optional(),
 });
 type Mapping = z.infer<typeof mappingSchema>;
-type Sheet = { name: string; rows: string[][] };
+type Sheet = {
+  name: string;
+  rows: string[][];
+  formulas?: Record<string, string>;
+};
 
 export async function progressSheets(
   file: UploadedImportFile,
@@ -47,24 +52,34 @@ export async function progressSheets(
   }
   return book.worksheets.map((sheet) => {
     const rows: string[][] = [];
+    const formulas: Record<string, string> = {};
     for (let n = 1; n <= sheet.rowCount; n++) {
       const row: string[] = [];
       for (let c = 1; c <= sheet.columnCount; c++) {
         const cell = sheet.getRow(n).getCell(c);
         const v = cell.value;
+        if (cell.formula) formulas[cell.address] = cell.formula;
         const value =
           v instanceof Date
             ? v.toISOString().slice(0, 10)
-            : v && typeof v === 'object' && 'formula' in v
+            : v &&
+                typeof v === 'object' &&
+                ('formula' in v || 'sharedFormula' in v)
               ? v.result === undefined
-                ? '[Formula without saved result]'
-                : String(v.result)
+                ? '[Formula without saved result: =' + cell.formula + ']'
+                : v.result instanceof Date
+                  ? v.result.toISOString().slice(0, 10)
+                  : typeof v.result === 'object' &&
+                      v.result &&
+                      'error' in v.result
+                    ? v.result.error
+                    : String(v.result)
               : cell.text;
         row.push(value.trim());
       }
       rows.push(row);
     }
-    return { name: sheet.name, rows };
+    return { name: sheet.name, rows, formulas };
   });
 }
 export function suggestMapping(sheets: Sheet[]): Mapping {
@@ -131,16 +146,72 @@ export function suggestMapping(sheets: Sheet[]): Mapping {
     percentScale: 'percent',
   };
 }
-function date(value: string, row: number) {
+function date(value: string, order: Mapping['dateOrder']) {
   if (!value || value === '-') return null;
+  let year: number, month: number, day: number;
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const named = /^(\d{1,2})[- /]([a-z]{3,9})[- /](\d{4})$/i.exec(value);
+  const numeric = /^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/.exec(value);
+  if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else if (named) {
+    day = Number(named[1]);
+    year = Number(named[3]);
+    month =
+      [
+        'jan',
+        'feb',
+        'mar',
+        'apr',
+        'may',
+        'jun',
+        'jul',
+        'aug',
+        'sep',
+        'oct',
+        'nov',
+        'dec',
+      ].indexOf(named[2]!.slice(0, 3).toLowerCase()) + 1;
+  } else if (numeric) {
+    year = Number(numeric[3]);
+    day = Number(numeric[order === 'month-first' ? 2 : 1]);
+    month = Number(numeric[order === 'month-first' ? 1 : 2]);
+  } else
+    throw new Error(
+      'Unrecognized date "' +
+        value +
+        '". Use an Excel date, YYYY-MM-DD, DD-MMM-YYYY, or the selected numeric date order.',
+    );
+  const normalized =
+    String(year).padStart(4, '0') +
+    '-' +
+    String(month).padStart(2, '0') +
+    '-' +
+    String(day).padStart(2, '0');
   if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
-    Number.isNaN(Date.parse(value)) ||
-    new Date(value).toISOString().slice(0, 10) !== value
+    !month ||
+    Number.isNaN(Date.parse(normalized)) ||
+    new Date(normalized).toISOString().slice(0, 10) !== normalized
   )
-    throw new Error('Row ' + row + ': use YYYY-MM-DD dates.');
-  return value;
+    throw new Error('Invalid date "' + value + '".');
+  return normalized;
 }
+
+function recognizedMapping(sheets: Sheet[]) {
+  const candidate = suggestMapping(sheets);
+  const row = sheets.find((s) => s.name === candidate.sheet)?.rows[
+    candidate.header - 1
+  ];
+  return row &&
+    /^(topic|topic title|topic name|lesson|lesson title)$/i.test(
+      row[candidate.topic] || '',
+    )
+    ? candidate
+    : null;
+}
+
 export function normalizeProgress(
   sheets: Sheet[],
   map: Mapping,
@@ -166,6 +237,46 @@ export function normalizeProgress(
     throw new BadRequestException(
       'Choose a different existing column for each field.',
     );
+  const detected = recognizedMapping([sheet]);
+  if (detected && detected.header !== map.header) {
+    throw new BadRequestException(
+      `The column headings are on row ${detected.header}. Select that row instead of row ${map.header}, which contains data.`,
+    );
+  }
+  const sourceColumns = headers.map((name, index) => ({
+    index,
+    name: name || 'Column ' + (index + 1),
+    destination:
+      index === map.topic
+        ? 'Topic name'
+        : index === map.hours
+          ? 'Planned hours'
+          : index === map.completion
+            ? 'Completion'
+            : index === map.status
+              ? 'Status'
+              : index === map.plannedDate
+                ? 'Planned date'
+                : index === map.taughtDate
+                  ? 'Date taught and topic notes'
+                  : 'Topic notes',
+  }));
+  const sourceRows: {
+    row: number;
+    values: string[];
+    kind: string;
+    issue?: string;
+  }[] = [];
+  const warnings: string[] = [];
+  if (
+    sheet.rows.some((row) =>
+      row.some((value) => value.startsWith('[Formula without saved result')),
+    )
+  ) {
+    warnings.push(
+      'Some Excel formulas have no saved result. Their formulas are preserved; calculated values are not invented. Open and save the workbook in Excel if you need those results.',
+    );
+  }
   const issues: string[] = [];
   const topics: {
     title: string;
@@ -184,10 +295,21 @@ export function normalizeProgress(
   for (let i = map.header; i < sheet.rows.length; i++) {
     const row = sheet.rows[i]!;
     if (row.every((v) => !v)) continue;
+    const sourceRow: (typeof sourceRows)[number] = {
+      row: i + 1,
+      values: row,
+      kind: 'Topic',
+    };
+    sourceRows.push(sourceRow);
     try {
       const raw = row
-        .map((v, j) =>
-          v ? (headers[j] || 'Column ' + (j + 1)) + ': ' + v : '',
+        .map(
+          (v, j) =>
+            (headers[j] || 'Column ' + (j + 1)) +
+            ' [column ' +
+            (j + 1) +
+            ']: ' +
+            (v || '(blank)'),
         )
         .filter(Boolean)
         .join('\n');
@@ -199,6 +321,7 @@ export function normalizeProgress(
           title.toLowerCase(),
         )
       ) {
+        sourceRow.kind = 'Other source row';
         otherRows++;
         preserved.push('Row ' + (i + 1) + '\n' + raw);
         continue;
@@ -247,12 +370,14 @@ export function normalizeProgress(
       )
         throw new Error('Enter a completion percentage for this status.');
       completion = Math.round(completion * 100) / 100;
-      const plannedDate = date(row[map.plannedDate] || '', i + 1);
-      const taughtDate = date(row[map.taughtDate] || '', i + 1);
+      const plannedDate = date(row[map.plannedDate] || '', map.dateOrder);
+      const taughtDate = date(row[map.taughtDate] || '', map.dateOrder);
       for (const d of [plannedDate, taughtDate])
         if (d && (d < start || d > end))
           throw new Error(
-            'Date is outside the selected semester (' +
+            'Date ' +
+              d +
+              ' is outside the selected semester (' +
               start +
               ' to ' +
               end +
@@ -276,7 +401,9 @@ export function normalizeProgress(
           'Imported historical progress · source row ' + (i + 1) + '\n' + raw,
       });
     } catch (e) {
-      issues.push('Row ' + (i + 1) + ': ' + (e as Error).message);
+      sourceRow.kind = 'Needs correction';
+      sourceRow.issue = (e as Error).message;
+      issues.push('Row ' + (i + 1) + ': ' + sourceRow.issue);
     }
   }
   if (!topics.length)
@@ -284,6 +411,13 @@ export function normalizeProgress(
       'No teaching topics found. Check the header row and column mapping.',
     );
   return {
+    source: {
+      sheet: sheet.name,
+      header: map.header,
+      columns: sourceColumns,
+      rows: sourceRows,
+    },
+    warnings,
     topics,
     preserved,
     issues,
@@ -371,6 +505,24 @@ export class ProgressImportService {
         mapping = mappingSchema.parse(
           JSON.parse(result.message?.content || ''),
         );
+        const automatic = recognizedMapping(sheets);
+        if (automatic && automatic.sheet === mapping.sheet) mapping = automatic;
+        const chosen = sheets.find((s) => s.name === mapping.sheet);
+        const headings = chosen?.rows[mapping.header - 1];
+        const indices = [
+          mapping.topic,
+          mapping.hours,
+          mapping.completion,
+          mapping.status,
+          mapping.plannedDate,
+          mapping.taughtDate,
+        ].filter((i) => i >= 0);
+        if (
+          !headings ||
+          indices.some((i) => i >= headings.length) ||
+          new Set(indices).size !== indices.length
+        )
+          throw new Error('Invalid AI mapping');
         matching = 'ai';
       } catch {
         // Optional AI must never prevent reading or manually mapping a valid file.
@@ -385,6 +537,7 @@ export class ProgressImportService {
           Math.max(50, mapping.sheet === s.name ? mapping.header : 0),
         ),
         totalRows: s.rows.length,
+        suggestedMapping: suggestMapping([s]),
       })),
       mapping,
       matching,
@@ -438,6 +591,7 @@ export class ProgressImportService {
       campusId,
     );
     if (!preview.valid) throw new BadRequestException(preview.issues);
+    const sourceWorkbook = await progressSheets(file);
     return this.prisma.$transaction(
       async (tx) => {
         await tx.$queryRaw(
@@ -514,6 +668,7 @@ export class ProgressImportService {
               fileName: file.originalname,
               mapping,
               counts: preview.counts,
+              sourceWorkbook,
             },
           },
         });

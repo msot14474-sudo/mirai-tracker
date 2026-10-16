@@ -12,109 +12,156 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-it('requires a reviewed preview and invalidates it when the mapping changes', async () => {
-  const mapping = {
-    sheet: 'Progress',
-    header: 1,
-    topic: 0,
-    hours: 1,
-    completion: -1,
-    status: -1,
-    plannedDate: -1,
-    taughtDate: -1,
-    percentScale: 'percent',
-  };
-  const fetch = vi
-    .spyOn(globalThis, 'fetch')
-    .mockImplementation(async (input) => {
-      const url = String(input);
-      const data = url.endsWith('/lesson-plans/offerings?campusId=campus-a')
-        ? [
-            {
-              id: 'subject',
-              subject: { name: 'Web' },
-              batch: {
-                name: 'A',
-                semester: { name: 'Term', campus: { name: 'Campus' } },
+it.each([true, false])(
+  'shows every source column, explains blocked imports and invalidates changed previews (valid=%s)',
+  async (valid) => {
+    const mapping = {
+      sheet: 'Progress',
+      header: 1,
+      topic: 0,
+      hours: 1,
+      completion: -1,
+      status: -1,
+      plannedDate: -1,
+      taughtDate: -1,
+      percentScale: 'percent',
+    };
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        const data = url.endsWith('/lesson-plans/offerings?campusId=campus-a')
+          ? [
+              {
+                id: 'subject',
+                subject: { name: 'Web' },
+                batch: {
+                  name: 'A',
+                  semester: { name: 'Term', campus: { name: 'Campus' } },
+                },
+                plan: null,
               },
-              plan: null,
-            },
-          ]
-        : url.endsWith('/inspect')
-          ? {
-              sheets: [
-                { name: 'Progress', rows: [['Topic', 'Hours']], totalRows: 2 },
-              ],
-              mapping,
-            }
-          : url.endsWith('/preview')
+            ]
+          : url.endsWith('/inspect')
             ? {
-                valid: true,
-                issues: [],
-                topics: [
+                sheets: [
                   {
-                    title: 'HTML',
-                    minutes: 90,
-                    completion: 100,
-                    description: 'Source',
+                    name: 'Progress',
+                    rows: [['Topic', 'Hours']],
+                    totalRows: 2,
                   },
                 ],
-                preserved: [],
-                counts: {
-                  topics: 1,
-                  completed: 1,
-                  minutes: 90,
-                  nonTeachingRows: 0,
-                },
+                mapping,
               }
-            : {};
-      return new Response(JSON.stringify(data), { status: 200 });
+            : url.endsWith('/preview')
+              ? {
+                  valid,
+                  issues: valid
+                    ? []
+                    : [
+                        'Row 3: Date 2026-08-24 is outside the selected semester.',
+                      ],
+                  source: {
+                    sheet: 'Progress',
+                    header: 1,
+                    columns: [
+                      { index: 0, name: 'Topic', destination: 'Topic name' },
+                      { index: 1, name: 'Hours', destination: 'Planned hours' },
+                      {
+                        index: 2,
+                        name: 'Homework',
+                        destination: 'Topic notes',
+                      },
+                    ],
+                    rows: [
+                      {
+                        row: 2,
+                        values: ['HTML', '1.5', 'Practice HTML'],
+                        kind: valid ? 'Topic' : 'Needs correction',
+                      },
+                    ],
+                  },
+                  topics: [
+                    {
+                      title: 'HTML',
+                      minutes: 90,
+                      completion: 100,
+                      description: 'Source',
+                    },
+                  ],
+                  preserved: [],
+                  counts: {
+                    topics: 1,
+                    completed: 1,
+                    minutes: 90,
+                    nonTeachingRows: 0,
+                  },
+                }
+              : {};
+        return new Response(JSON.stringify(data), { status: 200 });
+      });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: {
+              queries: { retry: false },
+              mutations: { retry: false },
+            },
+          })
+        }
+      >
+        <CourseProgressImport campusId="campus-a" />
+      </QueryClientProvider>,
+    );
+    await screen.findByText('Web · A · Term · Campus');
+    fireEvent.change(screen.getByLabelText('1. Choose the subject and batch'), {
+      target: { value: 'subject' },
     });
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: {
-            queries: { retry: false },
-            mutations: { retry: false },
-          },
-        })
-      }
-    >
-      <CourseProgressImport campusId="campus-a" />
-    </QueryClientProvider>,
-  );
-  await screen.findByText('Web · A · Term · Campus');
-  fireEvent.change(screen.getByLabelText('1. Choose the subject and batch'), {
-    target: { value: 'subject' },
-  });
-  fireEvent.change(screen.getByLabelText('2. Choose your progress file'), {
-    target: {
-      files: [
-        new File(['Topic,Hours\nHTML,1.5'], 'progress.csv', {
-          type: 'text/csv',
-        }),
-      ],
-    },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Read file' }));
-  await screen.findByText('3. Check the columns');
-  expect(
-    screen.queryByRole('button', { name: 'Confirm progress import' }),
-  ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Preview progress' }));
-  expect(
-    await screen.findByRole('button', { name: 'Confirm progress import' }),
-  ).toBeEnabled();
-  fireEvent.change(screen.getByLabelText('Completion values'), {
-    target: { value: 'fraction' },
-  });
-  await waitFor(() =>
+    fireEvent.change(screen.getByLabelText('2. Choose your progress file'), {
+      target: {
+        files: [
+          new File(['Topic,Hours\nHTML,1.5'], 'progress.csv', {
+            type: 'text/csv',
+          }),
+        ],
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Read file' }));
+    await screen.findByText('3. Check the columns');
     expect(
       screen.queryByRole('button', { name: 'Confirm progress import' }),
-    ).not.toBeInTheDocument(),
-  );
-  expect(
-    fetch.mock.calls.some(([url]) => String(url).endsWith('/imports/progress')),
-  ).toBe(false);
-});
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview progress' }));
+    const confirm = await screen.findByRole('button', {
+      name: 'Confirm progress import',
+    });
+    if (valid) expect(confirm).toBeEnabled();
+    else {
+      expect(confirm).toBeDisabled();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Row 3: Date 2026-08-24',
+      );
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Import is disabled',
+      );
+    }
+    expect(
+      screen.getByRole('region', { name: 'Complete source data' }),
+    ).toHaveTextContent('Homework');
+    expect(screen.getByText('Practice HTML')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Completion values'), {
+      target: { value: 'fraction' },
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Confirm progress import' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      fetch.mock.calls.some(([url]) =>
+        String(url).endsWith('/imports/progress'),
+      ),
+    ).toBe(false);
+  },
+);

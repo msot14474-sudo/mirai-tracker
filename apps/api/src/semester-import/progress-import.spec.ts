@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import { RedisService } from '../redis/redis.service';
 import { ForbiddenException } from '@nestjs/common';
 import {
@@ -43,7 +44,9 @@ it('recognizes tracker columns and preserves completion, extra columns and non-t
     nonTeachingRows: 2,
   });
   expect(result.topics[1]?.completion).toBe(50);
-  expect(result.topics[0]?.description).toContain('Homework: Practice');
+  expect(result.topics[0]?.description).toContain(
+    'Homework [column 7]: Practice',
+  );
   expect(result.preserved.join('\n')).toContain('Web Development');
   expect(result.preserved.join('\n')).toContain('Total');
 });
@@ -183,7 +186,10 @@ it('saves source completion and planned dates atomically without inventing lectu
     topicId: 'topic',
     plannedStartDate: new Date('2026-08-24'),
   });
-  expect(tx.auditEvent.create).toHaveBeenCalled();
+  expect(
+    tx.auditEvent.create.mock.calls[0]![0].data.metadata.sourceWorkbook[0]
+      .rows[1],
+  ).toEqual(['HTML', '1.5', 'Completed', '2026-08-24']);
 });
 
 it('returns automatic columns when AI dependencies are unavailable', async () => {
@@ -276,4 +282,132 @@ it('reads files beyond the old row, column, cell-text and byte limits', async ()
   expect(preview.valid).toBe(true);
   expect(preview.topics).toHaveLength(1001);
   expect(preview.topics[0]?.description).toContain('x'.repeat(9000));
+});
+
+it('accepts named dates and explicit numeric date order while rejecting impossible dates', () => {
+  const copy = structuredClone(sheets);
+  copy[0]!.rows[2]![4] = '24-Aug-2026';
+  copy[0]!.rows[2]![5] = '24/08/2026';
+  let result = normalizeProgress(copy, mapping, '2026-01-01', '2026-12-31');
+  expect(result.valid).toBe(true);
+  expect(result.topics[0]?.plannedDate).toBe('2026-08-24');
+  expect(result.topics[0]?.taughtDate).toBe('2026-08-24');
+  copy[0]!.rows[2]![5] = '08/24/2026';
+  result = normalizeProgress(
+    copy,
+    { ...mapping, dateOrder: 'month-first' },
+    '2026-01-01',
+    '2026-12-31',
+  );
+  expect(result.valid).toBe(true);
+  copy[0]!.rows[2]![4] = '31-Feb-2026';
+  expect(
+    normalizeProgress(copy, mapping, '2026-01-01', '2026-12-31').issues.join(
+      ' ',
+    ),
+  ).toContain('Invalid date');
+});
+it('retains every column including blanks and every nonempty source row in the preview', () => {
+  const copy = structuredClone(sheets);
+  copy[0]!.rows[1]!.push('Classwork', 'Homework');
+  copy[0]!.rows[2]!.push('', 'Extra task');
+  const result = normalizeProgress(copy, mapping, '2026-01-01', '2026-12-31');
+  expect(result.source.columns).toHaveLength(9);
+  expect(result.source.rows).toHaveLength(4);
+  expect(result.source.rows[0]?.values.at(-1)).toBe('Extra task');
+  expect(result.topics[0]?.description).toContain(
+    'Classwork [column 8]: (blank)',
+  );
+  expect(result.topics[0]?.description).toContain(
+    'Homework [column 9]: Extra task',
+  );
+});
+it('rejects a data row mistaken for headings and identifies the correct row', () => {
+  expect(() =>
+    normalizeProgress(
+      sheets,
+      { ...mapping, header: 3 },
+      '2026-01-01',
+      '2026-12-31',
+    ),
+  ).toThrow('headings are on row 2');
+});
+it('keeps the detected header when AI mistakenly chooses the first data row', async () => {
+  const old = process.env.OLLAMA_API_KEY;
+  process.env.OLLAMA_API_KEY = 'test-only';
+  const fetch = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        message: {
+          content: JSON.stringify({
+            ...mapping,
+            sheet: 'sheet1',
+            header: 2,
+            topic: 0,
+            hours: 1,
+            completion: -1,
+            status: -1,
+            plannedDate: -1,
+            taughtDate: -1,
+          }),
+        },
+      }),
+    ),
+  );
+  try {
+    const service = new ProgressImportService(
+      {} as PrismaService,
+      { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,
+      {
+        incrementWithExpiry: jest.fn().mockResolvedValue(1),
+      } as unknown as RedisService,
+    );
+    const buffer = Buffer.from('Topic,Planned hr\nHTML,1.5');
+    const result = await service.inspect(
+      {
+        buffer,
+        originalname: 'file.csv',
+        mimetype: 'text/csv',
+        size: buffer.length,
+      },
+      true,
+      { id: 'actor' } as AuthenticatedUser,
+    );
+    expect(result.mapping.header).toBe(1);
+  } finally {
+    fetch.mockRestore();
+    if (old === undefined) delete process.env.OLLAMA_API_KEY;
+    else process.env.OLLAMA_API_KEY = old;
+  }
+});
+
+it('retains Excel formulas with and without cached results', async () => {
+  const book = new ExcelJS.Workbook();
+  const sheet = book.addWorksheet('Progress');
+  sheet.addRow(['Topic', 'Planned hr', 'Cumulative hours', 'Hours earned']);
+  sheet.addRow([
+    'HTML',
+    1.5,
+    { formula: 'B2' },
+    { formula: 'B2', result: 1.5 },
+  ]);
+  const buffer = Buffer.from(await book.xlsx.writeBuffer());
+  const parsed = await progressSheets({
+    buffer,
+    originalname: 'formulas.xlsx',
+    size: buffer.length,
+    mimetype:
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  expect(parsed[0]?.formulas).toEqual({ C2: 'B2', D2: 'B2' });
+  expect(parsed[0]?.rows[1]?.[2]).toContain('=B2');
+  expect(parsed[0]?.rows[1]?.[3]).toBe('1.5');
+  const preview = normalizeProgress(
+    parsed,
+    suggestMapping(parsed),
+    '2026-01-01',
+    '2026-12-31',
+  );
+  expect(preview.valid).toBe(true);
+  expect(preview.warnings).toHaveLength(1);
 });
