@@ -28,7 +28,7 @@ it.each([true, false])(
     };
     const fetch = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(async (input) => {
+      .mockImplementation(async (input, _init) => {
         const url = String(input);
         const data = url.endsWith('/lesson-plans/offerings?campusId=campus-a')
           ? [
@@ -47,7 +47,7 @@ it.each([true, false])(
                 sheets: [
                   {
                     name: 'Progress',
-                    rows: [['Topic', 'Hours']],
+                    rows: [['Topic', 'Hours', 'Homework']],
                     totalRows: 2,
                   },
                 ],
@@ -150,6 +150,31 @@ it.each([true, false])(
       screen.getByRole('region', { name: 'Complete source data' }),
     ).toHaveTextContent('Homework');
     expect(screen.getByText('Practice HTML')).toBeInTheDocument();
+    expect(
+      screen.getByRole('checkbox', { name: 'Include column 1: Topic' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('checkbox', { name: 'Include column 2: Hours' }),
+    ).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Include column 3: Homework' }),
+    );
+    expect(
+      screen.getByRole('checkbox', { name: 'Include column 3: Homework' }),
+    ).not.toBeChecked();
+    expect(screen.getByText('Excluded — not saved')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Confirm progress import' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Preview progress' }));
+    await screen.findByRole('button', { name: 'Confirm progress import' });
+    const previews = fetch.mock.calls.filter(([url]) =>
+      String(url).endsWith('/preview'),
+    );
+    const formData = previews.at(-1)?.[1]?.body as FormData;
+    expect(JSON.parse(String(formData.get('mapping'))).excludedColumns).toEqual(
+      [2],
+    );
     fireEvent.change(screen.getByLabelText('Completion values'), {
       target: { value: 'fraction' },
     });

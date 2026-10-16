@@ -160,7 +160,7 @@ it('saves source completion and planned dates atomically without inventing lectu
     {} as RedisService,
   );
   const buffer = Buffer.from(
-    'Topic,Planned hr,Status,Planned Date\nHTML,1.5,Completed,2026-08-24',
+    'Topic,Planned hr,Status,Planned Date,Private note\nHTML,1.5,Completed,2026-08-24,exclude-this-value',
   );
   const file = {
     buffer,
@@ -169,9 +169,14 @@ it('saves source completion and planned dates atomically without inventing lectu
     size: buffer.length,
   };
   const mapping = suggestMapping(await progressSheets(file));
-  const result = await service.execute(file, 'offering', { ...mapping }, {
-    id: 'actor',
-  } as AuthenticatedUser);
+  const result = await service.execute(
+    file,
+    'offering',
+    { ...mapping, excludedColumns: [4] },
+    {
+      id: 'actor',
+    } as AuthenticatedUser,
+  );
   expect(result.planId).toBe('plan');
   expect(
     tx.lessonPlan.create.mock.calls[0]![0].data.units.create.topics.create[0],
@@ -189,7 +194,10 @@ it('saves source completion and planned dates atomically without inventing lectu
   expect(
     tx.auditEvent.create.mock.calls[0]![0].data.metadata.sourceWorkbook[0]
       .rows[1],
-  ).toEqual(['HTML', '1.5', 'Completed', '2026-08-24']);
+  ).toEqual(['HTML', '1.5', 'Completed', '2026-08-24', '']);
+  expect(JSON.stringify(tx.auditEvent.create.mock.calls)).not.toContain(
+    'exclude-this-value',
+  );
 });
 
 it('returns automatic columns when AI dependencies are unavailable', async () => {
@@ -410,4 +418,35 @@ it('retains Excel formulas with and without cached results', async () => {
   );
   expect(preview.valid).toBe(true);
   expect(preview.warnings).toHaveLength(1);
+});
+
+it('excludes unwanted columns from notes, preview, and mapped values', () => {
+  const copy = structuredClone(sheets);
+  copy[0]!.rows[2]![5] = 'not a valid date';
+  const result = normalizeProgress(
+    copy,
+    { ...mapping, excludedColumns: [5, 6] },
+    '2026-01-01',
+    '2026-12-31',
+  );
+  expect(result.valid).toBe(true);
+  expect(result.topics[0]?.taughtDate).toBeNull();
+  expect(result.source.columns.map((column) => column.name)).not.toContain(
+    'Homework',
+  );
+  expect(JSON.stringify(result)).not.toContain('Practice');
+  expect(JSON.stringify(result)).not.toContain('not a valid date');
+  expect(result.topics[0]?.description).not.toContain('column 7');
+});
+it('refuses exclusion of required or nonexistent columns', () => {
+  for (const excludedColumns of [[mapping.topic], [mapping.hours], [100]]) {
+    expect(() =>
+      normalizeProgress(
+        sheets,
+        { ...mapping, excludedColumns },
+        '2026-01-01',
+        '2026-12-31',
+      ),
+    ).toThrow();
+  }
 });

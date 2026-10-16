@@ -25,6 +25,7 @@ export const mappingSchema = z.object({
   taughtDate: z.number().int().min(-1),
   percentScale: z.enum(['fraction', 'percent']),
   dateOrder: z.enum(['day-first', 'month-first']).optional(),
+  excludedColumns: z.array(z.number().int().min(0)).optional(),
 });
 type Mapping = z.infer<typeof mappingSchema>;
 type Sheet = {
@@ -212,14 +213,58 @@ function recognizedMapping(sheets: Sheet[]) {
     : null;
 }
 
+function selectedSource(sheets: Sheet[], map: Mapping): Sheet[] {
+  const sheet = sheets.find((item) => item.name === map.sheet);
+  if (!sheet) throw new BadRequestException('Choose a worksheet.');
+  const excluded = new Set(map.excludedColumns ?? []);
+  const width = sheet.rows[map.header - 1]?.length ?? 0;
+  if ([...excluded].some((index) => index >= width))
+    throw new BadRequestException(
+      'An excluded column does not exist. Read the file again.',
+    );
+  if (excluded.has(map.topic) || excluded.has(map.hours))
+    throw new BadRequestException(
+      'Topic name and planned hours are required and cannot be excluded.',
+    );
+  return [
+    {
+      ...sheet,
+      rows: sheet.rows.map((row) =>
+        row.map((value, index) => (excluded.has(index) ? '' : value)),
+      ),
+      formulas: Object.fromEntries(
+        Object.entries(sheet.formulas ?? {}).filter(([address]) => {
+          const letters = address.match(/^[A-Z]+/)?.[0] ?? '';
+          const index =
+            [...letters].reduce(
+              (n, letter) => n * 26 + letter.charCodeAt(0) - 64,
+              0,
+            ) - 1;
+          return !excluded.has(index);
+        }),
+      ),
+    },
+  ];
+}
+
 export function normalizeProgress(
   sheets: Sheet[],
   map: Mapping,
   start: string,
   end: string,
 ) {
-  const sheet = sheets.find((s) => s.name === map.sheet);
-  if (!sheet) throw new BadRequestException('Choose a worksheet.');
+  const excluded = new Set(map.excludedColumns ?? []);
+  sheets = selectedSource(sheets, map);
+  map = { ...map };
+  for (const key of [
+    'completion',
+    'status',
+    'plannedDate',
+    'taughtDate',
+  ] as const) {
+    if (excluded.has(map[key])) map[key] = -1;
+  }
+  const sheet = sheets[0]!;
   const headers = sheet.rows[map.header - 1];
   if (!headers) throw new BadRequestException('Header row not found.');
   const columns = [
@@ -243,24 +288,26 @@ export function normalizeProgress(
       `The column headings are on row ${detected.header}. Select that row instead of row ${map.header}, which contains data.`,
     );
   }
-  const sourceColumns = headers.map((name, index) => ({
-    index,
-    name: name || 'Column ' + (index + 1),
-    destination:
-      index === map.topic
-        ? 'Topic name'
-        : index === map.hours
-          ? 'Planned hours'
-          : index === map.completion
-            ? 'Completion'
-            : index === map.status
-              ? 'Status'
-              : index === map.plannedDate
-                ? 'Planned date'
-                : index === map.taughtDate
-                  ? 'Date taught and topic notes'
-                  : 'Topic notes',
-  }));
+  const sourceColumns = headers
+    .map((name, index) => ({
+      index,
+      name: name || 'Column ' + (index + 1),
+      destination:
+        index === map.topic
+          ? 'Topic name'
+          : index === map.hours
+            ? 'Planned hours'
+            : index === map.completion
+              ? 'Completion'
+              : index === map.status
+                ? 'Status'
+                : index === map.plannedDate
+                  ? 'Planned date'
+                  : index === map.taughtDate
+                    ? 'Date taught and topic notes'
+                    : 'Topic notes',
+    }))
+    .filter((column) => !excluded.has(column.index));
   const sourceRows: {
     row: number;
     values: string[];
@@ -303,13 +350,14 @@ export function normalizeProgress(
     sourceRows.push(sourceRow);
     try {
       const raw = row
-        .map(
-          (v, j) =>
-            (headers[j] || 'Column ' + (j + 1)) +
-            ' [column ' +
-            (j + 1) +
-            ']: ' +
-            (v || '(blank)'),
+        .map((v, j) =>
+          excluded.has(j)
+            ? ''
+            : (headers[j] || 'Column ' + (j + 1)) +
+              ' [column ' +
+              (j + 1) +
+              ']: ' +
+              (v || '(blank)'),
         )
         .filter(Boolean)
         .join('\n');
@@ -591,7 +639,7 @@ export class ProgressImportService {
       campusId,
     );
     if (!preview.valid) throw new BadRequestException(preview.issues);
-    const sourceWorkbook = await progressSheets(file);
+    const sourceWorkbook = selectedSource(await progressSheets(file), mapping);
     return this.prisma.$transaction(
       async (tx) => {
         await tx.$queryRaw(

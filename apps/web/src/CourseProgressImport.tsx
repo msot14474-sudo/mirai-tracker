@@ -14,6 +14,7 @@ type Mapping = {
   taughtDate: number;
   percentScale: 'fraction' | 'percent';
   dateOrder?: 'day-first' | 'month-first';
+  excludedColumns?: number[];
 };
 type Inspection = {
   sheets: {
@@ -109,8 +110,35 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
     inspect.reset();
   };
   const update = (value: Partial<Mapping>) => {
-    setMapping((m) => (m ? { ...m, ...value } : m));
+    setMapping((m) => {
+      if (!m) return m;
+      const next = { ...m, ...value };
+      if (value.sheet !== undefined || value.header !== undefined)
+        next.excludedColumns = [];
+      else
+        next.excludedColumns = (next.excludedColumns ?? []).filter(
+          (index) => index !== next.topic && index !== next.hours,
+        );
+      return next;
+    });
     reset();
+  };
+  const toggleColumn = (index: number, include: boolean) => {
+    if (!mapping) return;
+    const excluded = new Set(mapping.excludedColumns ?? []);
+    if (include) excluded.delete(index);
+    else excluded.add(index);
+    const changes: Partial<Mapping> = { excludedColumns: [...excluded] };
+    if (!include)
+      for (const key of [
+        'completion',
+        'status',
+        'plannedDate',
+        'taughtDate',
+      ] as const) {
+        if (mapping[key] === index) changes[key] = -1;
+      }
+    update(changes);
   };
   const sheet = inspection?.sheets.find((s) => s.name === mapping?.sheet);
   const headers = sheet?.rows[(mapping?.header ?? 1) - 1] ?? [];
@@ -235,7 +263,11 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                         <option value={-1}>Not in this file</option>
                       ) : null}
                       {headers.map((h, i) => (
-                        <option key={i} value={i}>
+                        <option
+                          key={i}
+                          value={i}
+                          disabled={mapping.excludedColumns?.includes(i)}
+                        >
                           {i + 1}. {h || 'Unnamed column'}
                         </option>
                       ))}
@@ -271,11 +303,16 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   </select>
                 </label>
               </div>
-              <h4>All {headers.length} source columns</h4>
+              <h4>
+                Choose columns to import ·{' '}
+                {headers.length - (mapping.excludedColumns?.length ?? 0)} of{' '}
+                {headers.length} selected
+              </h4>
               <p className="schedule-help">
-                Check the original headings and sample values below. Extra
-                columns are saved in topic notes, including empty fields. Dates
-                such as 24-Aug-2026 are supported.
+                Uncheck fields you do not want to add. Excluded columns will not
+                be saved in the lesson plan, notes, or source record. Topic name
+                and planned hours are required. Your original file stays
+                unchanged.
               </p>
               <div
                 className="progress-preview-table"
@@ -286,6 +323,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                 <table>
                   <thead>
                     <tr>
+                      <th>Include</th>
                       <th>Column</th>
                       <th>Source heading</th>
                       <th>Sample value</th>
@@ -295,13 +333,32 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   <tbody>
                     {headers.map((header, index) => (
                       <tr key={index}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Include column ${index + 1}: ${header || 'Unnamed column'}`}
+                            checked={!mapping.excludedColumns?.includes(index)}
+                            disabled={
+                              index === mapping.topic || index === mapping.hours
+                            }
+                            onChange={(event) =>
+                              toggleColumn(index, event.target.checked)
+                            }
+                          />
+                          {index === mapping.topic ||
+                          index === mapping.hours ? (
+                            <small>Required</small>
+                          ) : null}
+                        </td>
                         <td>{index + 1}</td>
                         <th>{header || 'Unnamed column'}</th>
                         <td>{sheet?.rows[mapping.header]?.[index] || '—'}</td>
                         <td>
-                          {fields.find(
-                            ([key]) => mapping[key] === index,
-                          )?.[1] ?? 'Topic notes'}
+                          {mapping.excludedColumns?.includes(index)
+                            ? 'Excluded — not saved'
+                            : (fields.find(
+                                ([key]) => mapping[key] === index,
+                              )?.[1] ?? 'Topic notes')}
                         </td>
                       </tr>
                     ))}
@@ -356,7 +413,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
             </div>
           ) : (
             <p className="form-success">
-              Ready to import. All source columns will be kept.
+              Ready to import. All selected columns will be kept.
             </p>
           )}
           {preview.warnings?.map((warning) => (
@@ -367,7 +424,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
           {preview.source ? (
             <details open>
               <summary>
-                Complete source data · {preview.source.columns.length} columns ·{' '}
+                Selected source data · {preview.source.columns.length} columns ·{' '}
                 {preview.source.rows.length} rows
               </summary>
               <div
