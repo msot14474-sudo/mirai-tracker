@@ -1,3 +1,4 @@
+import { TimetableService } from '../timetable/timetable.service';
 import {
   AuditAction,
   ImportType,
@@ -29,6 +30,7 @@ export class SemesterImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessPolicyService,
+    private readonly timetable: TimetableService,
   ) {}
 
   private async checkCampus(preview: SemesterImportPreview, campusId?: string) {
@@ -105,10 +107,11 @@ export class SemesterImportService {
       };
     }
 
+    let affectedSemesters: string[] = [];
     try {
       await this.prisma.$transaction(
         async (transaction) => {
-          await this.commit(transaction, preview.data);
+          affectedSemesters = await this.commit(transaction, preview.data);
           await transaction.importJob.update({
             where: { id: job.id },
             data: {
@@ -159,6 +162,9 @@ export class SemesterImportService {
       );
     }
 
+    for (const semesterId of affectedSemesters) {
+      await this.timetable.regenerateSemester(semesterId, user);
+    }
     return {
       job: await this.requireJob(job.id),
       counts: preview.counts,
@@ -396,6 +402,7 @@ export class SemesterImportService {
         },
       });
     }
+    return [...semesterIds.values()];
   }
 }
 

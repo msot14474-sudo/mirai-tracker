@@ -56,7 +56,7 @@ describe('SemesterImportService', () => {
   });
 
   it('upserts the complete relationship graph in one transaction', async () => {
-    const { service, prisma, transaction } = setup();
+    const { service, prisma, transaction, timetable } = setup();
     prisma.importJob.create.mockResolvedValue({ id: 'job-valid' });
     prisma.importJob.findUnique.mockResolvedValue({
       id: 'job-valid',
@@ -82,6 +82,10 @@ describe('SemesterImportService', () => {
       }),
     );
     expect(transaction.auditEvent.create).toHaveBeenCalled();
+    expect(timetable.regenerateSemester).toHaveBeenCalledWith(
+      'semester-a',
+      manager,
+    );
     expect(result.counts?.offerings).toBe(1);
   });
 
@@ -120,13 +124,18 @@ function setup() {
     $transaction: jest.fn(),
   };
   const access = { assertGlobalManager: jest.fn() };
+  const timetable = {
+    regenerateSemester: jest.fn().mockResolvedValue(undefined),
+  };
   return {
+    timetable,
     transaction,
     prisma,
     access,
     service: new SemesterImportService(
       prisma as unknown as PrismaService,
       access as unknown as AccessPolicyService,
+      timetable as never,
     ),
   };
 }
