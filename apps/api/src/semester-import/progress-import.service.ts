@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -27,6 +28,13 @@ export const mappingSchema = z.object({
   dateOrder: z.enum(['day-first', 'month-first']).optional(),
   excludedColumns: z.array(z.number().int().min(0)).optional(),
 });
+export const progressDestinationSchema = z.object({
+  semesterId: z.string().uuid(),
+  subjectName: z.string().trim().min(1).max(200),
+  batchName: z.string().trim().min(1).max(160),
+  programName: z.string().trim().min(1).max(160),
+});
+type Destination = z.infer<typeof progressDestinationSchema>;
 type Mapping = z.infer<typeof mappingSchema>;
 type Sheet = {
   name: string;
@@ -597,8 +605,35 @@ export class ProgressImportService {
     mapping: Mapping,
     user: AuthenticatedUser,
     campusId?: string,
+    semesterId?: string,
+    destination?: Destination,
   ) {
     this.access.assertGlobalManager(user);
+    if (!offeringId) {
+      if (!destination || destination.semesterId !== semesterId)
+        throw new BadRequestException(
+          'Select a semester and enter the course details.',
+        );
+      const semester = await this.prisma.semester.findUnique({
+        where: { id: semesterId },
+        include: { campus: true },
+      });
+      if (
+        !semester ||
+        semester.status === 'ARCHIVED' ||
+        !semester.campus.active ||
+        (campusId && semester.campusId !== campusId)
+      )
+        throw new BadRequestException(
+          'Choose an active semester from this campus.',
+        );
+      return normalizeProgress(
+        await progressSheets(file),
+        mapping,
+        semester.startDate.toISOString().slice(0, 10),
+        semester.endDate.toISOString().slice(0, 10),
+      );
+    }
     const offering = await this.prisma.subjectOffering.findUnique({
       where: { id: offeringId },
       include: {
@@ -616,6 +651,13 @@ export class ProgressImportService {
       throw new ConflictException(
         'This subject already has a lesson plan. Historical import only supports subjects without a plan, to protect existing progress.',
       );
+    if (
+      (semesterId && offering.batch.semester.id !== semesterId) ||
+      offering.batch.semester.status === 'ARCHIVED'
+    )
+      throw new BadRequestException(
+        'Choose a subject from the selected active semester.',
+      );
     const data = normalizeProgress(
       await progressSheets(file),
       mapping,
@@ -630,6 +672,8 @@ export class ProgressImportService {
     mapping: Mapping,
     user: AuthenticatedUser,
     campusId?: string,
+    semesterId?: string,
+    destination?: Destination,
   ) {
     const preview = await this.preview(
       file,
@@ -637,11 +681,92 @@ export class ProgressImportService {
       mapping,
       user,
       campusId,
+      semesterId,
+      destination,
     );
     if (!preview.valid) throw new BadRequestException(preview.issues);
     const sourceWorkbook = selectedSource(await progressSheets(file), mapping);
     return this.prisma.$transaction(
       async (tx) => {
+        if (!offeringId && destination) {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM "Semester" WHERE id = ${destination.semesterId}::uuid FOR UPDATE`,
+          );
+          const semester = await tx.semester.findUniqueOrThrow({
+            where: { id: destination.semesterId },
+          });
+          if (
+            semester.status === 'ARCHIVED' ||
+            (campusId && semester.campusId !== campusId)
+          )
+            throw new BadRequestException(
+              'The selected semester is no longer available.',
+            );
+          const rechecked = normalizeProgress(
+            sourceWorkbook,
+            mapping,
+            semester.startDate.toISOString().slice(0, 10),
+            semester.endDate.toISOString().slice(0, 10),
+          );
+          if (!rechecked.valid) throw new BadRequestException(rechecked.issues);
+          const program = await tx.track.upsert({
+            where: { name: destination.programName },
+            create: {
+              name: destination.programName,
+              code: 'IMP-' + randomUUID().slice(0, 24),
+            },
+            update: {},
+          });
+          if (!program.active)
+            throw new BadRequestException(
+              'This program is inactive. Choose an active program.',
+            );
+          let batch = await tx.batch.findFirst({
+            where: { semesterId: semester.id, name: destination.batchName },
+          });
+          if (batch && (!batch.active || batch.trackId !== program.id))
+            throw new BadRequestException(
+              'This batch belongs to another program or is inactive. Check the batch and program names.',
+            );
+          if (!batch)
+            batch = await tx.batch.create({
+              data: {
+                semesterId: semester.id,
+                trackId: program.id,
+                name: destination.batchName,
+                code: 'IMP-' + randomUUID(),
+              },
+            });
+          let subject = await tx.subject.findFirst({
+            where: {
+              campusId: semester.campusId,
+              name: destination.subjectName,
+            },
+          });
+          if (subject && !subject.active)
+            throw new BadRequestException('This subject is inactive.');
+          if (!subject)
+            subject = await tx.subject.create({
+              data: {
+                campusId: semester.campusId,
+                name: destination.subjectName,
+                code: 'IMP-' + randomUUID(),
+              },
+            });
+          const offering = await tx.subjectOffering.upsert({
+            where: {
+              batchId_subjectId: { batchId: batch.id, subjectId: subject.id },
+            },
+            create: {
+              batchId: batch.id,
+              subjectId: subject.id,
+              targetFinishDate: semester.endDate,
+              status: 'ACTIVE',
+            },
+            update: {},
+          });
+          offeringId = offering.id;
+        }
         await tx.$queryRaw(
           Prisma.sql`SELECT id FROM "SubjectOffering" WHERE id = ${offeringId}::uuid FOR UPDATE`,
         );
@@ -717,6 +842,8 @@ export class ProgressImportService {
               mapping,
               counts: preview.counts,
               sourceWorkbook,
+              ...(semesterId ? { semesterId } : {}),
+              ...(destination ? { destination } : {}),
             },
           },
         });

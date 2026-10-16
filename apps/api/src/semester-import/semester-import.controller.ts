@@ -25,6 +25,7 @@ import { UploadedImportFile } from './semester-import.types';
 import {
   ProgressImportService,
   mappingSchema,
+  progressDestinationSchema,
 } from './progress-import.service';
 
 const managers = [UserRole.ADMIN, UserRole.PROGRAM_MANAGER] as const;
@@ -56,15 +57,19 @@ export class SemesterImportController {
     @UploadedFile() file: UploadedImportFile | undefined,
     @Body('campusId') campusId: string,
     @Body('offeringId') offeringId: string,
+    @Body('semesterId') semesterId: string,
+    @Body('destination') destination: string,
     @Body('mapping') mapping: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.progress.preview(
       requiredFile(file),
-      parseId(offeringId),
+      offeringId ? parseId(offeringId) : '',
       parseMapping(mapping),
       user,
       campusId ? parseId(campusId) : undefined,
+      semesterId ? parseId(semesterId) : undefined,
+      destination ? parseDestination(destination) : undefined,
     );
   }
 
@@ -74,15 +79,19 @@ export class SemesterImportController {
     @UploadedFile() file: UploadedImportFile | undefined,
     @Body('campusId') campusId: string,
     @Body('offeringId') offeringId: string,
+    @Body('semesterId') semesterId: string,
+    @Body('destination') destination: string,
     @Body('mapping') mapping: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.progress.execute(
       requiredFile(file),
-      parseId(offeringId),
+      offeringId ? parseId(offeringId) : '',
       parseMapping(mapping),
       user,
       campusId ? parseId(campusId) : undefined,
+      semesterId ? parseId(semesterId) : undefined,
+      destination ? parseDestination(destination) : undefined,
     );
   }
 
@@ -183,6 +192,16 @@ function parseMapping(value: string) {
   } catch {
     throw new BadRequestException(
       'Check the selected worksheet and column mapping.',
+    );
+  }
+}
+
+function parseDestination(value: string) {
+  try {
+    return progressDestinationSchema.parse(JSON.parse(value));
+  } catch {
+    throw new BadRequestException(
+      'Enter a subject, batch and program for the selected semester.',
     );
   }
 }

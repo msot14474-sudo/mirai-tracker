@@ -13,21 +13,21 @@ const countLabels: Array<[keyof ImportCounts, string]> = [
 ];
 
 export function SemesterImport({ campusId }: { campusId?: string }) {
-  const [mode, setMode] = useState('setup');
+  const [mode, setMode] = useState('progress');
   return (
     <>
       <div className="import-mode-picker" aria-label="Import type">
         <button
-          className={mode === 'setup' ? 'selected' : ''}
-          onClick={() => setMode('setup')}
-        >
-          Semester setup
-        </button>
-        <button
           className={mode === 'progress' ? 'selected' : ''}
           onClick={() => setMode('progress')}
         >
-          Existing course progress
+          Import course data
+        </button>
+        <button
+          className={mode === 'setup' ? 'selected' : ''}
+          onClick={() => setMode('setup')}
+        >
+          Semester setup template
         </button>
       </div>
       {mode === 'setup' ? (
@@ -92,8 +92,7 @@ function SemesterSetupImport({ campusId }: { campusId?: string }) {
           <h3>Choose semester data</h3>
           <p>
             For semester dates, batches and subjects, use the supplied template.
-            Already tracking completed lessons? Choose Existing course progress
-            above.
+            Already tracking completed lessons? Choose Import course data above.
           </p>
           <label className="file-picker">
             <span className="file-picker-label">CSV or Excel file</span>

@@ -498,6 +498,9 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Semester import' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Semester setup template' }),
+    );
     expect(
       await screen.findByRole('heading', { name: 'Semester import' }),
     ).toBeInTheDocument();

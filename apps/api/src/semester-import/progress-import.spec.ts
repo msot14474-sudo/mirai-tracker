@@ -450,3 +450,143 @@ it('refuses exclusion of required or nonexistent columns', () => {
     ).toThrow();
   }
 });
+
+it('previews and imports directly into a selected semester, creating its course only on confirmation', async () => {
+  const semester = {
+    id: 'term',
+    campusId: 'campus',
+    status: 'ACTIVE',
+    startDate: new Date('2026-07-01'),
+    endDate: new Date('2026-12-31'),
+    campus: { active: true },
+  };
+  const tx = {
+    $queryRaw: jest.fn(),
+    semester: { findUniqueOrThrow: jest.fn().mockResolvedValue(semester) },
+    track: {
+      upsert: jest.fn().mockResolvedValue({ id: 'program', active: true }),
+    },
+    batch: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'batch' }),
+    },
+    subject: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'subject' }),
+    },
+    subjectOffering: {
+      upsert: jest.fn().mockResolvedValue({ id: 'offering' }),
+    },
+    lessonPlan: {
+      count: jest.fn().mockResolvedValue(0),
+      create: jest
+        .fn()
+        .mockResolvedValue({
+          id: 'plan',
+          units: [{ topics: [{ id: 'topic' }] }],
+        }),
+    },
+    topicScheduleVersion: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn(),
+    },
+    auditEvent: { create: jest.fn() },
+  };
+  const prisma = {
+    semester: { findUnique: jest.fn().mockResolvedValue(semester) },
+    $transaction: jest.fn(async (fn) => fn(tx)),
+  };
+  const service = new ProgressImportService(
+    prisma as unknown as PrismaService,
+    { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,
+    {} as RedisService,
+  );
+  const buffer = Buffer.from(
+    'Topic,Planned hr,Status,Planned Date,Date Taught\nHTML,1.5,Completed,24-Aug-2026,25-Aug-2026',
+  );
+  const file = {
+    buffer,
+    originalname: 'progress.csv',
+    mimetype: 'text/csv',
+    size: buffer.length,
+  };
+  const map = suggestMapping(await progressSheets(file));
+  const destination = {
+    semesterId: 'term',
+    subjectName: 'Web',
+    batchName: 'Alpha',
+    programName: 'Technology',
+  };
+  const user = { id: 'actor' } as AuthenticatedUser;
+  const preview = await service.preview(
+    file,
+    '',
+    map,
+    user,
+    'campus',
+    'term',
+    destination,
+  );
+  expect(preview.valid).toBe(true);
+  expect(preview.topics[0]?.taughtDate).toBe('2026-08-25');
+  expect(prisma.$transaction).not.toHaveBeenCalled();
+  await service.execute(file, '', map, user, 'campus', 'term', destination);
+  expect(tx.batch.create).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({ semesterId: 'term', name: 'Alpha' }),
+    }),
+  );
+  expect(tx.subject.create).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({ campusId: 'campus', name: 'Web' }),
+    }),
+  );
+  expect(tx.topicScheduleVersion.create).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({
+        entries: {
+          create: [
+            expect.objectContaining({
+              plannedStartDate: new Date('2026-08-24'),
+            }),
+          ],
+        },
+      }),
+    }),
+  );
+  await expect(
+    service.preview(file, '', map, user, 'another-campus', 'term', destination),
+  ).rejects.toThrow('Choose an active semester');
+  semester.status = 'ARCHIVED';
+  await expect(
+    service.preview(file, '', map, user, 'campus', 'term', destination),
+  ).rejects.toThrow('Choose an active semester');
+});
+it('rejects an existing subject from a different selected semester', async () => {
+  const service = new ProgressImportService(
+    {
+      subjectOffering: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            lessonPlans: [],
+            batch: {
+              semester: { id: 'other', campusId: 'campus', status: 'ACTIVE' },
+            },
+          }),
+      },
+    } as unknown as PrismaService,
+    { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,
+    {} as RedisService,
+  );
+  await expect(
+    service.preview(
+      {} as never,
+      'offering',
+      mapping,
+      {} as AuthenticatedUser,
+      'campus',
+      'selected',
+    ),
+  ).rejects.toThrow('selected active semester');
+});

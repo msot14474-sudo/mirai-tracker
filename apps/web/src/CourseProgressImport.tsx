@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
+import { academicApi, dateOnly, SaturdayRule } from './academic';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { lessonPlanApi } from './lessonPlans';
 import { upload } from './imports';
@@ -64,6 +65,61 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
   const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [offeringId, setOfferingId] = useState('');
+  const [semesterId, setSemesterId] = useState('');
+  const [showSemesterForm, setShowSemesterForm] = useState(false);
+  const [subjectName, setSubjectName] = useState('');
+  const [batchName, setBatchName] = useState('');
+  const [programName, setProgramName] = useState('');
+  const semesters = useQuery({
+    queryKey: ['academic', 'semesters', campusId],
+    queryFn: () => academicApi.semesters(campusId!),
+    enabled: Boolean(campusId),
+  });
+  const semester = semesters.data?.find((item) => item.id === semesterId);
+  const createSemester = useMutation({
+    mutationFn: (input: {
+      name: string;
+      startDate: string;
+      endDate: string;
+      workingSaturdayRule: SaturdayRule;
+    }) => academicApi.createSemester(campusId!, input),
+    onSuccess: async (created) => {
+      await client.invalidateQueries({
+        queryKey: ['academic', 'semesters', campusId],
+      });
+      setSemesterId(created.id);
+      setOfferingId('');
+      setShowSemesterForm(false);
+      reset();
+    },
+  });
+  const submitSemester = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    createSemester.mutate({
+      name: String(values.get('name')),
+      startDate: String(values.get('startDate')),
+      endDate: String(values.get('endDate')),
+      workingSaturdayRule: String(
+        values.get('workingSaturdayRule'),
+      ) as SaturdayRule,
+    });
+  };
+  const destinationFields = () => ({
+    semesterId,
+    offeringId,
+    ...(!offeringId
+      ? {
+          destination: JSON.stringify({
+            semesterId,
+            subjectName,
+            batchName,
+            programName,
+          }),
+        }
+      : {}),
+  });
+
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [mapping, setMapping] = useState<Mapping | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -85,7 +141,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
   const validate = useMutation({
     mutationFn: () =>
       upload<Preview>('/imports/progress/preview', file!, {
-        offeringId,
+        ...destinationFields(),
         ...(campusId ? { campusId } : {}),
         mapping: JSON.stringify(mapping),
       }),
@@ -94,7 +150,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
   const save = useMutation({
     mutationFn: () =>
       upload('/imports/progress', file!, {
-        offeringId,
+        ...destinationFields(),
         ...(campusId ? { campusId } : {}),
         mapping: JSON.stringify(mapping),
       }),
@@ -102,7 +158,11 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
       await client.invalidateQueries();
     },
   });
-  const busy = inspect.isPending || validate.isPending || save.isPending;
+  const busy =
+    inspect.isPending ||
+    validate.isPending ||
+    save.isPending ||
+    createSemester.isPending;
   const reset = () => {
     setPreview(null);
     save.reset();
@@ -145,54 +205,101 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
   return (
     <div className="progress-import">
       <div className="setup-card">
-        <h3>Bring your existing teaching record</h3>
+        <h3>Import into a semester</h3>
         <p className="schedule-help">
-          Use the semester’s original start and end dates, even if teaching has
-          already started. First set up its batch and subject, then import the
-          progress you have recorded.
+          Create the semester with its original start and end dates, select it
+          below, then upload your teaching record. Planned dates and dates
+          taught come from your file; they are not shifted to today.
         </p>
+        <button
+          type="button"
+          className="text-button"
+          disabled={busy || save.isSuccess || !campusId}
+          onClick={() => setShowSemesterForm(!showSemesterForm)}
+        >
+          {showSemesterForm ? 'Cancel semester creation' : 'Create a semester'}
+        </button>
+        {showSemesterForm ? (
+          <form className="progress-import-fields" onSubmit={submitSemester}>
+            <fieldset disabled={busy} className="progress-import-fields">
+              <label>
+                Semester name
+                <input name="name" required maxLength={160} />
+              </label>
+              <div className="field-pair">
+                <label>
+                  Semester starts
+                  <input type="date" name="startDate" required />
+                </label>
+                <label>
+                  Semester ends
+                  <input type="date" name="endDate" required />
+                </label>
+              </div>
+              <label>
+                Working Saturdays
+                <select name="workingSaturdayRule" defaultValue="NONE">
+                  <option value="NONE">None</option>
+                  <option value="ALL">All Saturdays</option>
+                  <option value="SECOND_AND_FOURTH">Second and fourth</option>
+                </select>
+              </label>
+              <button type="submit">Create and select semester</button>
+            </fieldset>
+            {createSemester.error ? (
+              <p className="form-error" role="alert">
+                {createSemester.error.message}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
         <fieldset
           disabled={busy || save.isSuccess}
           className="progress-import-fields"
         >
           <label>
-            1. Choose the subject and batch
+            1. Choose a semester
             <select
-              value={offeringId}
-              onChange={(e) => {
-                setOfferingId(e.target.value);
+              value={semesterId}
+              onChange={(event) => {
+                setSemesterId(event.target.value);
+                setOfferingId('');
                 reset();
               }}
             >
-              <option value="">Choose a subject</option>
-              {offerings.data
-                ?.filter((o) => !o.plan)
-                .map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.subject.name} · {o.batch.name} · {o.batch.semester.name}{' '}
-                    · {o.batch.semester.campus.name}
+              <option value="">Choose a semester</option>
+              {semesters.data
+                ?.filter((item) => item.status !== 'ARCHIVED')
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {dateOnly(item.startDate)} to{' '}
+                    {dateOnly(item.endDate)}
                   </option>
                 ))}
             </select>
           </label>
-          {offerings.isLoading ? <p role="status">Loading subjects…</p> : null}
-          {offerings.error ? (
-            <p role="alert">{offerings.error.message}</p>
+          {semesters.isLoading ? <p role="status">Loading semesters…</p> : null}
+          {semesters.error ? (
+            <p role="alert">{semesters.error.message}</p>
           ) : null}
-          {!offerings.isLoading &&
-          offerings.data &&
-          !offerings.data.some((o) => !o.plan) ? (
+          {semester ? (
             <p className="schedule-help">
-              No subjects without a lesson plan are available. Add the semester,
-              batch and subject using the Semester setup template first.
-              Existing plans are protected from replacement.
+              Selected semester: <strong>{semester.name}</strong> ·{' '}
+              {dateOnly(semester.startDate)} to {dateOnly(semester.endDate)}.
+              File dates outside this range will be listed for correction before
+              import.
             </p>
-          ) : null}
+          ) : (
+            <p className="schedule-help">
+              Select an existing semester or use Create a semester above.
+            </p>
+          )}
           <label>
             2. Choose your progress file
             <input
               type="file"
               accept=".csv,.xlsx"
+              disabled={!semesterId}
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
                 setInspection(null);
@@ -205,12 +312,15 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
             Excel or CSV. Your file can use its own sheet and column names.
           </p>
           <div className="template-actions">
-            <button disabled={!file} onClick={() => inspect.mutate(false)}>
+            <button
+              disabled={!file || !semesterId}
+              onClick={() => inspect.mutate(false)}
+            >
               Read file
             </button>
             <button
               className="text-button"
-              disabled={!file}
+              disabled={!file || !semesterId}
               onClick={() => inspect.mutate(true)}
             >
               Match columns with AI
@@ -219,7 +329,80 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
 
           {mapping && inspection ? (
             <>
-              <h3>3. Check the columns</h3>
+              <h3>3. Confirm the course</h3>
+              <label>
+                Subject and batch in this semester
+                <select
+                  value={offeringId}
+                  onChange={(event) => {
+                    setOfferingId(event.target.value);
+                    reset();
+                  }}
+                >
+                  <option value="">
+                    Add a subject and batch with this import
+                  </option>
+                  {offerings.data
+                    ?.filter(
+                      (item) =>
+                        !item.plan && item.batch.semester.id === semesterId,
+                    )
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.subject.name} · {item.batch.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {offerings.error ? (
+                <p role="alert">{offerings.error.message}</p>
+              ) : null}
+              {!offeringId ? (
+                <div className="progress-mapping-grid">
+                  <label>
+                    Subject name
+                    <input
+                      value={subjectName}
+                      maxLength={200}
+                      required
+                      onChange={(event) => {
+                        setSubjectName(event.target.value);
+                        reset();
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Batch name
+                    <input
+                      value={batchName}
+                      maxLength={160}
+                      required
+                      onChange={(event) => {
+                        setBatchName(event.target.value);
+                        reset();
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Program name
+                    <input
+                      value={programName}
+                      maxLength={160}
+                      required
+                      onChange={(event) => {
+                        setProgramName(event.target.value);
+                        reset();
+                      }}
+                    />
+                  </label>
+                  <p className="schedule-help">
+                    These records are created only when you confirm the import.
+                    Existing matching records are reused; existing lesson plans
+                    are never overwritten.
+                  </p>
+                </div>
+              ) : null}
+              <h3>4. Check the columns</h3>
               <div className="progress-mapping-grid">
                 <label>
                   Worksheet
@@ -365,7 +548,16 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   </tbody>
                 </table>
               </div>
-              <button disabled={!offeringId} onClick={() => validate.mutate()}>
+              <button
+                disabled={
+                  !semesterId ||
+                  (!offeringId &&
+                    (!subjectName.trim() ||
+                      !batchName.trim() ||
+                      !programName.trim()))
+                }
+                onClick={() => validate.mutate()}
+              >
                 Preview progress
               </button>
             </>
@@ -390,7 +582,16 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
       </div>
       {preview ? (
         <div className="setup-card">
-          <h3>4. Review and import</h3>
+          <h3>5. Review and import</h3>
+          <p className="schedule-help">
+            {semester?.name} ·{' '}
+            {semester
+              ? dateOnly(semester.startDate) +
+                ' to ' +
+                dateOnly(semester.endDate)
+              : ''}{' '}
+            · File dates are kept as recorded.
+          </p>
           <p>
             {preview.counts.topics} topics · {preview.counts.completed}{' '}
             completed · {preview.counts.minutes / 60} planned hours ·{' '}

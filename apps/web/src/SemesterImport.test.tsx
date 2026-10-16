@@ -72,6 +72,9 @@ describe('SemesterImport', () => {
       return new Response(null, { status: 404 });
     });
     renderImport();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Semester setup template' }),
+    );
 
     const file = new File(['campus_code'], 'semester.csv', {
       type: 'text/csv',
@@ -119,6 +122,9 @@ describe('SemesterImport', () => {
       return json([]);
     });
     renderImport();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Semester setup template' }),
+    );
 
     fireEvent.change(screen.getByLabelText('CSV or Excel file'), {
       target: { files: [new File(['bad'], 'semester.csv')] },

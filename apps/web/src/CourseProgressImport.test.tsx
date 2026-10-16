@@ -30,6 +30,19 @@ it.each([true, false])(
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input, _init) => {
         const url = String(input);
+        if (url.endsWith('/academic/campuses/campus-a/semesters'))
+          return new Response(
+            JSON.stringify([
+              {
+                id: 'term',
+                name: 'Term',
+                startDate: '2026-07-01',
+                endDate: '2026-12-31',
+                status: 'ACTIVE',
+              },
+            ]),
+            { status: 200 },
+          );
         const data = url.endsWith('/lesson-plans/offerings?campusId=campus-a')
           ? [
               {
@@ -37,7 +50,11 @@ it.each([true, false])(
                 subject: { name: 'Web' },
                 batch: {
                   name: 'A',
-                  semester: { name: 'Term', campus: { name: 'Campus' } },
+                  semester: {
+                    id: 'term',
+                    name: 'Term',
+                    campus: { name: 'Campus' },
+                  },
                 },
                 plan: null,
               },
@@ -114,9 +131,14 @@ it.each([true, false])(
         <CourseProgressImport campusId="campus-a" />
       </QueryClientProvider>,
     );
-    await screen.findByText('Web · A · Term · Campus');
-    fireEvent.change(screen.getByLabelText('1. Choose the subject and batch'), {
-      target: { value: 'subject' },
+    expect(
+      screen.getByLabelText('2. Choose your progress file'),
+    ).toBeDisabled();
+    await screen.findByRole('option', {
+      name: 'Term · 2026-07-01 to 2026-12-31',
+    });
+    fireEvent.change(screen.getByLabelText('1. Choose a semester'), {
+      target: { value: 'term' },
     });
     fireEvent.change(screen.getByLabelText('2. Choose your progress file'), {
       target: {
@@ -128,7 +150,11 @@ it.each([true, false])(
       },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Read file' }));
-    await screen.findByText('3. Check the columns');
+    await screen.findByText('4. Check the columns');
+    fireEvent.change(
+      screen.getByLabelText('Subject and batch in this semester'),
+      { target: { value: 'subject' } },
+    );
     expect(
       screen.queryByRole('button', { name: 'Confirm progress import' }),
     ).not.toBeInTheDocument();
@@ -172,6 +198,7 @@ it.each([true, false])(
       String(url).endsWith('/preview'),
     );
     const formData = previews.at(-1)?.[1]?.body as FormData;
+    expect(formData.get('semesterId')).toBe('term');
     expect(JSON.parse(String(formData.get('mapping'))).excludedColumns).toEqual(
       [2],
     );
@@ -190,3 +217,70 @@ it.each([true, false])(
     ).toBe(false);
   },
 );
+
+it('creates and selects a semester before allowing file upload', async () => {
+  let created = false;
+  const semester = {
+    id: 'term-new',
+    name: 'Semester One',
+    startDate: '2026-07-01',
+    endDate: '2026-12-31',
+    status: 'DRAFT',
+  };
+  const requests: unknown[] = [];
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/academic/campuses/campus-a/semesters')) {
+      if (init?.method === 'POST') {
+        created = true;
+        requests.push(JSON.parse(String(init.body)));
+        return new Response(JSON.stringify(semester), { status: 200 });
+      }
+      return new Response(JSON.stringify(created ? [semester] : []), {
+        status: 200,
+      });
+    }
+    return new Response('[]', { status: 200 });
+  });
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false },
+          },
+        })
+      }
+    >
+      <CourseProgressImport campusId="campus-a" />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByLabelText('2. Choose your progress file')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Create a semester' }));
+  fireEvent.change(screen.getByLabelText('Semester name'), {
+    target: { value: 'Semester One' },
+  });
+  fireEvent.change(screen.getByLabelText('Semester starts'), {
+    target: { value: '2026-07-01' },
+  });
+  fireEvent.change(screen.getByLabelText('Semester ends'), {
+    target: { value: '2026-12-31' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Create and select semester' }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText('1. Choose a semester')).toHaveValue(
+      'term-new',
+    ),
+  );
+  expect(screen.getByLabelText('2. Choose your progress file')).toBeEnabled();
+  expect(requests).toEqual([
+    {
+      name: 'Semester One',
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      workingSaturdayRule: 'NONE',
+    },
+  ]);
+});
