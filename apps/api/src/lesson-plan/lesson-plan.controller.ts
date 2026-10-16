@@ -37,7 +37,7 @@ const editors = [
   UserRole.FACULTY,
 ] as const;
 const upload = FileInterceptor('file', {
-  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  limits: { files: 1 },
 });
 
 @Controller('lesson-plans')

@@ -227,7 +227,7 @@ function PlanUpload({
     <div className="plan-upload-card">
       <div>
         <h3>Upload lesson plan</h3>
-        <p>CSV or Excel · maximum 2 MB · planned time in whole minutes</p>
+        <p>CSV or Excel · planned time in whole minutes</p>
       </div>
       <label className="file-picker compact-picker">
         <span className="file-picker-label">Lesson-plan file</span>

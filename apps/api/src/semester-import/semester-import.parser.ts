@@ -14,8 +14,6 @@ import {
   setupColumns,
 } from './semester-import.types';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_ROWS = 5_000;
 const codeSchema = z
   .string()
   .trim()
@@ -127,18 +125,6 @@ export async function parseAndValidateSemesterImport(
   }
 
   const issues = [...parsed.issues];
-  if (parsed.totalRows > MAX_ROWS) {
-    issues.push(
-      issue(
-        'File',
-        0,
-        null,
-        String(parsed.totalRows),
-        `A file can contain at most ${MAX_ROWS} data rows.`,
-      ),
-    );
-  }
-
   const setupRows: SemesterSetupRow[] = [];
   for (const row of parsed.setup) {
     const unsafeFormula = formulaIssue('Semester Setup', row);
@@ -250,15 +236,6 @@ function validateFile(file: UploadedImportFile): ImportIssue | null {
   }
   if (!file.size || !file.buffer.length) {
     return issue('File', 0, null, null, 'The uploaded file is empty.');
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    return issue(
-      'File',
-      0,
-      null,
-      String(file.size),
-      'Maximum file size is 5 MB.',
-    );
   }
   return null;
 }

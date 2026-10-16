@@ -244,3 +244,36 @@ it('keeps reading a file if the AI provider rejects the request', async () => {
     else process.env.OLLAMA_API_KEY = old;
   }
 });
+
+it('reads files beyond the old row, column, cell-text and byte limits', async () => {
+  const headings = [
+    'Topic',
+    'Planned hr',
+    ...Array.from({ length: 100 }, (_, i) => `Note${i}`),
+  ];
+  const rows = Array.from({ length: 1001 }, (_, i) =>
+    [
+      `Topic ${i}`,
+      '1',
+      'x'.repeat(i === 0 ? 9000 : 6000),
+      ...Array(99).fill(''),
+    ].join(','),
+  );
+  const buffer = Buffer.from([headings.join(','), ...rows].join('\n'));
+  expect(buffer.length).toBeGreaterThan(5 * 1024 * 1024);
+  const sheets = await progressSheets({
+    buffer,
+    originalname: 'large.csv',
+    mimetype: 'text/csv',
+    size: buffer.length,
+  });
+  const preview = normalizeProgress(
+    sheets,
+    suggestMapping(sheets),
+    '2026-01-01',
+    '2026-12-31',
+  );
+  expect(preview.valid).toBe(true);
+  expect(preview.topics).toHaveLength(1001);
+  expect(preview.topics[0]?.description).toContain('x'.repeat(9000));
+});

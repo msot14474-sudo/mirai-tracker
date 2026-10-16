@@ -161,8 +161,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
             />
           </label>
           <p className="schedule-help">
-            Excel or CSV, up to 5 MB. Your file can use its own sheet and column
-            names.
+            Excel or CSV. Your file can use its own sheet and column names.
           </p>
           <div className="template-actions">
             <button disabled={!file} onClick={() => inspect.mutate(false)}>
@@ -199,7 +198,7 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                   <input
                     type="number"
                     min={1}
-                    max={Math.min(50, sheet?.totalRows ?? 50)}
+                    max={sheet?.rows.length}
                     value={mapping.header}
                     onChange={(e) => update({ header: Number(e.target.value) })}
                   />

@@ -9,15 +9,13 @@ import {
   lessonPlanColumns,
 } from './lesson-plan.types';
 
-const MAX_FILE_BYTES = 2 * 1024 * 1024;
-const MAX_ROWS = 1_000;
 const rowSchema = z.object({
-  unit_sequence: z.coerce.number().int().positive().max(200),
+  unit_sequence: z.coerce.number().int().positive().max(2147483647),
   unit_title: safeText(200),
-  unit_description: z.string().trim().max(4_000).optional().default(''),
-  topic_sequence: z.coerce.number().int().positive().max(1_000),
+  unit_description: z.string().trim().optional().default(''),
+  topic_sequence: z.coerce.number().int().positive().max(2147483647),
   topic_title: safeText(240),
-  topic_description: z.string().trim().max(4_000).optional().default(''),
+  topic_description: z.string().trim().optional().default(''),
   planned_minutes: z.coerce.number().int().positive().max(10_080),
   exam_names: z.string().trim().max(2_000).optional().default(''),
 });
@@ -42,19 +40,8 @@ export async function parseLessonPlanFile(
   }
 
   const { rows: rawRows, issues } = mapRows(sourceRows);
-  if (rawRows.length > MAX_ROWS) {
-    issues.push(
-      issue(
-        0,
-        null,
-        String(rawRows.length),
-        `A lesson plan can contain at most ${MAX_ROWS} topics.`,
-      ),
-    );
-  }
-
   const rows: LessonPlanRow[] = [];
-  for (const row of rawRows.slice(0, MAX_ROWS)) {
+  for (const row of rawRows) {
     const formula = Object.entries(row.values).find(([, value]) =>
       /^[=+@]/.test(value),
     );
@@ -121,9 +108,6 @@ function validateFile(file: UploadedImportFile) {
   }
   if (!file.size || !file.buffer.length) {
     return issue(0, null, null, 'The uploaded file is empty.');
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    return issue(0, null, String(file.size), 'Maximum file size is 2 MB.');
   }
   return null;
 }

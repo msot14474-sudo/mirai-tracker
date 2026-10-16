@@ -149,12 +149,15 @@ describe('semester import parser', () => {
     ]);
   });
 
-  it('rejects files over five megabytes before parsing', async () => {
+  it('validates file contents without a five-megabyte size gate', async () => {
     const preview = await parseAndValidateSemesterImport({
       ...uploaded('semester.csv', Buffer.from('x')),
       size: 5 * 1024 * 1024 + 1,
     });
-    expect(preview.issues[0]?.errorMessage).toBe('Maximum file size is 5 MB.');
+    expect(
+      preview.issues.some((issue) => issue.errorMessage.includes('file size')),
+    ).toBe(false);
+    expect(preview.valid).toBe(false); // Invalid headers are still rejected.
   });
 });
 

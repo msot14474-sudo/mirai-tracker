@@ -97,3 +97,16 @@ function file(name: string, value: string | Buffer) {
     buffer,
   };
 }
+
+it('reads more than 1,000 topics without truncating the plan', async () => {
+  const rows = Array.from(
+    { length: 1001 },
+    (_, i) => `1,Unit,,${i + 1},Topic ${i + 1},,60,`,
+  );
+  const preview = await parseLessonPlanFile(
+    file('large.csv', [header(), ...rows].join('\n')),
+  );
+  expect(preview.valid).toBe(true);
+  expect(preview.rows).toHaveLength(1001);
+  expect(preview.rows[1000]?.topicTitle).toBe('Topic 1001');
+});

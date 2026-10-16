@@ -16,13 +16,13 @@ import { UploadedImportFile } from './semester-import.types';
 
 export const mappingSchema = z.object({
   sheet: z.string().max(200),
-  header: z.number().int().min(1).max(50),
-  topic: z.number().int().min(0).max(99),
-  hours: z.number().int().min(0).max(99),
-  completion: z.number().int().min(-1).max(99),
-  status: z.number().int().min(-1).max(99),
-  plannedDate: z.number().int().min(-1).max(99),
-  taughtDate: z.number().int().min(-1).max(99),
+  header: z.number().int().min(1),
+  topic: z.number().int().min(0),
+  hours: z.number().int().min(0),
+  completion: z.number().int().min(-1),
+  status: z.number().int().min(-1),
+  plannedDate: z.number().int().min(-1),
+  taughtDate: z.number().int().min(-1),
   percentScale: z.enum(['fraction', 'percent']),
 });
 type Mapping = z.infer<typeof mappingSchema>;
@@ -31,8 +31,6 @@ type Sheet = { name: string; rows: string[][] };
 export async function progressSheets(
   file: UploadedImportFile,
 ): Promise<Sheet[]> {
-  if (file.buffer.length > 5 * 1024 * 1024)
-    throw new BadRequestException('Maximum file size is 5 MB.');
   const book = new ExcelJS.Workbook();
   try {
     if (file.originalname.toLowerCase().endsWith('.xlsx')) {
@@ -47,14 +45,7 @@ export async function progressSheets(
   } catch {
     throw new BadRequestException('Choose a readable .xlsx or .csv file.');
   }
-  if (book.worksheets.length > 20)
-    throw new BadRequestException('Use a workbook with 20 sheets or fewer.');
-  let textSize = 0;
   return book.worksheets.map((sheet) => {
-    if (sheet.rowCount > 1000 || sheet.columnCount > 100)
-      throw new BadRequestException(
-        'Use up to 1,000 rows and 100 columns per sheet.',
-      );
     const rows: string[][] = [];
     for (let n = 1; n <= sheet.rowCount; n++) {
       const row: string[] = [];
@@ -69,13 +60,6 @@ export async function progressSheets(
                 ? '[Formula without saved result]'
                 : String(v.result)
               : cell.text;
-        if (value.length > 8000)
-          throw new BadRequestException('A cell exceeds 8,000 characters.');
-        textSize += value.length;
-        if (textSize > 2000000)
-          throw new BadRequestException(
-            'Workbook text exceeds 2 million characters. Split the file.',
-          );
         row.push(value.trim());
       }
       rows.push(row);
@@ -85,7 +69,7 @@ export async function progressSheets(
 }
 export function suggestMapping(sheets: Sheet[]): Mapping {
   for (const sheet of sheets)
-    for (let i = 0; i < Math.min(sheet.rows.length, 50); i++) {
+    for (let i = 0; i < sheet.rows.length; i++) {
       const headers = sheet.rows[i]!.map((v) =>
         v.toLowerCase().replace(/[^a-z0-9]/g, ''),
       );
@@ -396,7 +380,10 @@ export class ProgressImportService {
     return {
       sheets: sheets.map((s) => ({
         name: s.name,
-        rows: s.rows.slice(0, 50),
+        rows: s.rows.slice(
+          0,
+          Math.max(50, mapping.sheet === s.name ? mapping.header : 0),
+        ),
         totalRows: s.rows.length,
       })),
       mapping,

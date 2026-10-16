@@ -91,9 +91,9 @@ function SemesterSetupImport({ campusId }: { campusId?: string }) {
           <span className="feature-number">01</span>
           <h3>Choose semester data</h3>
           <p>
-            For semester dates, batches and subjects, use the supplied template
-            (maximum 5 MB). Already tracking completed lessons? Choose Existing
-            course progress above.
+            For semester dates, batches and subjects, use the supplied template.
+            Already tracking completed lessons? Choose Existing course progress
+            above.
           </p>
           <label className="file-picker">
             <span className="file-picker-label">CSV or Excel file</span>

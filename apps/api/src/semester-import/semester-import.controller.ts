@@ -29,7 +29,7 @@ import {
 
 const managers = [UserRole.ADMIN, UserRole.PROGRAM_MANAGER] as const;
 const upload = FileInterceptor('file', {
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  limits: { files: 1 },
 });
 
 @Controller('imports')
