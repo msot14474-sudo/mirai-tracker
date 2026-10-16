@@ -1,4 +1,4 @@
-import { StaffType, UserStatus } from '@prisma/client';
+import { StaffType, UserStatus, UserRole } from '@prisma/client';
 import { z } from 'zod';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
 
@@ -45,6 +45,8 @@ export const createFacultySchema = z.object({
 
 export const updateManagedAccountSchema = z
   .object({
+    role: z.nativeEnum(UserRole).optional(),
+    campusId: uuidSchema.nullable().optional(),
     name: z.string().trim().min(2).max(160).optional(),
     email: z
       .string()

@@ -81,6 +81,8 @@ export type ManagedAccount = {
 };
 
 export type UpdateManagedAccountInput = {
+  role?: ManagedAccount['roleAssignments'][number]['role'];
+  campusId?: string | null;
   name?: string;
   email?: string;
   notificationEmail?: string | null;

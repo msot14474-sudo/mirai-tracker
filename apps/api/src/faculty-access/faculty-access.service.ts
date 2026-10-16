@@ -140,6 +140,29 @@ export class FacultyAccessService {
       throw new BadRequestException('You cannot suspend your own account.');
     }
 
+    let replacementCampusId: string | null = null;
+    if (input.role) {
+      this.access.assertGlobalManager(actor);
+      if (actor.id === target.id) {
+        throw new BadRequestException(
+          'Ask another administrator to change your role.',
+        );
+      }
+      const globalRole =
+        input.role === UserRole.ADMIN ||
+        input.role === UserRole.PROGRAM_MANAGER;
+      replacementCampusId = globalRole
+        ? null
+        : (input.campusId ??
+          target.roleAssignments.find((item) => item.campusId)?.campusId ??
+          null);
+      if (!globalRole) {
+        if (!replacementCampusId)
+          throw new BadRequestException('Choose a campus for this role.');
+        await this.requireCampus(replacementCampusId);
+      }
+    }
+
     const credential = input.password
       ? await hashPassword(input.password)
       : null;
@@ -148,9 +171,25 @@ export class FacultyAccessService {
         ?.campusId ?? null;
     try {
       return await this.prisma.$transaction(async (transaction) => {
+        // Serialize role replacements for this account before deleting old grants.
+        if (input.role) {
+          await transaction.$queryRaw`SELECT id FROM "User" WHERE id = ${target.id}::uuid FOR UPDATE`;
+        }
         const account = await transaction.user.update({
           where: { id: target.id },
           data: {
+            ...(input.role
+              ? {
+                  roleAssignments: {
+                    deleteMany: {},
+                    create: {
+                      role: input.role,
+                      campusId: replacementCampusId,
+                      scopeKey: replacementCampusId ?? 'GLOBAL',
+                    },
+                  },
+                }
+              : {}),
             ...(input.name !== undefined ? { name: input.name } : {}),
             ...(input.email !== undefined ? { email: input.email } : {}),
             ...(input.notificationEmail !== undefined
@@ -185,12 +224,16 @@ export class FacultyAccessService {
               email: target.email,
               notificationEmail: target.notificationEmail,
               status: target.status,
+              roles: target.roleAssignments,
             },
             after: {
               name: account.name,
               email: account.email,
               notificationEmail: account.notificationEmail,
               status: account.status,
+              ...(input.role
+                ? { role: input.role, campusId: replacementCampusId }
+                : {}),
               passwordChanged: Boolean(credential),
             },
           },
@@ -470,6 +513,18 @@ export class FacultyAccessService {
     role: UserRole,
     campusId: string | null,
   ) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: input.email },
+      select: { id: true },
+    });
+    if (existing) {
+      const result = await this.updateAccount(
+        existing.id,
+        { role, campusId },
+        actor,
+      );
+      return { ...result, role, campusId, passwordStoredAsHash: true };
+    }
     const credential = await hashPassword(input.password);
     try {
       return await this.prisma.$transaction(async (transaction) => {

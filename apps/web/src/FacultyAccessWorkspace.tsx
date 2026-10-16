@@ -82,9 +82,14 @@ export function FacultyAccessWorkspace({
         : facultyAccessApi.createCampusManager(campusId, input),
     onSuccess: async () => {
       form.current?.reset();
-      await queryClient.invalidateQueries({
-        queryKey: ['managed-accounts', campusId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['managed-accounts', campusId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['faculty-access', campusId],
+        }),
+      ]);
     },
   });
   const updateAccount = useMutation({
@@ -156,6 +161,14 @@ export function FacultyAccessWorkspace({
         email: String(values.get('managedEmail') ?? ''),
         notificationEmail: notificationEmail || null,
         status: String(values.get('managedStatus')) as 'ACTIVE' | 'SUSPENDED',
+        ...(values.get('managedRole')
+          ? {
+              role: String(
+                values.get('managedRole'),
+              ) as UpdateManagedAccountInput['role'],
+              campusId,
+            }
+          : {}),
         ...(password ? { password } : {}),
       },
     });
@@ -475,8 +488,8 @@ export function FacultyAccessWorkspace({
                   {createAccount.isSuccess ? (
                     <p className="form-success" role="status">
                       {accountType === 'ADMIN'
-                        ? 'Administrator access created.'
-                        : 'Campus Manager access created.'}
+                        ? 'Administrator access assigned.'
+                        : 'Campus Manager access assigned.'}
                     </p>
                   ) : null}
                   <button
@@ -491,7 +504,11 @@ export function FacultyAccessWorkspace({
               </div>
             ) : selectedAccount ? (
               <form
-                key={selectedAccount.id + selectedAccount.status}
+                key={
+                  selectedAccount.id +
+                  selectedAccount.status +
+                  accountRoleLabel(selectedAccount)
+                }
                 className="managed-account-editor"
                 onSubmit={submitAccountUpdate}
               >
@@ -548,6 +565,26 @@ export function FacultyAccessWorkspace({
                     </select>
                   </label>
                 </div>
+                {(canCreateAdministrators || canCreateCampusManagers) &&
+                selectedAccount.id !== currentUserId ? (
+                  <label>
+                    Change role
+                    <select name="managedRole" defaultValue="">
+                      <option value="">Keep current role</option>
+                      <option value="ADMIN">Administrator</option>
+                      <option value="CAMPUS_MANAGER">Campus manager</option>
+                      {selectedAccount.staffProfile ? (
+                        <option value="FACULTY">Faculty</option>
+                      ) : null}
+                      {selectedAccount.studentProfile ? (
+                        <option value="STUDENT">Student</option>
+                      ) : null}
+                    </select>
+                    <small>
+                      The selected role replaces all previous access roles.
+                    </small>
+                  </label>
+                ) : null}
                 <label>
                   New password <span className="optional-label">Optional</span>
                   <input

@@ -30,6 +30,7 @@ describe('FacultyAccessService', () => {
   const assignmentCreateMany = jest.fn();
   const auditCreate = jest.fn();
   const transaction = {
+    $queryRaw: jest.fn().mockResolvedValue([]),
     user: { create: userCreate, update: userUpdate },
     facultyAssignment: { createMany: assignmentCreateMany },
     auditEvent: { create: auditCreate },
@@ -55,6 +56,8 @@ describe('FacultyAccessService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    userFindUnique.mockReset();
+    access.assertGlobalManager.mockReset();
     campusFindUnique.mockResolvedValue({
       id: campusId,
       code: 'HI-TECH',
@@ -364,5 +367,98 @@ describe('FacultyAccessService', () => {
         administrator,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('replaces previous roles when an existing faculty email is assigned administrator access', async () => {
+    const target = {
+      id: 'faculty-user-a',
+      name: 'Faculty',
+      email: 'faculty@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.FACULTY, campusId }],
+    };
+    userFindUnique.mockResolvedValue(target);
+    userUpdate.mockResolvedValue(target);
+    access.isGlobalManager.mockReturnValue(true);
+    await service().createAdministrator(
+      {
+        name: 'Faculty',
+        email: target.email,
+        notificationEmail: null,
+        password: 'not-a-replacement-password',
+      },
+      programManager,
+    );
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(transaction.$queryRaw).toHaveBeenCalled();
+    expect(userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          roleAssignments: {
+            deleteMany: {},
+            create: {
+              role: UserRole.ADMIN,
+              campusId: null,
+              scopeKey: 'GLOBAL',
+            },
+          },
+        },
+      }),
+    );
+    expect(auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'UPDATE',
+          before: expect.objectContaining({ roles: target.roleAssignments }),
+          after: expect.objectContaining({ role: UserRole.ADMIN }),
+        }),
+      }),
+    );
+  });
+
+  it('replaces global access with a campus role and blocks campus-manager promotions', async () => {
+    const target = {
+      id: 'other-user',
+      name: 'Other',
+      email: 'other@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.ADMIN, campusId: null }],
+    };
+    userFindUnique.mockResolvedValue(target);
+    userUpdate.mockResolvedValue(target);
+    access.isGlobalManager.mockReturnValue(true);
+    await service().updateAccount(
+      target.id,
+      { role: UserRole.CAMPUS_MANAGER, campusId },
+      programManager,
+    );
+    expect(userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          roleAssignments: {
+            deleteMany: {},
+            create: {
+              role: UserRole.CAMPUS_MANAGER,
+              campusId,
+              scopeKey: campusId,
+            },
+          },
+        },
+      }),
+    );
+    userUpdate.mockClear();
+    access.isGlobalManager.mockReturnValue(false);
+    userFindUnique.mockResolvedValue({
+      ...target,
+      roleAssignments: [{ role: UserRole.FACULTY, campusId }],
+    });
+    access.assertGlobalManager.mockImplementation(() => {
+      throw new ForbiddenException();
+    });
+    await expect(
+      service().updateAccount(target.id, { role: UserRole.ADMIN }, actor),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(userUpdate).not.toHaveBeenCalled();
   });
 });
