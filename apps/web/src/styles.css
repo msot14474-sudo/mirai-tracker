@@ -9510,3 +9510,13 @@ body:has(.auth-shell) {
   .course-import-step { padding: 1rem; }
   .progress-import .course-import-actions button { flex: 1 1 10rem; }
 }
+
+.semester-list-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.semester-list-item > button:first-child { flex: 1; min-width: 0; }
+.semester-list .academic-delete, .subject-list .academic-delete {
+  width: auto; flex: 0 0 auto; padding: 8px 12px; border: 1px solid #ead3d3;
+  background: #fff; color: #a23d3d; font-size: .85rem; border-radius: 10px;
+}
+.academic-delete:disabled { opacity: .5; cursor: wait; }
+.subject-list article > div { min-width: 0; flex: 1; }
+@media (max-width: 540px) { .subject-list article { flex-wrap: wrap; } }

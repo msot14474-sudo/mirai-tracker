@@ -33,6 +33,15 @@ export function SemesterSetup({
     enabled: Boolean(semesterId),
   });
 
+  const deletion = useMutation({
+    mutationFn: academicApi.deleteSemester,
+    onSuccess: async (_, deletedId) => {
+      if (semesterId === deletedId) setSemesterId('');
+      queryClient.removeQueries({ queryKey: ['academic', 'calendar', deletedId] });
+      await queryClient.invalidateQueries();
+    },
+  });
+
   const refreshCalendar = async () => {
     await Promise.all(
       [
@@ -129,6 +138,7 @@ export function SemesterSetup({
                 {semesters.error.message}
               </p>
             ) : null}
+            {deletion.error ? <p className="form-error" role="alert">{deletion.error.message}</p> : null}
             <div className="semester-list" aria-label="Semesters">
               {semesters.isLoading ? (
                 <LoadingSkeleton
@@ -138,8 +148,8 @@ export function SemesterSetup({
                 />
               ) : (
                 semesters.data?.map((semester) => (
+                  <div className="semester-list-item" key={semester.id}>
                   <button
-                    key={semester.id}
                     className={semester.id === semesterId ? 'selected' : ''}
                     onClick={() => setSemesterId(semester.id)}
                   >
@@ -152,6 +162,12 @@ export function SemesterSetup({
                       {saturdayLabels[semester.workingSaturdayRule]}
                     </small>
                   </button>
+                  <button type="button" className="academic-delete" disabled={deletion.isPending}
+                    aria-label={`Delete semester ${semester.name}`}
+                    onClick={() => {
+                      if (window.confirm(`Delete “${semester.name}”? Its calendar days and exam windows will be permanently removed. Semesters with linked batches cannot be deleted.`)) deletion.mutate(semester.id);
+                    }}>Delete</button>
+                  </div>
                 ))
               )}
               {!semesters.isLoading &&
@@ -279,6 +295,13 @@ function SubjectSetup({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [savedSubject, setSavedSubject] = useState('');
+  const deletion = useMutation({
+    mutationFn: academicApi.deleteSubject,
+    onSuccess: async () => {
+      setSavedSubject('');
+      await queryClient.invalidateQueries();
+    },
+  });
   const subjects = useQuery({
     queryKey: ['academic', 'subjects', campusId],
     queryFn: () => academicApi.subjects(campusId),
@@ -376,6 +399,7 @@ function SubjectSetup({
             {savedSubject} added.
           </p>
         ) : null}
+        {deletion.error ? <p className="form-error" role="alert">{deletion.error.message}</p> : null}
         <div className="subject-list">
           {subjects.data?.map((subject) => (
             <article key={subject.id}>
@@ -384,6 +408,11 @@ function SubjectSetup({
                 <strong>{subject.name}</strong>
                 {subject.description ? <p>{subject.description}</p> : null}
               </div>
+              <button type="button" className="academic-delete" disabled={deletion.isPending}
+                aria-label={`Delete subject ${subject.name}`}
+                onClick={() => {
+                  if (window.confirm(`Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`)) deletion.mutate(subject.id);
+                }}>Delete</button>
             </article>
           ))}
         </div>

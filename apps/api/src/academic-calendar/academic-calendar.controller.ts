@@ -67,6 +67,18 @@ export class AcademicCalendarController {
     return this.calendar.createSubject(parse(createSubjectSchema, body), user);
   }
 
+  @Delete('subjects/:subjectId')
+  @HttpCode(204)
+  async deleteSubject(@Param('subjectId') subjectId: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.calendar.deleteSubject(id(subjectId), user);
+  }
+
+  @Delete('semesters/:semesterId')
+  @HttpCode(204)
+  async deleteSemester(@Param('semesterId') semesterId: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.calendar.deleteSemester(id(semesterId), user);
+  }
+
   @Get('campuses/:campusId/semesters')
   semesters(
     @Param('campusId') campusId: string,

@@ -108,6 +108,36 @@ export class AcademicCalendarService {
     }
   }
 
+  async deleteSemester(semesterId: string, user: AuthenticatedUser) {
+    this.access.assertGlobalManager(user);
+    try {
+      await this.prisma.semester.delete({ where: { id: semesterId } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') throw new NotFoundException('Semester not found.');
+        if (error.code === 'P2003') throw new ConflictException(
+          'This semester has linked batches or teaching records. Move or remove those records before deleting it.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  async deleteSubject(subjectId: string, user: AuthenticatedUser) {
+    this.access.assertGlobalManager(user);
+    try {
+      await this.prisma.subject.delete({ where: { id: subjectId } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') throw new NotFoundException('Subject not found.');
+        if (error.code === 'P2003') throw new ConflictException(
+          'This subject is assigned to a batch. Remove its teaching assignments and records before deleting it.',
+        );
+      }
+      throw error;
+    }
+  }
+
   async listSemesters(campusId: string, user: AuthenticatedUser) {
     this.access.assertCanViewCampus(user, campusId);
     return this.prisma.semester.findMany({

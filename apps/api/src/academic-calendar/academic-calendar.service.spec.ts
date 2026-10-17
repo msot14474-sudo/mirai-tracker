@@ -1,4 +1,5 @@
 import {
+  Prisma,
   CalendarDayType,
   ExamType,
   SemesterStatus,
@@ -40,6 +41,7 @@ describe('AcademicCalendarService', () => {
   const prisma = {
     campus: { findUnique: jest.fn(), findMany: jest.fn() },
     semester: {
+      delete: jest.fn(),
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -59,7 +61,7 @@ describe('AcademicCalendarService', () => {
       update: jest.fn(),
       deleteMany: jest.fn(),
     },
-    subject: { findMany: jest.fn(), create: jest.fn() },
+    subject: { delete: jest.fn(), findMany: jest.fn(), create: jest.fn() },
   };
   const access = {
     isGlobalManager: jest.fn().mockReturnValue(true),
@@ -81,6 +83,23 @@ describe('AcademicCalendarService', () => {
     prisma.campus.findUnique.mockResolvedValue({ id: 'campus-a' });
     prisma.semester.findUnique.mockResolvedValue(semester);
     prisma.examWindow.findFirst.mockResolvedValue(null);
+  });
+
+  it('deletes after checking administrator access and rejects linked records', async () => {
+    await service.deleteSemester('semester-a', programManager);
+    await service.deleteSubject('subject-a', programManager);
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(prisma.semester.delete).toHaveBeenCalledWith({ where: { id: 'semester-a' } });
+    expect(prisma.subject.delete).toHaveBeenCalledWith({ where: { id: 'subject-a' } });
+    const error = new Prisma.PrismaClientKnownRequestError('Linked', { code: 'P2003', clientVersion: '6' });
+    prisma.semester.delete.mockRejectedValueOnce(error);
+    prisma.subject.delete.mockRejectedValueOnce(error);
+    await expect(service.deleteSemester('semester-a', programManager)).rejects.toThrow('linked batches');
+    await expect(service.deleteSubject('subject-a', programManager)).rejects.toThrow('assigned to a batch');
+    access.assertGlobalManager.mockImplementationOnce(() => { throw new ForbiddenException(); });
+    prisma.semester.delete.mockClear();
+    await expect(service.deleteSemester('semester-a', programManager)).rejects.toThrow(ForbiddenException);
+    expect(prisma.semester.delete).not.toHaveBeenCalled();
   });
 
   it('regenerates the semester after holiday creation, editing and deletion', async () => {

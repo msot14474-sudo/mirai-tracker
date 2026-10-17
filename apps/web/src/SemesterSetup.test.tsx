@@ -156,3 +156,26 @@ it('shows all semester dates, including ordinary weekdays after the first eight 
       .querySelectorAll('time'),
   ).toHaveLength(10);
 });
+
+it('only deletes a semester after confirmation and refreshes the list', async () => {
+  let deleted = false;
+  const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/academic/semesters/semester-a') && init?.method === 'DELETE') {
+      deleted = true;
+      return new Response(null, { status: 204 });
+    }
+    if (url.endsWith('/academic/campuses/campus-a/semesters')) return json(deleted ? [] : [{
+      id: 'semester-a', name: 'Autumn', startDate: '2026-08-01', endDate: '2026-12-01', workingSaturdayRule: 'NONE',
+    }]);
+    throw new Error(`Unexpected request ${url}`);
+  });
+  renderSetup();
+  fireEvent.click(await screen.findByRole('button', { name: 'Delete semester Autumn' }));
+  expect(deleted).toBe(false);
+  confirmation.mockReturnValue(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Delete semester Autumn' }));
+  await screen.findByText('0 semesters in this campus');
+  expect(deleted).toBe(true);
+});

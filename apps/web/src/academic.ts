@@ -84,6 +84,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const academicApi = {
+  deleteSemester: (id: string) => api<void>(`/academic/semesters/${id}`, { method: 'DELETE' }),
+  deleteSubject: (id: string) => api<void>(`/academic/subjects/${id}`, { method: 'DELETE' }),
   campuses: () => api<Campus[]>('/academic/campuses'),
   subjects: (campusId?: string) =>
     api<Subject[]>(
