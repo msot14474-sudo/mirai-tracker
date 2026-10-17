@@ -10,6 +10,7 @@ import {
 import { LoadingSkeleton } from './LoadingSkeleton';
 
 export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
+  const queryClient = useQueryClient();
   const [offeringId, setOfferingId] = useState('');
   const offerings = useQuery({
     queryKey: ['lesson-plans', 'offerings', campusId],
@@ -65,6 +66,8 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
               <button
                 key={offering.id}
                 className={offering.id === selectedOfferingId ? 'selected' : ''}
+                onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['lesson-plans', 'offering', offering.id], queryFn: () => lessonPlanApi.offering(offering.id), staleTime: 60_000 })}
+                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['lesson-plans', 'offering', offering.id], queryFn: () => lessonPlanApi.offering(offering.id), staleTime: 60_000 })}
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>

@@ -214,3 +214,26 @@ describe('LessonPlanWorkspace', () => {
     );
   });
 });
+
+it('reuses a prefetched subject detail when selected without a second request', async () => {
+  const second = { ...offerings[0], id: 'offering-b', subject: { ...detail.subject, name: 'Web Development' } };
+  let detailRequests = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/lesson-plans/offerings?')) return json([...offerings, second]);
+    if (url.endsWith('/lesson-plans/offerings/offering-a')) return json(detail);
+    if (url.endsWith('/lesson-plans/offerings/offering-b')) {
+      detailRequests++;
+      return json({ ...detail, id: 'offering-b', subject: second.subject });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><LessonPlanWorkspace campusId="campus-a" /></QueryClientProvider>);
+  const button = await screen.findByRole('button', { name: /Web Development/ });
+  fireEvent.mouseEnter(button);
+  await waitFor(() => expect(client.getQueryData(['lesson-plans', 'offering', 'offering-b'])).toBeTruthy());
+  fireEvent.click(button);
+  await waitFor(() => expect(button.className).toContain('selected'));
+  expect(detailRequests).toBe(1);
+});

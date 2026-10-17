@@ -76,12 +76,6 @@ export function TimetableSetup({
         'student-overview',
       ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
     );
-    await queryClient.invalidateQueries({
-      queryKey: ['timetable', 'offering', offeringId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ['timetable', 'offerings', semesterId],
-    });
   };
 
   return (
@@ -168,6 +162,8 @@ export function TimetableSetup({
               <button
                 key={offering.id}
                 className={offering.id === offeringId ? 'selected' : ''}
+                onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['timetable', 'offering', offering.id], queryFn: () => timetableApi.offering(offering.id), staleTime: 60_000 })}
+                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['timetable', 'offering', offering.id], queryFn: () => timetableApi.offering(offering.id), staleTime: 60_000 })}
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>

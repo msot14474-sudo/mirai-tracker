@@ -5,6 +5,7 @@ import { LoadingSkeleton } from './LoadingSkeleton';
 import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
 
 export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
+  const queryClient = useQueryClient();
   const [offeringId, setOfferingId] = useState('');
   const offerings = useQuery({
     queryKey: ['topic-schedules', 'offerings', campusId],
@@ -56,7 +57,9 @@ export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
             <button
               key={offering.id}
               className={offering.id === selectedOfferingId ? 'selected' : ''}
-              onClick={() => setOfferingId(offering.id)}
+              onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['topic-schedules', 'offering', offering.id], queryFn: () => topicScheduleApi.offering(offering.id), staleTime: 60_000 })}
+                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['topic-schedules', 'offering', offering.id], queryFn: () => topicScheduleApi.offering(offering.id), staleTime: 60_000 })}
+                onClick={() => setOfferingId(offering.id)}
             >
               <strong>{offering.subject.name}</strong>
               <span>

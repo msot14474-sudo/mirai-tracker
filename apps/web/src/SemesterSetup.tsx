@@ -102,6 +102,8 @@ export function SemesterSetup({
         <button
           type="button"
           aria-pressed={setupView === 'subjects'}
+          onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId) })}
+          onFocus={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId) })}
           onClick={() => {
             setSetupView('subjects');
             setShowCreate(false);
@@ -151,6 +153,8 @@ export function SemesterSetup({
                   <div className="semester-list-item" key={semester.id}>
                   <button
                     className={semester.id === semesterId ? 'selected' : ''}
+                    onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'calendar', semester.id], queryFn: () => academicApi.calendar(semester.id) })}
+                    onFocus={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'calendar', semester.id], queryFn: () => academicApi.calendar(semester.id) })}
                     onClick={() => setSemesterId(semester.id)}
                   >
                     <strong>{semester.name}</strong>

@@ -1129,13 +1129,13 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         import('./FacultyAccessWorkspace'),
       ]);
 
-      if (canManageLessonPlans) {
-        void warmLessonPlanWorkspace(queryClient);
-        void warmTopicScheduleWorkspace(queryClient);
+      if (canManageLessonPlans && (!isGlobalAdministrator || selectedCampusId)) {
+        void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
+        void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [canManageLessonPlans, queryClient]);
+  }, [canManageLessonPlans, isGlobalAdministrator, selectedCampusId, queryClient]);
 
   if (isGlobalAdministrator && !selectedCampus) {
     return (
@@ -1266,11 +1266,22 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     navigation.find((item) => item.id === activeView)?.label ??
     (activeView === 'account' ? 'My account' : 'Help');
 
+  function warmView(view: DashboardView) {
+    if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
+    if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
+    if (selectedCampusId && ['academic-setup', 'semester-import', 'timetable'].includes(view)) {
+      void queryClient.prefetchQuery({
+        queryKey: ['academic', 'semesters', selectedCampusId],
+        queryFn: () => academicApi.semesters(selectedCampusId),
+      });
+    }
+  }
+
   function openView(view: DashboardView) {
     setProfileMenuOpen(false);
     if (view === activeView) return;
-    if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient);
-    if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient);
+    if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
+    if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
     setActiveView(view);
   }
 
@@ -1439,6 +1450,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               className={item.id === activeView ? 'active' : undefined}
               aria-label={item.label}
               aria-current={item.id === activeView ? 'page' : undefined}
+              onMouseEnter={() => warmView(item.id)}
+              onFocus={() => warmView(item.id)}
               onClick={() => openView(item.id)}
             >
               <NavigationIcon name={item.icon} />
@@ -1585,12 +1598,12 @@ function prefersReducedMotion() {
   );
 }
 
-async function warmLessonPlanWorkspace(queryClient: QueryClient) {
+async function warmLessonPlanWorkspace(queryClient: QueryClient, campusId?: string) {
   try {
     const { lessonPlanApi } = await import('./lessonPlans');
     const offerings = await queryClient.fetchQuery({
-      queryKey: ['lesson-plans', 'offerings'],
-      queryFn: () => lessonPlanApi.offerings(),
+      queryKey: ['lesson-plans', 'offerings', campusId],
+      queryFn: () => lessonPlanApi.offerings(campusId),
       staleTime: 60_000,
     });
     const firstOffering = offerings[0];
@@ -1606,12 +1619,12 @@ async function warmLessonPlanWorkspace(queryClient: QueryClient) {
   }
 }
 
-async function warmTopicScheduleWorkspace(queryClient: QueryClient) {
+async function warmTopicScheduleWorkspace(queryClient: QueryClient, campusId?: string) {
   try {
     const { topicScheduleApi } = await import('./topicSchedules');
     const offerings = await queryClient.fetchQuery({
-      queryKey: ['topic-schedules', 'offerings'],
-      queryFn: () => topicScheduleApi.offerings(),
+      queryKey: ['topic-schedules', 'offerings', campusId],
+      queryFn: () => topicScheduleApi.offerings(campusId),
       staleTime: 60_000,
     });
     const firstOffering = offerings[0];

@@ -34,6 +34,18 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
     return this.client.get(key);
   }
 
+  /** Read and upgrade legacy expiring sessions in one Redis round trip. */
+  async getPersistent(key: string): Promise<string | null> {
+    const value = await this.client.eval(
+      `local value = redis.call('GET', KEYS[1])
+       if value then redis.call('PERSIST', KEYS[1]) end
+       return value`,
+      1,
+      key,
+    );
+    return typeof value === 'string' ? value : null;
+  }
+
   async setPersistent(key: string, value: string) {
     await this.client.set(key, value);
   }

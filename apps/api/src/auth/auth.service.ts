@@ -502,7 +502,7 @@ export class AuthService {
 
   async userForSession(token: string): Promise<AuthenticatedUser | null> {
     const key = this.sessionKey(token);
-    const userId = await this.redis.get(key);
+    const userId = await this.redis.getPersistent(key);
     if (!userId) return null;
 
     const user = await this.prisma.user.findUnique({
@@ -519,8 +519,6 @@ export class AuthService {
       return null;
     }
 
-    // Upgrade still-valid sessions created under the previous expiry policy.
-    await this.redis.persist(key);
     return this.toAuthenticatedUser(user);
   }
 

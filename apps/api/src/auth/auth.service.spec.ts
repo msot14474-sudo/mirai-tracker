@@ -40,7 +40,7 @@ describe('AuthService', () => {
       store.set(key, value);
       return Promise.resolve();
     }),
-    persist: jest.fn().mockResolvedValue(undefined),
+    getPersistent: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     get: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     setWithExpiry: jest.fn((key: string, value: string) => {
       store.set(key, value);
@@ -321,7 +321,7 @@ describe('AuthService', () => {
       id: 'user-a',
       staffProfileId: 'faculty-a',
     });
-    expect(redis.persist).toHaveBeenCalledWith(sessionKey);
+    expect(redis.getPersistent).toHaveBeenCalledWith(sessionKey);
   });
 
   it('verifies the emailed code before accepting a new password', async () => {
