@@ -98,7 +98,9 @@ export async function apiFetch(
           expired
             ? 'Your session is no longer valid. Please sign in again.'
             : response.status >= 500
-              ? 'The service is temporarily unavailable. Please try again.'
+              ? path === '/ai-insights/report' && typeof message === 'string'
+                ? message
+                : 'The service is temporarily unavailable. Please try again.'
               : response.status === 429
                 ? 'Too many requests. Please wait a moment and try again.'
                 : typeof message === 'string'

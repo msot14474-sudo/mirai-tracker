@@ -3,6 +3,7 @@ import {
   BadRequestException,
   HttpException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
@@ -18,6 +19,7 @@ const instructions = `You are Mirai Tracker's academic planning assistant. Use O
 
 @Injectable()
 export class AiInsightsService {
+  private readonly logger = new Logger(AiInsightsService.name);
   constructor(
     private readonly context: AiContextService,
     private readonly redis: RedisService,
@@ -25,7 +27,7 @@ export class AiInsightsService {
   ) {}
   private config() {
     const provider =
-      process.env.AI_PROVIDER ||
+      process.env.AI_PROVIDER?.trim().toLowerCase() ||
       (process.env.OLLAMA_API_KEY ? 'ollama' : undefined);
     const key =
       provider === 'ollama'
@@ -36,7 +38,7 @@ export class AiInsightsService {
             ? process.env.GEMINI_API_KEY
             : undefined;
     const model =
-      process.env.AI_MODEL ||
+      process.env.AI_MODEL?.trim() ||
       (provider === 'ollama' ? 'gpt-oss:20b' : undefined);
     return { provider, key, model };
   }
@@ -196,7 +198,19 @@ export class AiInsightsService {
         },
         body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error('Provider request failed');
+      if (!response.ok) {
+        this.logger.warn(`AI provider request failed: provider=${provider}, status=${response.status}`);
+        if ([401, 403].includes(response.status)) throw new ServiceUnavailableException(
+          'The AI provider rejected its credentials. Ask your administrator to check the AI API key.',
+        );
+        if ([400, 404].includes(response.status)) throw new ServiceUnavailableException(
+          'The configured AI model or request is not supported. Ask your administrator to check AI_MODEL.',
+        );
+        if (response.status === 429) throw new HttpException(
+          'The AI provider is busy or its usage limit has been reached. Please try again later.', 429,
+        );
+        throw new Error('Provider request failed');
+      }
       const result = (await response.json()) as {
         status?: string;
         message?: { content?: string };
@@ -255,6 +269,7 @@ export class AiInsightsService {
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.warn(`AI generation failed: ${error instanceof Error ? error.name : 'UnknownError'}`);
       throw new ServiceUnavailableException(
         'AI could not finish this request. Try again or generate a data report; your records are unchanged.',
       );

@@ -223,3 +223,10 @@ it('keeps production requests on the cookie-bearing website origin', () => {
   expect(canRecoverRequest(new RequestError('offline'))).toBe(true);
   expect(canRecoverRequest(new RequestError('forbidden', 403))).toBe(false);
 });
+
+it('shows an actionable AI provider error without retrying the request', async () => {
+  const message = 'The AI provider rejected its credentials. Ask your administrator to check the AI API key.';
+  const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ message }, 503));
+  await expect(apiFetch('/api/ai-insights/report', { method: 'POST' })).rejects.toThrow(message);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});

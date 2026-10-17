@@ -53,7 +53,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-function setup(ready = false, fail = false) {
+function setup(ready = false, fail = false, empty = false) {
   const requests: unknown[] = [];
   const onOpen = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
@@ -83,6 +83,7 @@ function setup(ready = false, fail = false) {
     return new Response(
       JSON.stringify({
         ...snapshot,
+        subjects: empty ? [] : snapshot.subjects,
         ai: { ready, provider: ready ? 'openai' : null },
       }),
       { headers: { 'Content-Type': 'application/json' } },
@@ -240,5 +241,14 @@ it('sends with Enter and preserves Shift+Enter for multiline follow-ups', async 
   fireEvent.keyDown(composer, { key: 'Enter', shiftKey: true });
   expect(requests).toHaveLength(0);
   fireEvent.keyDown(composer, { key: 'Enter' });
+  await waitFor(() => expect(requests).toHaveLength(1));
+});
+
+it('allows setup questions when the campus has no subjects yet', async () => {
+  const { requests } = setup(true, false, true);
+  const input = await screen.findByPlaceholderText('Ask a question or follow up…');
+  await waitFor(() => expect(input).toBeEnabled());
+  fireEvent.change(input, { target: { value: 'How do I start a semester?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
   await waitFor(() => expect(requests).toHaveLength(1));
 });

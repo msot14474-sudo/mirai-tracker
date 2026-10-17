@@ -175,7 +175,7 @@ export function AiInsights({
     chats.isError ||
     Boolean(conversationId && (history.isPending || history.isError));
   const canSend = Boolean(
-    data?.ai.ready && data.subjects.length && !chatBusy && !report.isPending,
+    data?.ai.ready && !chatBusy && !report.isPending,
   );
   const send = () => {
     if (canSend && question.trim())
@@ -252,7 +252,7 @@ export function AiInsights({
                       <button
                         key={prompt}
                         type="button"
-                        disabled={!canSend}
+                        disabled={report.isPending}
                         onClick={() => setQuestion(prompt)}
                       >
                         {prompt}
@@ -346,6 +346,8 @@ export function AiInsights({
                 send();
               }}
             >
+              {!data.ai.ready ? <p className="ai-connection-note" role="status">AI is not connected. Ask your administrator to check the provider settings. You can still download a data report below.</p> : null}
+              {chatBusy ? <p className="ai-connection-note" role="status">{chats.isError || history.isError ? 'Your conversation could not be loaded. Use Retry conversation above to reconnect.' : 'Loading your conversation…'}</p> : null}
               <label htmlFor="ai-question">Message Mirai AI</label>
               <textarea
                 id="ai-question"
@@ -364,7 +366,7 @@ export function AiInsights({
                 maxLength={2000}
                 rows={2}
                 placeholder="Ask a question or follow up…"
-                disabled={!canSend}
+                disabled={report.isPending}
               />
               <div className="ai-composer-footer">
                 <span>
@@ -375,10 +377,10 @@ export function AiInsights({
                 <div className="ai-actions">
                   <button
                     type="button"
-                    disabled={!canSend}
-                    onClick={() => report.mutate({ useAi: true })}
+                    disabled={report.isPending || (data.ai.ready && chatBusy)}
+                    onClick={() => report.mutate({ useAi: data.ai.ready })}
                   >
-                    Generate AI report
+                    {data.ai.ready ? 'Generate AI report' : 'Generate data report'}
                   </button>
                   <button type="submit" disabled={!canSend || !question.trim()}>
                     Send

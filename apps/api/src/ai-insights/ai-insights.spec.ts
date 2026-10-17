@@ -236,7 +236,7 @@ it('protects provider failures and limits without leaking raw responses', async 
   } as unknown as RedisService);
   await expect(
     failing.generate(user('FACULTY'), {}, 'What next?', true),
-  ).rejects.toThrow('AI could not finish');
+  ).rejects.toThrow('The AI provider rejected its credentials');
 });
 
 it('uses Ollama cloud with the efficient default and only returns the final answer', async () => {
@@ -306,3 +306,17 @@ function makeInsights(context: AiContextService, redis: RedisService) {
     append: jest.fn().mockResolvedValue('chat-id'),
   } as unknown as AiConversationService);
 }
+
+it('normalizes provider settings and explains rejected credentials', async () => {
+  process.env.AI_PROVIDER = ' Ollama ';
+  process.env.AI_MODEL = ' gpt-oss:20b ';
+  process.env.OLLAMA_API_KEY = 'test-only';
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 401 }));
+  const { context } = setup();
+  const svc = makeInsights(context, {
+    get: jest.fn().mockResolvedValue(null),
+    incrementWithExpiry: jest.fn().mockResolvedValue(1),
+  } as unknown as RedisService);
+  expect(svc.configuration()).toEqual({ ready: true, provider: 'ollama' });
+  await expect(svc.generate(user('FACULTY'), {}, 'Help', true)).rejects.toThrow('rejected its credentials');
+});

@@ -9522,3 +9522,41 @@ body:has(.auth-shell) {
 @media (max-width: 540px) { .subject-list article { flex-wrap: wrap; } }
 
 .calendar-date-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 18px; }
+
+/* Quiet loading feedback: opacity only, without sliding content or repainting gradients. */
+.skeleton-block {
+  background: #e9eef6;
+  animation: skeleton-breathe 2.4s ease-in-out infinite;
+}
+@keyframes skeleton-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.content-skeleton, .skeleton-app {
+  animation: loading-reveal 180ms ease-out 120ms both;
+}
+@keyframes loading-reveal { from { opacity: 0; } to { opacity: 1; } }
+.workspace-view-enter, .route-surface-enter {
+  animation: loading-reveal 180ms ease-out both;
+}
+.workspace-view-exit { animation: route-surface-exit 120ms ease-out both; }
+.overview-shortcut-grid button { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block, .content-skeleton, .skeleton-app,
+  .workspace-view-enter, .workspace-view-exit, .route-surface-enter { animation: none; }
+}
+
+/* Focused AI workspace with restrained surfaces and a compact composer. */
+.ai-workspace { gap: 14px; }
+.ai-conversation { border-color: #e3e8ef; border-radius: 18px; box-shadow: 0 4px 24px #1b315207; }
+.ai-transcript { padding: clamp(20px, 3vw, 40px); gap: 28px; }
+.ai-transcript .ai-chat-message { font-size: 14px; line-height: 1.75; }
+.ai-transcript .ai-chat-user { background: #f0f4f9; border-radius: 16px 16px 4px 16px; padding: 12px 18px; }
+.ai-chat-welcome p { color: #6b788e; font-size: 14px; line-height: 1.6; }
+.ai-suggestions button { background: #fff; color: #40516b; border: 1px solid #e0e6ef; border-radius: 12px; padding: 10px 14px; box-shadow: none; }
+.ai-suggestions button:hover { background: #f7f9fc; border-color: #bccbe0; transform: none; }
+.ai-composer { padding: 14px 18px; border-radius: 16px; background: #fbfcfe; box-shadow: 0 3px 16px #1b315206; }
+.ai-composer:focus-within { border-color: #8ea9de; box-shadow: 0 0 0 3px #2459ce0a; }
+.ai-composer textarea { min-height: 56px; line-height: 1.6; outline: none; }
+.ai-composer .ai-actions button { min-height: 38px; padding: 8px 14px; margin: 0; border-radius: 10px; box-shadow: none; font-size: 12px; font-weight: 550; }
+.ai-composer .ai-actions button:first-child { background: #fff; border: 1px solid #dce4ef; color: #496383; }
+.ai-composer button:disabled { opacity: .5; cursor: not-allowed; }
+.ai-connection-note { font-size: 12px; line-height: 1.5; color: #6c552c; background: #faf6ed; border-radius: 8px; padding: 8px 12px; margin: 0 0 10px; }
+@media (max-width:640px) { .ai-composer { padding: 10px 12px; } .ai-transcript { padding: 16px; } }
