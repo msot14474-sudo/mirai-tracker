@@ -179,3 +179,30 @@ it('only deletes a semester after confirmation and refreshes the list', async ()
   await screen.findByText('0 semesters in this campus');
   expect(deleted).toBe(true);
 });
+
+it('loads an existing date and updates it instead of creating a duplicate', async () => {
+  const semester = { id: 'semester-a', name: 'Autumn', startDate: '2026-08-01', endDate: '2026-12-01', workingSaturdayRule: 'NONE' };
+  let update: unknown;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/academic/campuses/campus-a/semesters')) return json([semester]);
+    if (url.endsWith('/academic/semesters/semester-a/calendar')) return json({
+      semester, summary: { totalDays: 1, workingDays: 0, nonWorkingDays: 1 }, exams: [],
+      days: [{ date: '2026-09-01', weekday: 'TUESDAY', working: false, reason: 'HOLIDAY', override: { id: 'day-a', title: 'Holiday', type: 'HOLIDAY', teachingAllowed: false } }],
+    });
+    if (url.endsWith('/academic/calendar-days/day-a') && init?.method === 'PATCH') {
+      update = JSON.parse(String(init.body));
+      return json({ id: 'day-a' });
+    }
+    throw new Error(`Unexpected ${init?.method} ${url}`);
+  });
+  renderSetup();
+  fireEvent.click(await screen.findByRole('button', { name: /^Autumn/ }));
+  await screen.findByRole('heading', { name: 'Update calendar date' });
+  fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-01' } });
+  expect(screen.getByLabelText('Title')).toHaveValue('Holiday');
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Campus event' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update date' }));
+  await screen.findByText('Calendar date updated.');
+  expect(update).toEqual({ title: 'Campus event', type: 'HOLIDAY', teachingAllowed: false });
+});

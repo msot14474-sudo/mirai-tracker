@@ -118,6 +118,10 @@ export const academicApi = {
     }),
   calendar: (semesterId: string) =>
     api<GeneratedCalendar>(`/academic/semesters/${semesterId}/calendar`),
+  updateCalendarDay: (
+    id: string,
+    input: { title: string; type: string; teachingAllowed: boolean },
+  ) => api(`/academic/calendar-days/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   createCalendarDay: (
     semesterId: string,
     input: {

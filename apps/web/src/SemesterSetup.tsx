@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
-import { academicApi, dateOnly, SaturdayRule } from './academic';
+import { academicApi, dateOnly, SaturdayRule, GeneratedCalendar } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
 const saturdayLabels: Record<SaturdayRule, string> = {
@@ -252,6 +252,8 @@ export function SemesterSetup({
 
                 <div className="setup-forms">
                   <CalendarDayForm
+                    key={semesterId}
+                    calendar={calendar.data}
                     semesterId={semesterId}
                     onSaved={refreshCalendar}
                   />
@@ -514,29 +516,31 @@ function CreateSemesterForm({
 
 function CalendarDayForm({
   semesterId,
+  calendar,
   onSaved,
 }: {
   semesterId: string;
+  calendar: GeneratedCalendar;
   onSaved: () => Promise<void>;
 }) {
   const [date, setDate] = useState('');
+  const [saved, setSaved] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState<
     'HOLIDAY' | 'EVENT' | 'EXTRA_WORKING_DAY' | 'CAMPUS_CLOSED'
   >('HOLIDAY');
   const [teachingAllowed, setTeachingAllowed] = useState(false);
   const mutation = useMutation({
-    mutationFn: () =>
-      academicApi.createCalendarDay(semesterId, {
-        date,
-        title,
-        type,
-        teachingAllowed,
-      }),
+    mutationFn: () => {
+      const existing = calendar.days.find((day) => day.date === date)?.override;
+      const input = { title, type, teachingAllowed };
+      return existing?.id
+        ? academicApi.updateCalendarDay(existing.id, input)
+        : academicApi.createCalendarDay(semesterId, { date, ...input });
+    },
     onSuccess: async () => {
-      setDate('');
-      setTitle('');
       await onSaved();
+      setSaved(true);
     },
   });
 
@@ -545,16 +549,29 @@ function CalendarDayForm({
       className="setup-card compact"
       onSubmit={(event) => {
         event.preventDefault();
+        setSaved(false);
         mutation.mutate();
       }}
     >
-      <h3>Add calendar day</h3>
+      <h3>Update calendar date</h3>
+      <fieldset className="calendar-date-fields" disabled={mutation.isPending}>
       <label>
         Date
         <input
           type="date"
           value={date}
-          onChange={(event) => setDate(event.target.value)}
+          min={dateOnly(calendar.semester.startDate)}
+          max={dateOnly(calendar.semester.endDate)}
+          onChange={(event) => {
+            const selected = event.target.value;
+            const existing = calendar.days.find((day) => day.date === selected)?.override;
+            setDate(selected);
+            setTitle(existing?.title ?? '');
+            setType((existing?.type as typeof type) ?? 'HOLIDAY');
+            setTeachingAllowed(existing?.teachingAllowed ?? false);
+            setSaved(false);
+            mutation.reset();
+          }}
           required
         />
       </label>
@@ -591,7 +608,11 @@ function CalendarDayForm({
       {mutation.error ? (
         <p className="form-error">{mutation.error.message}</p>
       ) : null}
-      <button disabled={mutation.isPending}>Add date</button>
+      {saved ? <p className="form-success" role="status">Calendar date updated.</p> : null}
+      <button disabled={!date || mutation.isPending}>
+        {mutation.isPending ? 'Updating…' : 'Update date'}
+      </button>
+      </fieldset>
     </form>
   );
 }

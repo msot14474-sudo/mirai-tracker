@@ -9520,3 +9520,5 @@ body:has(.auth-shell) {
 .academic-delete:disabled { opacity: .5; cursor: wait; }
 .subject-list article > div { min-width: 0; flex: 1; }
 @media (max-width: 540px) { .subject-list article { flex-wrap: wrap; } }
+
+.calendar-date-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 18px; }
