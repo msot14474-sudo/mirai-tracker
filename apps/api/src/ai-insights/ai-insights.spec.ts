@@ -67,6 +67,9 @@ function setup(withPlan = true) {
     ],
   };
   const db = {
+    campus: { findMany: jest.fn().mockResolvedValue([{ id: 'campus-a', name: 'Hi-Tech', timezone: 'Asia/Kolkata' }]) },
+    semester: { findMany: jest.fn().mockResolvedValue([{ name: 'Semester 1', startDate: new Date('2026-08-01'), endDate: new Date('2026-12-01') }]) },
+    subject: { findMany: jest.fn().mockResolvedValue([{ code: 'WEB', name: 'Web Development' }]) },
     subjectOffering: { findMany: jest.fn().mockResolvedValue([offering]) },
     scheduledSession: {
       groupBy: jest
@@ -208,6 +211,9 @@ it('calls the configured provider with server context and no tools or storage', 
   expect(sent.tools).toBeUndefined();
   expect(sent.instructions).toContain('untrusted data');
   expect(sent.input).toContain('Arrays');
+  expect(sent.input).toContain('Semester setup');
+  expect(sent.input).toContain('workflows');
+  expect(sent.input).toContain('Test');
   expect(sent.input).not.toContain('private@example.test');
 });
 it('protects provider failures and limits without leaking raw responses', async () => {
@@ -319,4 +325,24 @@ it('normalizes provider settings and explains rejected credentials', async () =>
   } as unknown as RedisService);
   expect(svc.configuration()).toEqual({ ready: true, provider: 'ollama' });
   await expect(svc.generate(user('FACULTY'), {}, 'Help', true)).rejects.toThrow('rejected its credentials');
+});
+
+it('includes existing semester and catalog setup even with no subject offerings', async () => {
+  const { db, context } = setup();
+  db.subjectOffering.findMany.mockResolvedValueOnce([]);
+  const snapshot = await context.snapshot(user('ADMIN'), { campusId: 'campus-a' });
+  expect(snapshot.subjects).toEqual([]);
+  expect(snapshot.viewer).toEqual({ name: 'Test', roles: ['ADMIN'] });
+  expect(snapshot.setup.semesters[0]?.name).toBe('Semester 1');
+  expect(snapshot.setup.catalog[0]?.name).toBe('Web Development');
+  expect(db.subjectOffering.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ AND: expect.arrayContaining([expect.objectContaining({ status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } })]) }) }));
+});
+
+it('keeps setup context campus-scoped and does not expose the catalog to faculty', async () => {
+  const { db, context } = setup();
+  await context.snapshot(user('FACULTY'), { campusId: 'campus-b' });
+  expect(db.subject.findMany).not.toHaveBeenCalled();
+  expect(db.semester.findMany).toHaveBeenCalledWith(expect.objectContaining({
+    where: { campus: { AND: [{ id: { in: ['campus-a'] } }, { id: 'campus-b' }] } },
+  }));
 });

@@ -486,7 +486,7 @@ describe('App authentication', () => {
       screen.queryByRole('heading', { name: 'Semester calendar' }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Academic setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Semester setup' }));
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
@@ -575,7 +575,7 @@ describe('App authentication', () => {
       screen.getByRole('button', { name: /Jaggannath Campus/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Academic setup' }),
+      screen.queryByRole('button', { name: 'Semester setup' }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /HI-Tech Campus/i }));
@@ -587,13 +587,13 @@ describe('App authentication', () => {
       screen.getByRole('button', { name: /Change campus/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Academic setup' }),
+      screen.getByRole('button', { name: 'Semester setup' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester calendar' }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Academic setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Semester setup' }));
     expect(
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();

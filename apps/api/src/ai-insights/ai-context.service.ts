@@ -47,7 +47,7 @@ export class AiContextService {
               ? { batch: { semester: { campusId: filter.campusId } } }
               : {}),
             ...(filter.offeringId ? { id: filter.offeringId } : {}),
-            status: { in: ['ACTIVE', 'COMPLETE'] },
+            status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] },
           },
         ],
       },
@@ -55,6 +55,11 @@ export class AiContextService {
       orderBy: { id: 'asc' },
       include: {
         subject: { select: { name: true, code: true } },
+        timetableEntries: {
+          where: { active: true },
+          select: { weekday: true, startTime: true, endTime: true, effectiveFrom: true, effectiveTo: true },
+          orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
+        },
         batch: {
           select: {
             name: true,
@@ -92,6 +97,7 @@ export class AiContextService {
                   select: {
                     id: true,
                     title: true,
+                    description: true,
                     plannedMinutes: true,
                     status: true,
                     currentCompletionPercentage: true,
@@ -115,6 +121,24 @@ export class AiContextService {
       throw new BadRequestException(
         'Select a campus or subject to analyse a smaller scope.',
       );
+    const global = user.roles.some((r) => r.role === 'ADMIN' || r.role === 'PROGRAM_MANAGER');
+    const managedCampusIds = user.roles.filter((r) => r.role === 'CAMPUS_MANAGER' && r.campusId).map((r) => r.campusId!);
+    const permittedCampusIds = [...new Set([...managedCampusIds, ...offerings.map((o) => o.batch.semester.campus.id)])];
+    const campusWhere: Prisma.CampusWhereInput = {
+      AND: [global ? {} : { id: { in: permittedCampusIds } }, filter.campusId ? { id: filter.campusId } : {}],
+    };
+    const [campuses, semesters, catalog] = await Promise.all([
+      this.prisma.campus.findMany({ where: campusWhere, select: { id: true, name: true, timezone: true }, orderBy: { name: 'asc' }, take: 100 }),
+      this.prisma.semester.findMany({ where: { campus: campusWhere }, select: {
+        name: true, startDate: true, endDate: true, status: true, workingSaturdayRule: true,
+        campus: { select: { name: true } },
+        calendarDays: { select: { date: true, title: true, type: true, teachingAllowed: true }, orderBy: { date: 'asc' } },
+        examWindows: { select: { name: true, type: true, startDate: true, endDate: true, syllabusDeadline: true } },
+      }, orderBy: { startDate: 'desc' }, take: 100 }),
+      global || managedCampusIds.length ? this.prisma.subject.findMany({
+        where: { active: true, campus: { AND: [campusWhere, global ? {} : { id: { in: managedCampusIds } }] } }, select: { code: true, name: true, description: true }, orderBy: { code: 'asc' }, take: 200,
+      }) : Promise.resolve([]),
+    ]);
     const ids = offerings.map((o) => o.id);
     const sessionScope = { offeringId: { in: ids } };
     const pastScope = {
@@ -163,6 +187,8 @@ export class AiContextService {
             orderBy: { revision: 'desc' },
             take: 1,
             select: {
+              notes: true,
+              carryForwardTopic: { select: { title: true } },
               coveredSummary: true,
               leftOverSummary: true,
               classworkStatus: true,
@@ -213,6 +239,7 @@ export class AiContextService {
             id: t.id,
             unit: u.title,
             title: t.title,
+            description: t.description,
             minutes: t.plannedMinutes,
             completion: Number(t.currentCompletionPercentage),
             status: t.status,
@@ -275,13 +302,15 @@ export class AiContextService {
           );
       return {
         id: o.id,
+        status: o.status,
+        timetable: o.timetableEntries,
         code: o.subject.code,
         name: o.subject.name,
         batch: o.batch.name,
         campus: o.batch.semester.campus,
         semester: o.batch.semester.name,
         teachers: o.faculty.map((f) => f.staffProfile.user.name),
-        plan: plan ? { version: plan.version, status: plan.status } : null,
+        plan: plan ? { version: plan.version, status: plan.status, fileName: plan.fileName } : null,
         completion: minutes
           ? Math.round((completedMinutes / minutes) * 100)
           : null,
@@ -304,6 +333,8 @@ export class AiContextService {
       feedbackCounts.find((f) => !f.understood)?._count._all ?? 0;
     return {
       generatedAt: now.toISOString(),
+      viewer: { name: user.name, roles: [...new Set(user.roles.map((r) => r.role))] },
+      setup: { campuses, semesters, catalog, limits: 'Up to 100 permitted campuses, 100 most recent semesters, and 200 catalog subjects. Faculty context includes only assigned subjects and their campus calendars.' },
       scope: filter.campusId
         ? 'Selected campus · permitted subjects'
         : 'All permitted subjects',
@@ -315,7 +346,7 @@ export class AiContextService {
         upcomingIncluded: upcomingLectures.length,
         feedbackGaps: needsHelp,
         feedbackGapsIncluded: recentGaps.length,
-        note: 'All permitted active/completed subjects, current plans and aggregate lecture/feedback totals. Detailed context includes the latest 80 past lectures, next 20 lectures and 50 recent understanding gaps. Select a subject for deeper focus. Missing logs are not proof that a class was missed.',
+        note: 'All permitted draft/active/completed subjects, current plans and aggregate lecture/feedback totals. Detailed context includes the latest 80 past lectures, next 20 lectures and 50 recent understanding gaps. Select a subject for deeper focus. Missing logs are not proof that a class was missed.',
       },
       summary: {
         subjects: subjects.length,

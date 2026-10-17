@@ -1172,7 +1172,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       ? [
           {
             id: 'academic-setup' as const,
-            label: 'Academic setup',
+            label: 'Semester setup',
             icon: 'academic' as const,
           },
           {
