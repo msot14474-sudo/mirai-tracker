@@ -16,15 +16,19 @@ export function SemesterImport({ campusId }: { campusId?: string }) {
   const [mode, setMode] = useState('progress');
   return (
     <>
-      <div className="import-mode-picker" aria-label="Import type">
+      <div className="import-mode-picker" role="group" aria-label="Import type">
         <button
           className={mode === 'progress' ? 'selected' : ''}
+          aria-pressed={mode === 'progress'}
+          type="button"
           onClick={() => setMode('progress')}
         >
           Import course data
         </button>
         <button
           className={mode === 'setup' ? 'selected' : ''}
+          aria-pressed={mode === 'setup'}
+          type="button"
           onClick={() => setMode('setup')}
         >
           Semester setup template

@@ -9433,3 +9433,80 @@ body:has(.auth-shell) {
 .subject-setup-layout.subject-setup-list-only {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* Course import: compact navigation and two clearly separated setup steps. */
+.import-mode-picker {
+  width: fit-content;
+  max-width: 100%;
+  padding: .3rem;
+  gap: .3rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e1e7f0;
+  border-radius: .9rem;
+  background: #edf1f7;
+}
+.import-mode-picker button {
+  min-height: 2.75rem;
+  padding: .65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  background: transparent;
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #596b85;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.import-mode-picker button.selected {
+  color: #244eb4;
+  background: #fff;
+  border-color: #dce4f2;
+  box-shadow: 0 2px 5px #182c4d08;
+}
+.import-mode-picker button:hover { background: #f8faff; }
+.import-mode-picker button:focus-visible { outline: 2px solid #527ce3; outline-offset: 2px; }
+.progress-import .course-import-card {
+  padding: clamp(1.1rem, 2.4vw, 2rem);
+  gap: 1.5rem;
+  min-width: 0;
+}
+.course-import-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
+.course-import-heading > div { min-width: 0; max-width: 58rem; }
+.course-import-heading h3 { margin: 0 0 .65rem; font-size: 1.35rem; letter-spacing: -.025em; }
+.progress-import .schedule-help { margin: 0; font-size: .875rem; line-height: 1.65; color: #66758d; }
+.progress-import .course-create-semester {
+  width: auto;
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: .65rem 1rem;
+  margin: 0;
+  border: 1px solid #ccd9ed;
+  border-radius: .65rem;
+  background: #fff;
+  color: #315aa3;
+  box-shadow: 0 1px 3px #1c32520a;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.course-import-steps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; }
+.course-import-step { display: flex; flex-direction: column; gap: 1rem; min-width: 0; padding: 1.4rem; border: 1px solid #e1e7f0; border-radius: 1rem; background: #fbfcff; }
+.course-import-step label { gap: .8rem; font-size: .9rem; font-weight: 600; }
+.course-import-step select { font-size: .9rem; min-width: 0; width: 100%; text-overflow: ellipsis; background-color: #fff; }
+.course-upload-step input[type="file"] { width: 100%; min-width: 0; padding: 1.5rem 1rem; border: 1px dashed #bacbe4; border-radius: .8rem; background: #fff; box-shadow: none; color: #65728a; font-size: .85rem; }
+.course-upload-step input[type="file"]::file-selector-button { margin-right: .8rem; padding: .6rem .85rem; border: 1px solid #d7e1f0; border-radius: .5rem; background: #f0f5ff; color: #315aa3; font: inherit; font-weight: 600; cursor: pointer; }
+.course-import-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: .6rem; padding-top: .35rem; }
+.progress-import .course-import-actions button { width: auto; min-height: 2.65rem; margin: 0; padding: .65rem 1rem; border-radius: .65rem; font-size: .85rem; font-weight: 600; }
+.progress-import .course-import-actions .text-button { background: #fff; color: #315aa3; border: 1px solid #ccd9ed; box-shadow: none; }
+.progress-import .course-import-actions button:disabled, .course-create-semester:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.course-semester-form { padding: 1.25rem; border: 1px solid #dce5f3; border-radius: .85rem; background: #f7faff; }
+@media (max-width: 1100px) {
+  .course-import-steps { grid-template-columns: minmax(0, 1fr); }
+  .course-import-heading { flex-wrap: wrap; }
+}
+@media (max-width: 540px) {
+  .import-mode-picker { width: 100%; }
+  .import-mode-picker button { flex: 1 1 10rem; }
+  .course-import-step { padding: 1rem; }
+  .progress-import .course-import-actions button { flex: 1 1 10rem; }
+}

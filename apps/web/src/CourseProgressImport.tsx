@@ -204,23 +204,33 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
   const headers = sheet?.rows[(mapping?.header ?? 1) - 1] ?? [];
   return (
     <div className="progress-import">
-      <div className="setup-card">
-        <h3>Import into a semester</h3>
-        <p className="schedule-help">
-          Create the semester with its original start and end dates, select it
-          below, then upload your teaching record. Planned dates and dates
-          taught come from your file; they are not shifted to today.
-        </p>
-        <button
-          type="button"
-          className="text-button"
-          disabled={busy || save.isSuccess || !campusId}
-          onClick={() => setShowSemesterForm(!showSemesterForm)}
-        >
-          {showSemesterForm ? 'Cancel semester creation' : 'Create a semester'}
-        </button>
+      <div className="setup-card course-import-card">
+        <div className="course-import-heading">
+          <div>
+            <h3>Import into a semester</h3>
+            <p className="schedule-help">
+              Create the semester with its original start and end dates, select
+              it below, then upload your teaching record. Planned dates and
+              dates taught come from your file; they are not shifted to today.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-button course-create-semester"
+            aria-expanded={showSemesterForm}
+            disabled={busy || save.isSuccess || !campusId}
+            onClick={() => setShowSemesterForm(!showSemesterForm)}
+          >
+            {showSemesterForm
+              ? 'Cancel semester creation'
+              : 'Create a semester'}
+          </button>
+        </div>
         {showSemesterForm ? (
-          <form className="progress-import-fields" onSubmit={submitSemester}>
+          <form
+            className="progress-import-fields course-semester-form"
+            onSubmit={submitSemester}
+          >
             <fieldset disabled={busy} className="progress-import-fields">
               <label>
                 Semester name
@@ -257,76 +267,83 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
           disabled={busy || save.isSuccess}
           className="progress-import-fields"
         >
-          <label>
-            1. Choose a semester
-            <select
-              value={semesterId}
-              onChange={(event) => {
-                setSemesterId(event.target.value);
-                setOfferingId('');
-                reset();
-              }}
-            >
-              <option value="">Choose a semester</option>
-              {semesters.data
-                ?.filter((item) => item.status !== 'ARCHIVED')
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {dateOnly(item.startDate)} to{' '}
-                    {dateOnly(item.endDate)}
-                  </option>
-                ))}
-            </select>
-          </label>
-          {semesters.isLoading ? <p role="status">Loading semesters…</p> : null}
-          {semesters.error ? (
-            <p role="alert">{semesters.error.message}</p>
-          ) : null}
-          {semester ? (
-            <p className="schedule-help">
-              Selected semester: <strong>{semester.name}</strong> ·{' '}
-              {dateOnly(semester.startDate)} to {dateOnly(semester.endDate)}.
-              File dates outside this range will be listed for correction before
-              import.
-            </p>
-          ) : (
-            <p className="schedule-help">
-              Select an existing semester or use Create a semester above.
-            </p>
-          )}
-          <label>
-            2. Choose your progress file
-            <input
-              type="file"
-              accept=".csv,.xlsx"
-              disabled={!semesterId}
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-                setInspection(null);
-                setMapping(null);
-                reset();
-              }}
-            />
-          </label>
-          <p className="schedule-help">
-            Excel or CSV. Your file can use its own sheet and column names.
-          </p>
-          <div className="template-actions">
-            <button
-              disabled={!file || !semesterId}
-              onClick={() => inspect.mutate(false)}
-            >
-              Read file
-            </button>
-            <button
-              className="text-button"
-              disabled={!file || !semesterId}
-              onClick={() => inspect.mutate(true)}
-            >
-              Match columns with AI
-            </button>
+          <div className="course-import-steps">
+            <div className="course-import-step">
+              <label>
+                1. Choose a semester
+                <select
+                  value={semesterId}
+                  onChange={(event) => {
+                    setSemesterId(event.target.value);
+                    setOfferingId('');
+                    reset();
+                  }}
+                >
+                  <option value="">Choose a semester</option>
+                  {semesters.data
+                    ?.filter((item) => item.status !== 'ARCHIVED')
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {dateOnly(item.startDate)} to{' '}
+                        {dateOnly(item.endDate)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {semesters.isLoading ? (
+                <p role="status">Loading semesters…</p>
+              ) : null}
+              {semesters.error ? (
+                <p role="alert">{semesters.error.message}</p>
+              ) : null}
+              {semester ? (
+                <p className="schedule-help">
+                  Selected semester: <strong>{semester.name}</strong> ·{' '}
+                  {dateOnly(semester.startDate)} to {dateOnly(semester.endDate)}
+                  . File dates outside this range will be listed for correction
+                  before import.
+                </p>
+              ) : (
+                <p className="schedule-help">
+                  Select an existing semester or use Create a semester above.
+                </p>
+              )}
+            </div>
+            <div className="course-import-step course-upload-step">
+              <label>
+                2. Choose your progress file
+                <input
+                  type="file"
+                  accept=".csv,.xlsx"
+                  disabled={!semesterId}
+                  onChange={(e) => {
+                    setFile(e.target.files?.[0] ?? null);
+                    setInspection(null);
+                    setMapping(null);
+                    reset();
+                  }}
+                />
+              </label>
+              <p className="schedule-help">
+                Excel or CSV. Your file can use its own sheet and column names.
+              </p>
+              <div className="template-actions course-import-actions">
+                <button
+                  disabled={!file || !semesterId}
+                  onClick={() => inspect.mutate(false)}
+                >
+                  Read file
+                </button>
+                <button
+                  className="text-button"
+                  disabled={!file || !semesterId}
+                  onClick={() => inspect.mutate(true)}
+                >
+                  Match columns with AI
+                </button>
+              </div>
+            </div>
           </div>
-
           {mapping && inspection ? (
             <>
               <h3>3. Confirm the course</h3>
