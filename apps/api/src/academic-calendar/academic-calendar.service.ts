@@ -1,3 +1,4 @@
+import { inheritSubjectTeacher } from './subject-teacher';
 import { TimetableService } from '../timetable/timetable.service';
 import { CalendarDayType, Prisma } from '@prisma/client';
 import {
@@ -77,8 +78,168 @@ export class AcademicCalendarService {
         name: true,
         description: true,
         active: true,
+        teachers: {
+          where: campusId ? { campusId } : {},
+          select: {
+            campusId: true,
+            staffProfile: {
+              select: {
+                id: true,
+                active: true,
+                user: { select: { name: true, status: true } },
+              },
+            },
+          },
+        },
+        offerings: {
+          where: {
+            status: { not: 'ARCHIVED' },
+            ...(campusId ? { batch: { semester: { campusId } } } : {}),
+          },
+          select: {
+            id: true,
+            batch: {
+              select: { name: true, semester: { select: { name: true } } },
+            },
+            faculty: {
+              where: { active: true },
+              select: {
+                staffProfile: {
+                  select: { id: true, user: { select: { name: true } } },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { code: 'asc' },
+    });
+  }
+
+  async subjectFaculty(campusId: string, user: AuthenticatedUser) {
+    this.access.assertCanManageCampus(user, campusId);
+    return this.prisma.staffProfile.findMany({
+      where: {
+        active: true,
+        user: {
+          status: 'ACTIVE',
+          roleAssignments: { some: { role: 'FACULTY', campusId } },
+        },
+      },
+      select: { id: true, user: { select: { name: true } } },
+      orderBy: { user: { name: 'asc' } },
+    });
+  }
+
+  async assignSubjectTeacher(
+    subjectId: string,
+    input: { campusId: string; staffProfileId: string; offeringId?: string },
+    user: AuthenticatedUser,
+  ) {
+    this.access.assertCanManageCampus(user, input.campusId);
+    return this.prisma.$transaction(async (tx) => {
+      const subject = await tx.subject.findFirst({
+        where: {
+          id: subjectId,
+          active: true,
+          OR: [
+            { campusId: input.campusId },
+            {
+              offerings: {
+                some: { batch: { semester: { campusId: input.campusId } } },
+              },
+            },
+          ],
+        },
+      });
+      if (!subject)
+        throw new NotFoundException('Subject not found in this campus.');
+      const teacher = await tx.staffProfile.findFirst({
+        where: {
+          id: input.staffProfileId,
+          active: true,
+          user: {
+            status: 'ACTIVE',
+            roleAssignments: {
+              some: { role: 'FACULTY', campusId: input.campusId },
+            },
+          },
+        },
+      });
+      if (!teacher)
+        throw new BadRequestException(
+          'Choose an active faculty member from this campus.',
+        );
+      if (input.offeringId) {
+        const offering = await tx.subjectOffering.findFirst({
+          where: {
+            id: input.offeringId,
+            subjectId,
+            status: { not: 'ARCHIVED' },
+            batch: { semester: { campusId: input.campusId } },
+          },
+          include: { batch: { include: { semester: true } } },
+        });
+        if (!offering)
+          throw new BadRequestException(
+            'This batch does not belong to the subject and campus.',
+          );
+        // Add access without altering existing co-teachers or historical timetable/log ownership.
+        await tx.facultyAssignment.upsert({
+          where: {
+            offeringId_staffProfileId_startDate: {
+              offeringId: offering.id,
+              staffProfileId: teacher.id,
+              startDate: offering.batch.semester.startDate,
+            },
+          },
+          create: {
+            offeringId: offering.id,
+            staffProfileId: teacher.id,
+            startDate: offering.batch.semester.startDate,
+            endDate: offering.batch.semester.endDate,
+            type: 'PRIMARY',
+          },
+          update: { active: true },
+        });
+      } else {
+        await tx.subjectTeacher.upsert({
+          where: {
+            subjectId_campusId: { subjectId, campusId: input.campusId },
+          },
+          create: {
+            subjectId,
+            campusId: input.campusId,
+            staffProfileId: teacher.id,
+          },
+          update: { staffProfileId: teacher.id },
+        });
+        const offerings = await tx.subjectOffering.findMany({
+          where: {
+            subjectId,
+            status: { not: 'ARCHIVED' },
+            batch: { semester: { campusId: input.campusId } },
+            faculty: { none: { active: true } },
+          },
+          select: { id: true },
+        });
+        for (const offering of offerings)
+          await inheritSubjectTeacher(tx, offering.id);
+      }
+      await tx.auditEvent.create({
+        data: {
+          actorId: user.id,
+          campusId: input.campusId,
+          action: 'UPDATE',
+          entityType: 'Subject',
+          entityId: subjectId,
+          metadata: {
+            staffProfileId: teacher.id,
+            offeringId: input.offeringId || null,
+          },
+        },
+      });
+      return { assigned: true };
     });
   }
 
@@ -114,10 +275,12 @@ export class AcademicCalendarService {
       await this.prisma.semester.delete({ where: { id: semesterId } });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') throw new NotFoundException('Semester not found.');
-        if (error.code === 'P2003') throw new ConflictException(
-          'This semester has linked batches or teaching records. Move or remove those records before deleting it.',
-        );
+        if (error.code === 'P2025')
+          throw new NotFoundException('Semester not found.');
+        if (error.code === 'P2003')
+          throw new ConflictException(
+            'This semester has linked batches or teaching records. Move or remove those records before deleting it.',
+          );
       }
       throw error;
     }
@@ -129,10 +292,12 @@ export class AcademicCalendarService {
       await this.prisma.subject.delete({ where: { id: subjectId } });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') throw new NotFoundException('Subject not found.');
-        if (error.code === 'P2003') throw new ConflictException(
-          'This subject is assigned to a batch. Remove its teaching assignments and records before deleting it.',
-        );
+        if (error.code === 'P2025')
+          throw new NotFoundException('Subject not found.');
+        if (error.code === 'P2003')
+          throw new ConflictException(
+            'This subject is assigned to a batch. Remove its teaching assignments and records before deleting it.',
+          );
       }
       throw error;
     }

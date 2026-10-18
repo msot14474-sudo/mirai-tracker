@@ -108,6 +108,7 @@ function setup() {
     batch: { upsert: jest.fn().mockResolvedValue({ id: 'batch-a' }) },
     subject: { upsert: jest.fn().mockResolvedValue({ id: 'subject-a' }) },
     subjectOffering: {
+      findUnique: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue({ id: 'offering-a' }),
     },
     calendarDayOverride: { upsert: jest.fn() },

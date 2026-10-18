@@ -1,3 +1,4 @@
+import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { academicApi, dateOnly, SaturdayRule, GeneratedCalendar } from './academic';
@@ -413,6 +414,7 @@ function SubjectSetup({
               <div>
                 <strong>{subject.name}</strong>
                 {subject.description ? <p>{subject.description}</p> : null}
+                <SubjectTeacherAssignment subject={subject} campusId={campusId} />
               </div>
               <button type="button" className="academic-delete" disabled={deletion.isPending}
                 aria-label={`Delete subject ${subject.name}`}

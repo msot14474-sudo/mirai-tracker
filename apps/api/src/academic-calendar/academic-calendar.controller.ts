@@ -62,6 +62,34 @@ export class AcademicCalendarController {
     );
   }
 
+  @Get('campuses/:campusId/subject-faculty')
+  subjectFaculty(
+    @Param('campusId') campusId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendar.subjectFaculty(id(campusId), user);
+  }
+
+  @Post('subjects/:subjectId/teacher')
+  assignTeacher(
+    @Param('subjectId') subjectId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendar.assignSubjectTeacher(
+      id(subjectId),
+      parse(
+        z.object({
+          campusId: uuidSchema,
+          staffProfileId: uuidSchema,
+          offeringId: uuidSchema.optional(),
+        }),
+        body,
+      ),
+      user,
+    );
+  }
+
   @Post('subjects')
   createSubject(@Body() body: unknown, @CurrentUser() user: AuthenticatedUser) {
     return this.calendar.createSubject(parse(createSubjectSchema, body), user);
@@ -69,13 +97,19 @@ export class AcademicCalendarController {
 
   @Delete('subjects/:subjectId')
   @HttpCode(204)
-  async deleteSubject(@Param('subjectId') subjectId: string, @CurrentUser() user: AuthenticatedUser) {
+  async deleteSubject(
+    @Param('subjectId') subjectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     await this.calendar.deleteSubject(id(subjectId), user);
   }
 
   @Delete('semesters/:semesterId')
   @HttpCode(204)
-  async deleteSemester(@Param('semesterId') semesterId: string, @CurrentUser() user: AuthenticatedUser) {
+  async deleteSemester(
+    @Param('semesterId') semesterId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     await this.calendar.deleteSemester(id(semesterId), user);
   }
 

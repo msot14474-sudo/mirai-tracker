@@ -9,6 +9,19 @@ export type Campus = {
 export type SaturdayRule = 'ALL' | 'NONE' | 'SECOND_AND_FOURTH';
 
 export type Subject = {
+  teachers?: Array<{
+    campusId: string;
+    staffProfile: {
+      id: string;
+      active: boolean;
+      user: { name: string; status: string };
+    };
+  }>;
+  offerings?: Array<{
+    id: string;
+    batch: { name: string; semester: { name: string } };
+    faculty: Array<{ staffProfile: { id: string; user: { name: string } } }>;
+  }>;
   id: string;
   code: string;
   name: string;
@@ -84,8 +97,22 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const academicApi = {
-  deleteSemester: (id: string) => api<void>(`/academic/semesters/${id}`, { method: 'DELETE' }),
-  deleteSubject: (id: string) => api<void>(`/academic/subjects/${id}`, { method: 'DELETE' }),
+  deleteSemester: (id: string) =>
+    api<void>(`/academic/semesters/${id}`, { method: 'DELETE' }),
+  subjectFaculty: (campusId: string) =>
+    api<Array<{ id: string; user: { name: string } }>>(
+      `/academic/campuses/${campusId}/subject-faculty`,
+    ),
+  assignSubjectTeacher: (
+    subjectId: string,
+    input: { campusId: string; staffProfileId: string; offeringId?: string },
+  ) =>
+    api(`/academic/subjects/${subjectId}/teacher`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteSubject: (id: string) =>
+    api<void>(`/academic/subjects/${id}`, { method: 'DELETE' }),
   campuses: () => api<Campus[]>('/academic/campuses'),
   subjects: (campusId?: string) =>
     api<Subject[]>(
@@ -121,7 +148,11 @@ export const academicApi = {
   updateCalendarDay: (
     id: string,
     input: { title: string; type: string; teachingAllowed: boolean },
-  ) => api(`/academic/calendar-days/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  ) =>
+    api(`/academic/calendar-days/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
   createCalendarDay: (
     semesterId: string,
     input: {

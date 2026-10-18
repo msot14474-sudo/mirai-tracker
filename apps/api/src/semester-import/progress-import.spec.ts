@@ -475,6 +475,7 @@ it('previews and imports directly into a selected semester, creating its course 
       create: jest.fn().mockResolvedValue({ id: 'subject' }),
     },
     subjectOffering: {
+      findUnique: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue({ id: 'offering' }),
     },
     lessonPlan: {

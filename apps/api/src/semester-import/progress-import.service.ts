@@ -1,3 +1,4 @@
+import { inheritSubjectTeacher } from '../academic-calendar/subject-teacher';
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
@@ -765,6 +766,7 @@ export class ProgressImportService {
             },
             update: {},
           });
+          await inheritSubjectTeacher(tx, offering.id);
           offeringId = offering.id;
         }
         await tx.$queryRaw(

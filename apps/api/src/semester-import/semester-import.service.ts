@@ -1,3 +1,4 @@
+import { inheritSubjectTeacher } from '../academic-calendar/subject-teacher';
 import { TimetableService } from '../timetable/timetable.service';
 import {
   AuditAction,
@@ -360,7 +361,7 @@ export class SemesterImportService {
       const batchKey = `${row.campusCode}\u0000${row.semesterName}\u0000${row.batchCode}`;
       const batchId = requiredId(batchIds, batchKey);
       const subjectId = requiredId(subjectIds, row.subjectCode);
-      await transaction.subjectOffering.upsert({
+      const savedOffering = await transaction.subjectOffering.upsert({
         where: { batchId_subjectId: { batchId, subjectId } },
         create: {
           batchId,
@@ -376,6 +377,7 @@ export class SemesterImportService {
           tightThreshold: row.tightThreshold,
         },
       });
+      await inheritSubjectTeacher(transaction, savedOffering.id);
     }
 
     for (const row of data.calendarRows) {

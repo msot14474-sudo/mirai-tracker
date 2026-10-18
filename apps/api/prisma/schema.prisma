@@ -248,6 +248,7 @@ model RoleAssignment {
 }
 
 model StaffProfile {
+  subjectTeachers SubjectTeacher[]
   id                 String              @id @default(uuid()) @db.Uuid
   userId             String              @unique @db.Uuid
   employeeCode       String              @unique @db.VarChar(64)
@@ -276,6 +277,7 @@ model StudentProfile {
 }
 
 model Campus {
+  subjectTeachers SubjectTeacher[]
   id              String           @id @default(uuid()) @db.Uuid
   code            String           @unique @db.VarChar(32)
   name            String           @unique @db.VarChar(160)
@@ -374,6 +376,7 @@ model Batch {
 }
 
 model Subject {
+  teachers SubjectTeacher[]
   campusId    String? @db.Uuid
   campus      Campus? @relation(fields: [campusId], references: [id], onDelete: Restrict)
   id          String            @id @default(uuid()) @db.Uuid
@@ -791,4 +794,16 @@ model AiMessage {
   conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, ordinal])
+}
+
+model SubjectTeacher {
+  id String @id @default(uuid()) @db.Uuid
+  subjectId String @db.Uuid
+  campusId String @db.Uuid
+  staffProfileId String @db.Uuid
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
+  @@unique([subjectId, campusId])
+  @@index([staffProfileId])
 }

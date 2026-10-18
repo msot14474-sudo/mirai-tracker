@@ -9632,3 +9632,10 @@ body:has(.auth-shell) {
   overflow-wrap: anywhere;
   color: #62718a;
 }
+
+.subject-teacher-assignment { margin-top: 14px; font-size: .9rem; }
+.subject-teacher-assignment p { margin: 8px 0; overflow-wrap: anywhere; }
+.subject-teacher-assignment form { display: grid; gap: 12px; padding: 16px; margin-top: 12px; border: 1px solid #dce4f1; border-radius: 12px; background: #f8faff; }
+.subject-teacher-assignment label { display: grid; gap: 6px; }
+.subject-teacher-assignment select { width: 100%; min-width: 0; }
+.subject-teacher-assignment button { width: auto; justify-self: start; }
