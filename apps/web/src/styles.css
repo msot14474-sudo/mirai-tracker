@@ -9560,3 +9560,75 @@ body:has(.auth-shell) {
 .ai-composer button:disabled { opacity: .5; cursor: not-allowed; }
 .ai-connection-note { font-size: 12px; line-height: 1.5; color: #6c552c; background: #faf6ed; border-radius: 8px; padding: 8px 12px; margin: 0 0 10px; }
 @media (max-width:640px) { .ai-composer { padding: 10px 12px; } .ai-transcript { padding: 16px; } }
+
+.calendar-file-import {
+  padding: clamp(20px, 3vw, 40px);
+  min-width: 0;
+}
+.calendar-file-import fieldset {
+  border: 0;
+  padding: 0;
+  margin: 24px 0 0;
+  min-width: 0;
+}
+.calendar-file-import label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.calendar-file-import input,
+.calendar-file-import select {
+  min-width: 0;
+  width: 100%;
+}
+.calendar-file-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 18px;
+  margin: 16px 0;
+}
+.calendar-file-note,
+.calendar-file-import header p {
+  color: #62718a;
+  line-height: 1.6;
+}
+.calendar-file-entries {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.calendar-file-entry {
+  border: 1px solid #dce4f1;
+  border-radius: 16px;
+  padding: 20px;
+  background: #fff;
+  min-width: 0;
+}
+.calendar-file-entry-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.calendar-file-import .calendar-file-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+}
+.calendar-file-check input {
+  width: 18px;
+  flex-shrink: 0;
+}
+.calendar-file-warnings {
+  background: #fff8e9;
+  color: #755324;
+  border-radius: 10px;
+  padding: 16px 28px;
+}
+.calendar-file-entry details {
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+  color: #62718a;
+}

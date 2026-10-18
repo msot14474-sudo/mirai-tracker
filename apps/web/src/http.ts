@@ -98,7 +98,9 @@ export async function apiFetch(
           expired
             ? 'Your session is no longer valid. Please sign in again.'
             : response.status >= 500
-              ? path === '/ai-insights/report' && typeof message === 'string'
+              ? (path === '/ai-insights/report' ||
+                  path.startsWith('/imports/calendar/')) &&
+                typeof message === 'string'
                 ? message
                 : 'The service is temporarily unavailable. Please try again.'
               : response.status === 429

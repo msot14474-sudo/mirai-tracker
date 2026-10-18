@@ -1,3 +1,4 @@
+import { CalendarFileService } from './calendar-file.service';
 import { TimetableModule } from '../timetable/timetable.module';
 import { ProgressImportService } from './progress-import.service';
 import { Module } from '@nestjs/common';
@@ -8,7 +9,11 @@ import { SemesterImportService } from './semester-import.service';
 @Module({
   imports: [AuthModule, TimetableModule],
   controllers: [SemesterImportController],
-  providers: [SemesterImportService, ProgressImportService],
+  providers: [
+    SemesterImportService,
+    ProgressImportService,
+    CalendarFileService,
+  ],
   exports: [SemesterImportService],
 })
 export class SemesterImportModule {}

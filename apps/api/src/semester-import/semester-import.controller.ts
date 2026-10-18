@@ -1,3 +1,4 @@
+import { CalendarFileService } from './calendar-file.service';
 import { UserRole } from '@prisma/client';
 import {
   BadRequestException,
@@ -39,7 +40,39 @@ export class SemesterImportController {
   constructor(
     private readonly imports: SemesterImportService,
     private readonly progress: ProgressImportService,
+    private readonly calendarFile: CalendarFileService,
   ) {}
+
+  @Post('calendar/preview')
+  @UseInterceptors(upload)
+  calendarPreview(
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @Body('semesterId') semesterId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendarFile.inspect(
+      requiredFile(file),
+      parseId(semesterId),
+      user,
+    );
+  }
+
+  @Post('calendar/:token/verify')
+  calendarVerify(
+    @Param('token') token: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendarFile.verify(parseId(token), user);
+  }
+
+  @Post('calendar/:token/commit')
+  calendarCommit(
+    @Param('token') token: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendarFile.commit(parseId(token), body, user);
+  }
 
   @Post('progress/inspect')
   @UseInterceptors(upload)

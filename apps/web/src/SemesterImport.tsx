@@ -1,3 +1,4 @@
+import { CalendarFileImport } from './CalendarFileImport';
 import { CourseProgressImport } from './CourseProgressImport';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChangeEvent, FormEvent, useState } from 'react';
@@ -33,8 +34,18 @@ export function SemesterImport({ campusId }: { campusId?: string }) {
         >
           Semester setup template
         </button>
+        <button
+          type="button"
+          className={mode === 'calendar' ? 'selected' : ''}
+          aria-pressed={mode === 'calendar'}
+          onClick={() => setMode('calendar')}
+        >
+          Update calendar from file
+        </button>
       </div>
-      {mode === 'setup' ? (
+      {mode === 'calendar' ? (
+        <CalendarFileImport key={campusId} campusId={campusId} />
+      ) : mode === 'setup' ? (
         <SemesterSetupImport campusId={campusId} />
       ) : (
         <CourseProgressImport campusId={campusId} />
