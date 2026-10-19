@@ -79,8 +79,13 @@ export function ProgressDashboard({
       ) : !dashboard.data?.summary ? (
         <div className="empty-state compact-empty">
           <span>11</span>
-          <h3>No subjects in this scope</h3>
-          <p>Active subject offerings will appear here automatically.</p>
+          <h3>No progress to calculate yet</h3>
+          <p>
+            Progress appears after a linked subject has an active lesson plan.
+            {scope === 'faculty'
+              ? ' Open Lesson plans to upload and activate your assigned subject’s plan. Your campus manager sets its class timetable.'
+              : ' Administrators link subjects to semester batches; campus managers assign teachers and set the timetable. Faculty then upload and activate their lesson plans.'}
+          </p>
         </div>
       ) : (
         <>

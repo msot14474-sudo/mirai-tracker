@@ -155,8 +155,10 @@ function ScheduleDetail({
         <span>02</span>
         <h3>Lesson plan required</h3>
         <p>
-          Your timetable is ready below. Upload your units, topics and planned
-          hours in Lesson plans to allocate the teaching time.
+          Upload your units, topics and planned hours in Lesson plans.
+          {detail.sessions.length
+            ? ' Your scheduled classes are listed below; activating the plan allocates topics to this teaching time.'
+            : ' No classes have been scheduled yet. Ask your campus manager to add the subject’s timetable so planned dates can be calculated.'}
         </p>
         {detail.sessions.map((session) => (
           <SessionCapacityRow
