@@ -143,8 +143,8 @@ it('keeps dashboard usable when report generation fails', async () => {
   ).toBeEnabled();
   expect(screen.getByText('Data Structures')).toBeInTheDocument();
 });
-it('escapes model and student text in downloadable reports', () => {
-  const html = reportHtml({
+it('escapes model and student text in downloadable reports', async () => {
+  const html = await reportHtml({
     mode: 'ai',
     text: '<script>alert(1)</script>',
     generatedAt: snapshot.generatedAt,
@@ -246,9 +246,42 @@ it('sends with Enter and preserves Shift+Enter for multiline follow-ups', async 
 
 it('allows setup questions when the campus has no subjects yet', async () => {
   const { requests } = setup(true, false, true);
-  const input = await screen.findByPlaceholderText('Ask a question or follow up…');
+  const input = await screen.findByPlaceholderText(
+    'Ask a question or follow up…',
+  );
   await waitFor(() => expect(input).toBeEnabled());
   fireEvent.change(input, { target: { value: 'How do I start a semester?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
   await waitFor(() => expect(requests).toHaveLength(1));
+});
+
+it('keeps the only download action inside the chat composer', async () => {
+  setup(true);
+  await screen.findByText('Data Structures');
+  fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
+    target: { value: 'What next?' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Download report' }),
+    ).toBeEnabled(),
+  );
+  expect(
+    screen.getAllByRole('button', { name: 'Download report' }),
+  ).toHaveLength(1);
+  expect(
+    screen.getByRole('button', { name: 'Download report' }).closest('form'),
+  ).not.toBeNull();
+});
+it('renders report headings and tables without exposing Markdown syntax or executing HTML', async () => {
+  const html = await reportHtml({
+    mode: 'ai',
+    text: '## Progress\n\n| Subject | Hours |\n| --- | --- |\n| Maths | 2 |',
+    generatedAt: snapshot.generatedAt,
+    snapshot,
+  });
+  expect(html).toContain('<h2>Progress</h2>');
+  expect(html).toContain('<table>');
+  expect(html).not.toContain('## Progress');
 });

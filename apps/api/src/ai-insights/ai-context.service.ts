@@ -57,7 +57,13 @@ export class AiContextService {
         subject: { select: { name: true, code: true } },
         timetableEntries: {
           where: { active: true },
-          select: { weekday: true, startTime: true, endTime: true, effectiveFrom: true, effectiveTo: true },
+          select: {
+            weekday: true,
+            startTime: true,
+            endTime: true,
+            effectiveFrom: true,
+            effectiveTo: true,
+          },
           orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
         },
         batch: {
@@ -72,6 +78,7 @@ export class AiContextService {
                     id: true,
                     name: true,
                     startDate: true,
+                    endDate: true,
                     syllabusDeadline: true,
                   },
                 },
@@ -121,31 +128,88 @@ export class AiContextService {
       throw new BadRequestException(
         'Select a campus or subject to analyse a smaller scope.',
       );
-    const global = user.roles.some((r) => r.role === 'ADMIN' || r.role === 'PROGRAM_MANAGER');
-    const managedCampusIds = user.roles.filter((r) => r.role === 'CAMPUS_MANAGER' && r.campusId).map((r) => r.campusId!);
-    const permittedCampusIds = [...new Set([...managedCampusIds, ...offerings.map((o) => o.batch.semester.campus.id)])];
+    const global = user.roles.some(
+      (r) => r.role === 'ADMIN' || r.role === 'PROGRAM_MANAGER',
+    );
+    const managedCampusIds = user.roles
+      .filter((r) => r.role === 'CAMPUS_MANAGER' && r.campusId)
+      .map((r) => r.campusId!);
+    const permittedCampusIds = [
+      ...new Set([
+        ...managedCampusIds,
+        ...offerings.map((o) => o.batch.semester.campus.id),
+      ]),
+    ];
     const campusWhere: Prisma.CampusWhereInput = {
-      AND: [global ? {} : { id: { in: permittedCampusIds } }, filter.campusId ? { id: filter.campusId } : {}],
+      AND: [
+        global ? {} : { id: { in: permittedCampusIds } },
+        filter.campusId ? { id: filter.campusId } : {},
+      ],
     };
     const [campuses, semesters, catalog] = await Promise.all([
-      this.prisma.campus.findMany({ where: campusWhere, select: { id: true, name: true, timezone: true }, orderBy: { name: 'asc' }, take: 100 }),
-      this.prisma.semester.findMany({ where: { campus: campusWhere }, select: {
-        name: true, startDate: true, endDate: true, status: true, workingSaturdayRule: true,
-        campus: { select: { name: true } },
-        calendarDays: { select: { date: true, title: true, type: true, teachingAllowed: true }, orderBy: { date: 'asc' } },
-        examWindows: { select: { name: true, type: true, startDate: true, endDate: true, syllabusDeadline: true } },
-      }, orderBy: { startDate: 'desc' }, take: 100 }),
-      global || managedCampusIds.length ? this.prisma.subject.findMany({
-        where: { active: true, campus: { AND: [campusWhere, global ? {} : { id: { in: managedCampusIds } }] } }, select: { code: true, name: true, description: true }, orderBy: { code: 'asc' }, take: 200,
-      }) : Promise.resolve([]),
+      this.prisma.campus.findMany({
+        where: campusWhere,
+        select: { id: true, name: true, timezone: true },
+        orderBy: { name: 'asc' },
+        take: 100,
+      }),
+      this.prisma.semester.findMany({
+        where: { campus: campusWhere },
+        select: {
+          name: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          workingSaturdayRule: true,
+          campus: { select: { name: true } },
+          calendarDays: {
+            select: {
+              date: true,
+              title: true,
+              type: true,
+              teachingAllowed: true,
+            },
+            orderBy: { date: 'asc' },
+          },
+          examWindows: {
+            select: {
+              name: true,
+              type: true,
+              startDate: true,
+              endDate: true,
+              syllabusDeadline: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'desc' },
+        take: 100,
+      }),
+      global || managedCampusIds.length
+        ? this.prisma.subject.findMany({
+            where: {
+              active: true,
+              campus: {
+                AND: [
+                  campusWhere,
+                  global ? {} : { id: { in: managedCampusIds } },
+                ],
+              },
+            },
+            select: { code: true, name: true, description: true },
+            orderBy: { code: 'asc' },
+            take: 200,
+          })
+        : Promise.resolve([]),
     ]);
     const ids = offerings.map((o) => o.id);
     const sessionScope = { offeringId: { in: ids } };
-    const pastScope = {
-      ...sessionScope,
-      endsAt: { lte: now },
+    const pastScope = { ...sessionScope, endsAt: { lte: now } };
+    const missingLogScope = {
+      ...pastScope,
       status: {
-        in: ['SCHEDULED', 'COMPLETED'] as ('SCHEDULED' | 'COMPLETED')[],
+        in: ['SCHEDULED', 'COMPLETED', 'IN_PROGRESS'] as (
+          'SCHEDULED' | 'COMPLETED' | 'IN_PROGRESS'
+        )[],
       },
     };
     const [
@@ -165,7 +229,7 @@ export class AiContextService {
       }),
       this.prisma.scheduledSession.groupBy({
         by: ['offeringId'],
-        where: { ...pastScope, logs: { none: {} } },
+        where: { ...missingLogScope, logs: { none: {} } },
         _count: { _all: true },
       }),
       this.prisma.lectureReview.groupBy({
@@ -284,13 +348,22 @@ export class AiContextService {
           `Review ${recentHelp} recent student understanding-gap responses.`,
         );
       const exams = o.batch.semester.examWindows
-        .filter((e) => e.startDate.toISOString().slice(0, 10) >= today)
+        .filter(
+          (e) => (e.endDate ?? e.startDate).toISOString().slice(0, 10) >= today,
+        )
         .map((e) => {
           const scoped = topics.filter((t) => t.examIds.includes(e.id));
           return {
             name: e.name,
             date: e.startDate.toISOString().slice(0, 10),
             syllabusDeadline: e.syllabusDeadline.toISOString().slice(0, 10),
+            endDate: (e.endDate ?? e.startDate).toISOString().slice(0, 10),
+            scopeDefined: scoped.length > 0,
+            plannedMinutes: scoped.reduce((sum, t) => sum + t.minutes, 0),
+            remainingMinutes: scoped.reduce(
+              (sum, t) => sum + t.minutes * (1 - t.completion / 100),
+              0,
+            ),
             scopeTopics: scoped.length,
             incompleteTopics: scoped.filter((t) => t.completion < 100).length,
           };
@@ -303,6 +376,7 @@ export class AiContextService {
       return {
         id: o.id,
         status: o.status,
+        localDate: today,
         timetable: o.timetableEntries,
         code: o.subject.code,
         name: o.subject.name,
@@ -310,11 +384,19 @@ export class AiContextService {
         campus: o.batch.semester.campus,
         semester: o.batch.semester.name,
         teachers: o.faculty.map((f) => f.staffProfile.user.name),
-        plan: plan ? { version: plan.version, status: plan.status, fileName: plan.fileName } : null,
+        plan: plan
+          ? {
+              version: plan.version,
+              status: plan.status,
+              fileName: plan.fileName,
+            }
+          : null,
         completion: minutes
           ? Math.round((completedMinutes / minutes) * 100)
           : null,
         plannedMinutes: minutes,
+        coveredMinutes: completedMinutes,
+        remainingMinutes: Math.max(0, minutes - completedMinutes),
         overdueTopics: overdue.length,
         missingLogs: unlogged,
         topics,
@@ -333,8 +415,17 @@ export class AiContextService {
       feedbackCounts.find((f) => !f.understood)?._count._all ?? 0;
     return {
       generatedAt: now.toISOString(),
-      viewer: { name: user.name, roles: [...new Set(user.roles.map((r) => r.role))] },
-      setup: { campuses, semesters, catalog, limits: 'Up to 100 permitted campuses, 100 most recent semesters, and 200 catalog subjects. Faculty context includes only assigned subjects and their campus calendars.' },
+      viewer: {
+        name: user.name,
+        roles: [...new Set(user.roles.map((r) => r.role))],
+      },
+      setup: {
+        campuses,
+        semesters,
+        catalog,
+        limits:
+          'Up to 100 permitted campuses, 100 most recent semesters, and 200 catalog subjects. Faculty context includes only assigned subjects and their campus calendars.',
+      },
       scope: filter.campusId
         ? 'Selected campus · permitted subjects'
         : 'All permitted subjects',

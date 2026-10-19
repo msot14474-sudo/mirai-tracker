@@ -9639,3 +9639,10 @@ body:has(.auth-shell) {
 .subject-teacher-assignment label { display: grid; gap: 6px; }
 .subject-teacher-assignment select { width: 100%; min-width: 0; }
 .subject-teacher-assignment button { width: auto; justify-self: start; }
+
+.ai-markdown { overflow-wrap: anywhere; min-width: 0; line-height: 1.7; }
+.ai-markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 16px 0; font-size: .92em; }
+.ai-markdown :is(th, td) { border: 1px solid #dce4f1; padding: 10px 14px; text-align: left; vertical-align: top; }
+.ai-markdown th { background: #f5f7fb; font-weight: 600; }
+.ai-markdown input[type="checkbox"] { width: auto; margin-right: 8px; }
+.ai-composer .ai-actions { flex-wrap: wrap; }

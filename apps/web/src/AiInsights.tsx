@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { apiFetch, apiUrl } from './http';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -174,9 +175,7 @@ export function AiInsights({
     chats.isPending ||
     chats.isError ||
     Boolean(conversationId && (history.isPending || history.isError));
-  const canSend = Boolean(
-    data?.ai.ready && !chatBusy && !report.isPending,
-  );
+  const canSend = Boolean(data?.ai.ready && !chatBusy && !report.isPending);
   const send = () => {
     if (canSend && question.trim())
       report.mutate({ useAi: true, ask: question.trim() });
@@ -279,8 +278,12 @@ export function AiInsights({
                       }
                     >
                       {message.role === 'assistant' ? (
-                        <Markdown skipHtml disallowedElements={['img']}>
-                          {message.content}
+                        <Markdown
+                          remarkPlugins={[remarkGfm]}
+                          skipHtml
+                          disallowedElements={['img']}
+                        >
+                          {cleanReply(message.content)}
                         </Markdown>
                       ) : (
                         message.content
@@ -314,28 +317,29 @@ export function AiInsights({
                   !report.data.conversationId ||
                   !history.data?.messages.some(
                     (m) =>
-                      m.role === 'assistant' && m.content === report.data?.text,
+                      m.role === 'assistant' &&
+                      cleanReply(m.content) ===
+                        cleanReply(report.data?.text || ''),
                   ) ? (
                     <div className="ai-chat-message ai-chat-assistant">
                       <strong>Mirai AI</strong>
                       <div className="ai-markdown">
-                        <Markdown skipHtml disallowedElements={['img']}>
-                          {report.data.text}
+                        <Markdown
+                          remarkPlugins={[remarkGfm]}
+                          skipHtml
+                          disallowedElements={['img']}
+                        >
+                          {cleanReply(report.data.text)}
                         </Markdown>
                       </div>
                     </div>
                   ) : null}
                   {report.data.incomplete ? (
                     <p role="alert">
-                      This response is incomplete. Try a more focused question.
+                      The provider stopped before finishing. Use Continue
+                      response in the chat box to resume.
                     </p>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => downloadReport(report.data!)}
-                  >
-                    Download report
-                  </button>
                 </article>
               ) : null}
             </div>
@@ -346,8 +350,19 @@ export function AiInsights({
                 send();
               }}
             >
-              {!data.ai.ready ? <p className="ai-connection-note" role="status">AI is not connected. Ask your administrator to check the provider settings. You can still download a data report below.</p> : null}
-              {chatBusy ? <p className="ai-connection-note" role="status">{chats.isError || history.isError ? 'Your conversation could not be loaded. Use Retry conversation above to reconnect.' : 'Loading your conversation…'}</p> : null}
+              {!data.ai.ready ? (
+                <p className="ai-connection-note" role="status">
+                  AI is not connected. Ask your administrator to check the
+                  provider settings. You can still download a data report below.
+                </p>
+              ) : null}
+              {chatBusy ? (
+                <p className="ai-connection-note" role="status">
+                  {chats.isError || history.isError
+                    ? 'Your conversation could not be loaded. Use Retry conversation above to reconnect.'
+                    : 'Loading your conversation…'}
+                </p>
+              ) : null}
               <label htmlFor="ai-question">Message Mirai AI</label>
               <textarea
                 id="ai-question"
@@ -375,12 +390,60 @@ export function AiInsights({
                     : 'AI is not connected yet. Data reports are available.'}
                 </span>
                 <div className="ai-actions">
+                  {(report.data?.incomplete ||
+                    history.data?.messages
+                      .at(-1)
+                      ?.content.startsWith('[Incomplete response]')) && (
+                    <button
+                      type="button"
+                      disabled={!canSend}
+                      onClick={() =>
+                        report.mutate({
+                          useAi: true,
+                          ask: 'Continue your previous response from where it stopped. Finish the remaining points without repeating earlier text.',
+                        })
+                      }
+                    >
+                      Continue response
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={
+                      report.isPending ||
+                      (!report.data &&
+                        !history.data?.messages.some(
+                          (m) => m.role === 'assistant',
+                        ))
+                    }
+                    onClick={() => {
+                      const last = history.data?.messages
+                        .filter((m) => m.role === 'assistant')
+                        .at(-1);
+                      const latest =
+                        report.data ??
+                        (last && {
+                          mode: 'ai' as const,
+                          text: cleanReply(last.content),
+                          generatedAt: last.createdAt,
+                          incomplete: last.content.startsWith(
+                            '[Incomplete response]',
+                          ),
+                          snapshot: data,
+                        });
+                      if (latest) downloadReport(latest);
+                    }}
+                  >
+                    Download report
+                  </button>
                   <button
                     type="button"
                     disabled={report.isPending || (data.ai.ready && chatBusy)}
                     onClick={() => report.mutate({ useAi: data.ai.ready })}
                   >
-                    {data.ai.ready ? 'Generate AI report' : 'Generate data report'}
+                    {data.ai.ready
+                      ? 'Generate AI report'
+                      : 'Generate data report'}
                   </button>
                   <button type="submit" disabled={!canSend || !question.trim()}>
                     Send
@@ -551,7 +614,14 @@ async function getSnapshot(
   });
   return (await apiFetch(`${apiUrl}/ai-insights?${query}`)).json();
 }
-export function reportHtml(report: Report) {
+export function cleanReply(text: string) {
+  const cleaned = text.replace(/^\[Incomplete response\]\s*/, '').trim();
+  return /^```(?:markdown|md)\s*\n[\s\S]*\n```$/.test(cleaned)
+    ? cleaned.replace(/^```(?:markdown|md)\s*\n/, '').replace(/\n```$/, '')
+    : cleaned;
+}
+export async function reportHtml(report: Report) {
+  const { renderToStaticMarkup } = await import('react-dom/server');
   const escape = (text: string) =>
     text.replace(
       /[&<>"']/g,
@@ -564,11 +634,20 @@ export function reportHtml(report: Report) {
           "'": '&#39;',
         })[char]!,
     );
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mirai Academic Report</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#162a50;max-width:850px;margin:48px auto;padding:24px}header{border-bottom:3px solid #245bd7;padding-bottom:20px;margin-bottom:28px}h1{font-size:28px}article{white-space:pre-wrap;overflow-wrap:anywhere}@media print{body{margin:0;padding:10px;font-size:11pt}}</style></head><body><header><p>MIRAI TRACKER</p><h1>Academic report</h1><p>${escape(report.mode === 'ai' ? 'AI analysis — review suggestions before acting' : 'Data report')}${report.incomplete ? ' · INCOMPLETE RESPONSE' : ''}</p><p>${escape(report.generatedAt)}</p></header><article>${escape(report.text)}</article><footer><p>${escape(report.snapshot.coverage.note)}</p></footer></body></html>`;
+  const rendered = renderToStaticMarkup(
+    <Markdown
+      remarkPlugins={[remarkGfm]}
+      skipHtml={false}
+      disallowedElements={['img']}
+    >
+      {cleanReply(report.text)}
+    </Markdown>,
+  );
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mirai Academic Report</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#162a50;max-width:850px;margin:48px auto;padding:24px}header{border-bottom:3px solid #245bd7;padding-bottom:20px;margin-bottom:28px}h1{font-size:28px}article{overflow-wrap:anywhere}table{border-collapse:collapse;width:100%}td,th{border:1px solid #dce4f1;padding:8px;text-align:left}pre{overflow:auto;white-space:pre-wrap}@media print{body{margin:0;padding:10px;font-size:11pt}}</style></head><body><header><p>MIRAI TRACKER</p><h1>Academic report</h1><p>${escape(report.mode === 'ai' ? 'AI analysis — review suggestions before acting' : 'Data report')}${report.incomplete ? ' · INCOMPLETE RESPONSE' : ''}</p><p>${escape(report.generatedAt)}</p></header><article>${rendered}</article><footer><p>${escape(report.snapshot.coverage.note)}</p></footer></body></html>`;
 }
-function downloadReport(report: Report) {
+async function downloadReport(report: Report) {
   const url = URL.createObjectURL(
-    new Blob([reportHtml(report)], { type: 'text/html;charset=utf-8' }),
+    new Blob([await reportHtml(report)], { type: 'text/html;charset=utf-8' }),
   );
   const a = document.createElement('a');
   a.href = url;

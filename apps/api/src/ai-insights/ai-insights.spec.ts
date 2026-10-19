@@ -274,12 +274,12 @@ it('uses Ollama cloud with the efficient default and only returns the final answ
     model: 'gpt-oss:20b',
     stream: false,
     think: 'low',
-    options: { num_predict: 1200 },
+    options: { num_predict: 4096, temperature: 0.2 },
   });
   expect(report.text).toBe('Focus on Arrays.');
   expect(JSON.stringify(report)).not.toContain('private reasoning');
   expect(redis.setWithExpiry).toHaveBeenCalledWith(
-    expect.stringMatching(/^ai:report:v1:/),
+    expect.stringMatching(/^ai:report:v2:/),
     expect.any(String),
     300,
   );
@@ -345,4 +345,30 @@ it('keeps setup context campus-scoped and does not expose the catalog to faculty
   expect(db.semester.findMany).toHaveBeenCalledWith(expect.objectContaining({
     where: { campus: { AND: [{ id: { in: ['campus-a'] } }, { id: 'campus-b' }] } },
   }));
+});
+
+it('preserves complete recent replies for follow-up context', async () => {
+  const { conversationContext } = await import('./ai-insights.service');
+  const long = 'x'.repeat(8000) + ' final important detail';
+  expect(conversationContext([{ role: 'assistant', content: long }])[0]!.content).toBe(long);
+  const history = conversationContext([{ role: 'user', content: 'old'.repeat(20000) }, { role: 'assistant', content: long }]);
+  expect(history).toHaveLength(1);
+  expect(history[0]!.content).toBe(long);
+});
+it('supplies weighted hours and actual missing-log totals to the model', async () => {
+  const { compactContext } = await import('./ai-insights.service');
+  const { context } = setup();
+  const snapshot = await context.snapshot(user('ADMIN'), {});
+  const compact = compactContext(snapshot);
+  expect(compact.subjects[0]).toMatchObject({ plannedMinutes: 200, coveredMinutes: 50, remainingMinutes: 150 });
+  expect(compact.subjects[0]!.missingLogs).toBe(snapshot.subjects[0]!.missingLogs);
+});
+it('marks provider-truncated replies as incomplete and never caches them as finished', async () => {
+  process.env.OLLAMA_API_KEY = 'test';
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ done: true, done_reason: 'length', message: { content: 'An unfinished answer' } })));
+  const { context } = setup();
+  const redis = { get: jest.fn().mockResolvedValue(null), incrementWithExpiry: jest.fn().mockResolvedValue(1), setWithExpiry: jest.fn() };
+  const result = await makeInsights(context, redis as unknown as RedisService).generate(user('ADMIN'), {}, 'Explain', true);
+  expect(result).toMatchObject({ incomplete: true, text: 'An unfinished answer' });
+  expect(redis.setWithExpiry).not.toHaveBeenCalled();
 });
