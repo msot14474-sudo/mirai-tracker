@@ -11,7 +11,23 @@ export function RequestRecovery() {
   const client = useQueryClient();
   const [, render] = useReducer((value) => value + 1, 0);
   const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => client.getQueryCache().subscribe(() => render()), [client]);
+  useEffect(() => {
+    let active = true;
+    let queued = false;
+    const unsubscribe = client.getQueryCache().subscribe(() => {
+      // Queries may register while another workspace is rendering.
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        if (active) render();
+      });
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [client]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
     window.addEventListener('online', update);

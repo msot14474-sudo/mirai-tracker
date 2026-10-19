@@ -21,6 +21,114 @@ const manager: AuthenticatedUser = {
 };
 
 describe('TimetableService', () => {
+  const upload = (lines: string) =>
+    ({
+      originalname: 'weekly.csv',
+      buffer: Buffer.from('Subject,Teacher,Day,Start time,End time\n' + lines),
+    }) as never;
+  function importSetup() {
+    const state = setup();
+    state.prisma.subjectOffering.findMany.mockResolvedValue([
+      { id: 'offering-a', subject: { code: 'OT101', name: 'Foundations' } },
+    ]);
+    state.prisma.subjectOffering.findUnique.mockResolvedValue(
+      offering({ faculty: [facultyAssignment()] }),
+    );
+    state.prisma.timetableEntry.findFirst.mockResolvedValue(null);
+    state.prisma.$transaction.mockImplementation(async (callback) =>
+      callback(state.prisma),
+    );
+    return state;
+  }
+  it('previews a full batch without writes and rejects a cross-campus request', async () => {
+    const { service, prisma, access } = importSetup();
+    const result = await service.importBatch(
+      'batch-a',
+      upload('OT101,faculty@mirai.local,Monday,09:00,10:00'),
+      manager,
+    );
+    expect(result.valid).toBe(true);
+    expect(result.rows[0]?.teacher).toBe('Faculty A');
+    expect(prisma.timetableEntry.createMany).not.toHaveBeenCalled();
+    access.assertCanManageCampus.mockImplementation(() => {
+      throw new ForbiddenException();
+    });
+    await expect(
+      service.importBatch(
+        'batch-a',
+        upload('OT101,,Monday,09:00,10:00'),
+        manager,
+        true,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+  it('rejects unknown subjects, wrong teachers and overlapping file rows before writing', async () => {
+    const { service, prisma } = importSetup();
+    const file = upload(
+      'OT101,,Monday,09:00,10:00\nOT101,,Monday,09:30,10:30\nUNKNOWN,,Tuesday,09:00,10:00\nOT101,other@example.edu,Wednesday,09:00,10:00',
+    );
+    const result = await service.importBatch('batch-a', file, manager);
+    expect(result.errors).toHaveLength(3);
+    expect(result.valid).toBe(false);
+    await expect(
+      service.importBatch('batch-a', file, manager, true),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.timetableEntry.createMany).not.toHaveBeenCalled();
+  });
+  it('commits together, regenerates each subject once and treats matching rows as idempotent', async () => {
+    const { service, prisma } = importSetup();
+    const generate = jest
+      .spyOn(service as never, 'regenerateOffering' as never)
+      .mockResolvedValue({} as never);
+    const file = upload(
+      'OT101,,Monday,09:00,10:00\nOT101,,Wednesday,09:00,10:00',
+    );
+    const result = await service.importBatch('batch-a', file, manager, true);
+    expect(result.added).toBe(2);
+    expect(
+      prisma.timetableEntry.createMany.mock.calls[0]![0].data,
+    ).toHaveLength(2);
+    expect(generate).toHaveBeenCalledTimes(1);
+    prisma.subjectOffering.findUnique.mockResolvedValue(
+      offering({
+        faculty: [facultyAssignment()],
+        timetableEntries: [
+          entry({ facultyAssignmentId: 'faculty-assignment-a' }),
+        ],
+      }),
+    );
+    const duplicate = await service.importBatch(
+      'batch-a',
+      upload('OT101,,Monday,09:00,10:00'),
+      manager,
+      true,
+    );
+    expect(duplicate.added).toBe(0);
+    expect(duplicate.rows[0]?.existing).toBe(true);
+  });
+  it('revalidates newly conflicting existing classes at commit and reports generation retries truthfully', async () => {
+    const { service, prisma } = importSetup();
+    const file = upload('OT101,,Monday,09:00,10:00');
+    expect((await service.importBatch('batch-a', file, manager)).valid).toBe(
+      true,
+    );
+    prisma.timetableEntry.findFirst.mockResolvedValue({
+      id: 'conflict',
+      offering: { batchId: 'batch-a' },
+    });
+    await expect(
+      service.importBatch('batch-a', file, manager, true),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.timetableEntry.createMany).not.toHaveBeenCalled();
+    prisma.timetableEntry.findFirst.mockResolvedValue(null);
+    jest
+      .spyOn(service as never, 'regenerateOffering' as never)
+      .mockRejectedValue(new Error('timeout') as never);
+    const result = await service.importBatch('batch-a', file, manager, true);
+    expect('warnings' in result && result.warnings).toHaveLength(1);
+    expect(result.added).toBe(1);
+  });
+
   it('derives weekly planned minutes while listing offerings', async () => {
     const { service, prisma } = setup();
     prisma.semester.findUnique.mockResolvedValue({
@@ -131,7 +239,9 @@ describe('TimetableService', () => {
     expect(result.entry.plannedMinutes).toBe(60);
     expect(result.generation.scheduledSessions).toBe(13);
     expect(result.generation.semesterPlannedMinutes).toBe(780);
-    expect(transaction.scheduledSession.create).toHaveBeenCalledTimes(13);
+    expect(
+      transaction.scheduledSession.createMany.mock.calls[0]![0].data,
+    ).toHaveLength(13);
   });
 
   it('preserves historical sessions and removes obsolete unlogged sessions', async () => {
@@ -187,7 +297,9 @@ describe('TimetableService', () => {
       callback(transaction),
     );
     await service.regenerateSemester('semester-a', manager);
-    expect(transaction.scheduledSession.create).toHaveBeenCalledTimes(12);
+    expect(
+      transaction.scheduledSession.createMany.mock.calls[0]![0].data,
+    ).toHaveLength(12);
     expect(schedules.calculate).toHaveBeenCalledWith(
       'offering-a',
       { reason: 'CALENDAR_CHANGE' },
@@ -213,18 +325,31 @@ function setup() {
   const transaction = {
     scheduledSession: {
       create: jest.fn(),
+      createMany: jest
+        .fn()
+        .mockImplementation(async ({ data }) => ({ count: data.length })),
       update: jest.fn(),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
   };
   const prisma = {
     lessonPlan: { findFirst: jest.fn().mockResolvedValue(null) },
+    batch: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({
+          id: 'batch-a',
+          name: 'Batch A',
+          semester: offering().batch.semester,
+        }),
+    },
     semester: { findUnique: jest.fn() },
     subjectOffering: { findUnique: jest.fn(), findMany: jest.fn() },
     timetableEntry: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      createMany: jest.fn(),
       update: jest.fn(),
     },
     scheduledSession: { findMany: jest.fn() },
@@ -285,6 +410,7 @@ function facultyAssignment(overrides: Record<string, unknown> = {}) {
     startDate: date('2026-01-01'),
     endDate: date('2026-03-31'),
     staffProfile: {
+      active: true,
       user: {
         id: 'faculty-a',
         name: 'Faculty A',

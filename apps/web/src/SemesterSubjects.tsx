@@ -30,7 +30,7 @@ export function SemesterSubjects({
   });
   return (
     <section
-      className="import-card"
+      className="import-card batch-links"
       aria-labelledby="semester-subjects-heading"
     >
       <h3 id="semester-subjects-heading">

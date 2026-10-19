@@ -88,6 +88,7 @@ export function SemesterSetup({
         </div>
         <button
           type="button"
+          className="primary-button"
           aria-expanded={showCreate}
           onClick={() => setShowCreate(!showCreate)}
         >

@@ -262,6 +262,7 @@ function PlanUpload({
           {previewMutation.isPending ? 'Checking…' : 'Preview'}
         </button>
         <button
+          className="primary-button"
           disabled={!file || !preview?.valid || importMutation.isPending}
           onClick={() => importMutation.mutate()}
         >

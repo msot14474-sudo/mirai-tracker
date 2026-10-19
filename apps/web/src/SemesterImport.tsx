@@ -1,5 +1,4 @@
 import { CalendarFileImport } from './CalendarFileImport';
-import { CourseProgressImport } from './CourseProgressImport';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { ImportCounts, ImportPreview, importApi } from './imports';
@@ -13,56 +12,11 @@ const countLabels: Array<[keyof ImportCounts, string]> = [
   ['calendarDays', 'Calendar days'],
 ];
 
-export function SemesterImport({
-  campusId,
-  canImportProgress = false,
-}: {
-  campusId?: string;
-  canImportProgress?: boolean;
-}) {
-  const [mode, setMode] = useState(canImportProgress ? 'progress' : 'setup');
-  return (
-    <>
-      <div className="import-mode-picker" role="group" aria-label="Import type">
-        {canImportProgress && (
-          <button
-            className={mode === 'progress' ? 'selected' : ''}
-            aria-pressed={mode === 'progress'}
-            type="button"
-            onClick={() => setMode('progress')}
-          >
-            Import course data
-          </button>
-        )}
-        <button
-          className={mode === 'setup' ? 'selected' : ''}
-          aria-pressed={mode === 'setup'}
-          type="button"
-          onClick={() => setMode('setup')}
-        >
-          Semester setup template
-        </button>
-        <button
-          type="button"
-          className={mode === 'calendar' ? 'selected' : ''}
-          aria-pressed={mode === 'calendar'}
-          onClick={() => setMode('calendar')}
-        >
-          Update calendar from file
-        </button>
-      </div>
-      {mode === 'calendar' ? (
-        <CalendarFileImport key={campusId} campusId={campusId} />
-      ) : mode === 'setup' || !canImportProgress ? (
-        <SemesterSetupImport campusId={campusId} />
-      ) : (
-        <CourseProgressImport campusId={campusId} />
-      )}
-    </>
-  );
+export function SemesterImport({ campusId }: { campusId?: string }) {
+  return <CalendarFileImport key={campusId} campusId={campusId} />;
 }
 
-function SemesterSetupImport({ campusId }: { campusId?: string }) {
+export function SemesterSetupImport({ campusId }: { campusId?: string }) {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);

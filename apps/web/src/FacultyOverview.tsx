@@ -60,8 +60,8 @@ export function FacultyOverview({
             to check your teacher assignment.
           </p>
         ) : (
-          subjects.data.map((subject) => (
-            <article className="import-card" key={subject.id}>
+          <div className="faculty-subject-grid">{subjects.data.map((subject) => (
+            <article className="faculty-subject-card" key={subject.id}>
               <h3>{subject.name}</h3>
               <p>{subject.code}</p>
               {subject.offerings.length ? (
@@ -71,7 +71,7 @@ export function FacultyOverview({
                       {o.batch.name} · {o.batch.semester.name}
                     </p>
                   ))}
-                  <button type="button" onClick={() => onOpen('lesson-plans')}>
+                  <div className="action-row"><button type="button" onClick={() => onOpen('lesson-plans')}>
                     Open lesson plans
                   </button>{' '}
                   <button
@@ -80,7 +80,7 @@ export function FacultyOverview({
                     onClick={() => onOpen('daily-logging')}
                   >
                     Log a class
-                  </button>
+                  </button></div>
                 </>
               ) : (
                 <p>
@@ -90,7 +90,7 @@ export function FacultyOverview({
                 </p>
               )}
             </article>
-          ))
+          ))}</div>
         )}
       </section>
       {subjects.data?.some(subject => subject.offerings.length > 0) && <ProgressDashboard scope="faculty" />}

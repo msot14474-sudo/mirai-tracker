@@ -31,7 +31,7 @@ export function StudentOverview() {
     >
       <div className="student-overview-heading">
         <div>
-          <p className="step-label">M13 · Student view</p>
+          <p className="step-label">Student view</p>
           <h2 id="student-overview-title">My course progress</h2>
           <p>
             Review what your class has covered, see what comes next and prepare

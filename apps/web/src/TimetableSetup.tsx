@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
-import { OfferingTimetable, timetableApi } from './timetable';
+import { BatchTimetableImport } from './BatchTimetableImport';
+import { OfferingTimetable, TimetableEntry, timetableApi } from './timetable';
 
 const weekdayLabels = [
   '',
@@ -33,13 +34,17 @@ export function TimetableSetup({
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
     queryFn: () => academicApi.semesters(campusId),
-    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
+    staleTime: 0,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
     enabled: Boolean(campusId),
   });
   const offerings = useQuery({
     queryKey: ['timetable', 'offerings', semesterId],
     queryFn: () => timetableApi.offerings(semesterId),
-    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
+    staleTime: 0,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
     enabled: Boolean(semesterId),
   });
   const detail = useQuery({
@@ -86,8 +91,8 @@ export function TimetableSetup({
         <div>
           <h2 id="timetable-title">Weekly timetable</h2>
           <p className="schedule-help">
-            Choose a subject, set when it meets each week, and review its class
-            dates.
+            Upload a full batch timetable, or choose a subject below to add and
+            edit weekly classes.
           </p>
         </div>
         <div className="timetable-filters">
@@ -143,6 +148,13 @@ export function TimetableSetup({
         </p>
       ) : null}
 
+      {semesterId && offerings.data && (
+        <BatchTimetableImport
+          key={semesterId}
+          offerings={offerings.data.offerings}
+          onChanged={refresh}
+        />
+      )}
       <div className="timetable-layout">
         <div className="offering-list" aria-label="Subject offerings">
           <div className="subheading-row">
@@ -164,8 +176,20 @@ export function TimetableSetup({
               <button
                 key={offering.id}
                 className={offering.id === offeringId ? 'selected' : ''}
-                onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['timetable', 'offering', offering.id], queryFn: () => timetableApi.offering(offering.id), staleTime: 60_000 })}
-                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['timetable', 'offering', offering.id], queryFn: () => timetableApi.offering(offering.id), staleTime: 60_000 })}
+                onMouseEnter={() =>
+                  void queryClient.prefetchQuery({
+                    queryKey: ['timetable', 'offering', offering.id],
+                    queryFn: () => timetableApi.offering(offering.id),
+                    staleTime: 60_000,
+                  })
+                }
+                onFocus={() =>
+                  void queryClient.prefetchQuery({
+                    queryKey: ['timetable', 'offering', offering.id],
+                    queryFn: () => timetableApi.offering(offering.id),
+                    staleTime: 60_000,
+                  })
+                }
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>
@@ -235,6 +259,7 @@ function TimetableDetail({
   offeringId: string;
   onChanged: () => Promise<void>;
 }) {
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const generate = useMutation({
     mutationFn: () => timetableApi.generate(offeringId),
     onSuccess: onChanged,
@@ -271,7 +296,9 @@ function TimetableDetail({
 
       <div className="timetable-grid">
         <EntryForm
-          key={offeringId}
+          key={editingEntry?.id || offeringId}
+          entry={editingEntry}
+          onCancel={() => setEditingEntry(null)}
           detail={detail}
           offeringId={offeringId}
           onChanged={onChanged}
@@ -301,14 +328,30 @@ function TimetableDetail({
                     {entry.startTime}–{entry.endTime} ·{' '}
                     {formatMinutes(entry.plannedMinutes)}
                   </span>
+                  <small>
+                    {detail.facultyAssignments.find(
+                      (a) => a.id === entry.facultyAssignmentId,
+                    )?.staff.name || 'Teacher not assigned'}{' '}
+                    · {entry.effectiveFrom} to {entry.effectiveTo}
+                  </small>
                 </div>
-                <button
-                  className="text-button danger"
-                  onClick={() => archive.mutate(entry.id)}
-                  disabled={archive.isPending}
-                >
-                  Stop repeating
-                </button>
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="text-button"
+                    aria-label={`Edit ${weekdayLabels[entry.weekday]} ${entry.startTime} class`}
+                    onClick={() => setEditingEntry(entry)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="text-button danger"
+                    onClick={() => archive.mutate(entry.id)}
+                    disabled={archive.isPending}
+                  >
+                    Stop repeating
+                  </button>
+                </div>
               </div>
             ))}
           {!detail.entries.some((entry) => entry.active) ? (
@@ -357,6 +400,8 @@ function TimetableDetail({
 }
 
 function EntryForm({
+  entry,
+  onCancel,
   detail,
   offeringId,
   onChanged,
@@ -364,23 +409,38 @@ function EntryForm({
   detail: OfferingTimetable;
   offeringId: string;
   onChanged: () => Promise<void>;
+  entry: TimetableEntry | null;
+  onCancel: () => void;
 }) {
-  const [weekday, setWeekday] = useState(1);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [effectiveFrom, setEffectiveFrom] = useState(detail.semester.startDate);
-  const [effectiveTo, setEffectiveTo] = useState(detail.semester.endDate);
-  const [facultyAssignmentId, setFacultyAssignmentId] = useState('');
+  const formHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (entry) formHeading.current?.focus();
+  }, [entry]);
+  const [weekday, setWeekday] = useState(entry?.weekday ?? 1);
+  const [startTime, setStartTime] = useState(entry?.startTime ?? '09:00');
+  const [endTime, setEndTime] = useState(entry?.endTime ?? '10:00');
+  const [effectiveFrom, setEffectiveFrom] = useState(
+    entry?.effectiveFrom ?? detail.semester.startDate,
+  );
+  const [effectiveTo, setEffectiveTo] = useState(
+    entry?.effectiveTo ?? detail.semester.endDate,
+  );
+  const [facultyAssignmentId, setFacultyAssignmentId] = useState(
+    entry?.facultyAssignmentId ?? '',
+  );
   const mutation = useMutation({
     mutationFn: () =>
-      timetableApi.createEntry(offeringId, {
-        weekday,
-        startTime,
-        endTime,
-        effectiveFrom,
-        effectiveTo,
-        facultyAssignmentId: facultyAssignmentId || null,
-      }),
+      (entry ? timetableApi.updateEntry : timetableApi.createEntry)(
+        entry?.id || offeringId,
+        {
+          weekday,
+          startTime,
+          endTime,
+          effectiveFrom,
+          effectiveTo,
+          facultyAssignmentId: facultyAssignmentId || null,
+        },
+      ),
     onSuccess: onChanged,
   });
 
@@ -391,7 +451,16 @@ function EntryForm({
 
   return (
     <form className="setup-card timetable-form" onSubmit={submit}>
-      <h3>2. Add a weekly class</h3>
+      <div className="subheading-row">
+        <h3 tabIndex={-1} ref={formHeading}>
+          {entry ? 'Edit weekly class' : '2. Add a weekly class'}
+        </h3>
+        {entry && (
+          <button type="button" className="text-button" onClick={onCancel}>
+            Cancel edit
+          </button>
+        )}
+      </div>
       <p className="schedule-help">
         This class repeats every {weekdayLabels[weekday]} between the dates
         below. Closed days are skipped automatically.
@@ -480,7 +549,11 @@ function EntryForm({
         </p>
       ) : null}
       <button disabled={mutation.isPending}>
-        {mutation.isPending ? 'Saving schedule…' : 'Save weekly class'}
+        {mutation.isPending
+          ? 'Saving schedule…'
+          : entry
+            ? 'Save timetable changes'
+            : 'Save weekly class'}
       </button>
     </form>
   );

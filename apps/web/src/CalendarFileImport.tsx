@@ -30,7 +30,9 @@ async function request(path: string, body?: FormData | object) {
           body: JSON.stringify(body || {}),
         }),
   });
-  return response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(' ') : result.message || 'The calendar request could not be completed. Please retry.');
+  return result;
 }
 export function CalendarFileImport({ campusId }: { campusId?: string }) {
   const client = useQueryClient();
@@ -125,18 +127,20 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           dates you approve below will change.
         </p>
       </header>
+      {semesters.isSuccess && !semesters.data.length && <div className="empty-state"><h3>Create a semester first</h3><p>Open Semester setup, add the semester dates, then return here to upload its calendar.</p></div>}
       <fieldset disabled={!!busy}>
         <div className="calendar-file-inputs">
           <label>
             1. Choose semester
             <select
+              disabled={semesters.isLoading || !semesters.data?.length}
               value={semesterId}
               onChange={(e) => {
                 setSemesterId(e.target.value);
                 reset();
               }}
             >
-              <option value="">Select a semester</option>
+              <option value="">{semesters.isLoading ? 'Loading semesters…' : 'Select a semester'}</option>
               {semesters.data?.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} · {s.startDate.slice(0, 10)} –{' '}

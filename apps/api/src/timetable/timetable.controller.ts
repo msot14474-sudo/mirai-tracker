@@ -1,3 +1,6 @@
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadedImportFile } from '../semester-import/semester-import.types';
+import { timetableCsvTemplate } from './timetable-import.parser';
 import { UserRole } from '@prisma/client';
 import {
   BadRequestException,
@@ -9,6 +12,9 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
+  UseInterceptors,
+  StreamableFile,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
@@ -30,6 +36,41 @@ const managers = [
 @Roles(...managers)
 export class TimetableController {
   constructor(private readonly timetable: TimetableService) {}
+
+  @Get('batch-template')
+  @Roles(UserRole.CAMPUS_MANAGER)
+  template() {
+    return new StreamableFile(Buffer.from(timetableCsvTemplate), {
+      type: 'text/csv',
+      disposition: 'attachment; filename="weekly-batch-timetable.csv"',
+    });
+  }
+
+  @Post('batches/:batchId/preview')
+  @Roles(UserRole.CAMPUS_MANAGER)
+  @UseInterceptors(FileInterceptor('file', { limits: { files: 1 } }))
+  previewBatch(
+    @Param('batchId') batchId: string,
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!file?.buffer?.length)
+      throw new BadRequestException('Choose a timetable file.');
+    return this.timetable.importBatch(id(batchId), file, user);
+  }
+
+  @Post('batches/:batchId/import')
+  @Roles(UserRole.CAMPUS_MANAGER)
+  @UseInterceptors(FileInterceptor('file', { limits: { files: 1 } }))
+  importBatch(
+    @Param('batchId') batchId: string,
+    @UploadedFile() file: UploadedImportFile | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!file?.buffer?.length)
+      throw new BadRequestException('Choose a timetable file.');
+    return this.timetable.importBatch(id(batchId), file, user, true);
+  }
 
   @Get('semesters/:semesterId/offerings')
   offerings(

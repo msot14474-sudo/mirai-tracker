@@ -501,21 +501,15 @@ describe('App authentication', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Semester import' }));
     expect(screen.queryByRole('button', { name: 'Import course data' })).not.toBeInTheDocument();
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Semester setup template' }),
-    );
+    expect(screen.queryByRole('button', { name: 'Semester setup template' })).not.toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Semester import' }),
+      await screen.findByRole('heading', { name: 'Update calendar from file' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester calendar' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'Download Excel template' }),
-    ).toHaveAttribute(
-      'href',
-      expect.stringContaining('/imports/template?format=xlsx'),
-    );
+    expect(screen.queryByRole('link', { name: 'Download Excel template' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('2. Upload calendar')).toHaveAttribute('accept', '.pdf,.xlsx,.csv');
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();

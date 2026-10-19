@@ -114,9 +114,19 @@ function renderTimetable() {
   );
 }
 
-function installFetchMock(onCreate?: (body: unknown) => void) {
+function installFetchMock(
+  onCreate?: (body: unknown) => void,
+  onUpdate?: (body: unknown) => void,
+) {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
+    if (
+      url.endsWith('/timetable/entries/entry-a') &&
+      init?.method === 'PATCH'
+    ) {
+      onUpdate?.(JSON.parse(String(init.body)));
+      return json({ entry: offeringDetail.entries[0], generation: {} });
+    }
     if (url.endsWith('/academic/campuses')) {
       return json([
         {
@@ -148,6 +158,34 @@ function installFetchMock(onCreate?: (body: unknown) => void) {
 }
 
 describe('TimetableSetup', () => {
+  it('prefills an existing class and saves edits to that entry', async () => {
+    const update = vi.fn();
+    installFetchMock(undefined, update);
+    renderTimetable();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Edit Monday 09:00 class' }),
+    );
+    expect(screen.getByLabelText('End time')).toHaveValue('11:00');
+    expect(screen.getByLabelText('Teacher (optional)')).toHaveValue(
+      'assignment-a',
+    );
+    fireEvent.change(screen.getByLabelText('Start time'), {
+      target: { value: '09:30' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save timetable changes' }),
+    );
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith({
+        weekday: 1,
+        startTime: '09:30',
+        endTime: '11:00',
+        effectiveFrom: '2026-01-01',
+        effectiveTo: '2026-03-31',
+        facultyAssignmentId: 'assignment-a',
+      }),
+    );
+  });
   it('shows loading skeletons instead of a premature selection prompt', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       () => new Promise<Response>(() => undefined),

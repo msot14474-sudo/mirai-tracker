@@ -11,7 +11,7 @@ it('shows admin-created subjects even without offerings and exposes no setup wri
   vi.spyOn(academicApi, 'semesterCourses').mockResolvedValue([]);
   vi.spyOn(academicApi, 'calendar').mockResolvedValue({semester:{} as any,days:[],exams:[],summary:{totalDays:0,workingDays:0,nonWorkingDays:0}});
   render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><CampusAcademicOverview /></QueryClientProvider>);
-  expect(await screen.findByText('Web Development · WD')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', {name:'Web Development'})).toBeInTheDocument();
   expect(await screen.findByRole('option',{name:/Semester 1/})).toBeInTheDocument();
   expect(screen.getByText(/program manager must link it/)).toBeInTheDocument();
   expect(screen.queryByRole('button',{name:/create|save|delete/i})).not.toBeInTheDocument();

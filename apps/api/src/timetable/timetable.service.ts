@@ -1,3 +1,5 @@
+import { parseBatchTimetable } from './timetable-import.parser';
+import { UploadedImportFile } from '../semester-import/semester-import.types';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
 import {
   Prisma,
@@ -246,10 +248,173 @@ export class TimetableService {
     return this.regenerateOffering(offeringId, user);
   }
 
+  async importBatch(
+    batchId: string,
+    file: UploadedImportFile,
+    user: AuthenticatedUser,
+    commit = false,
+  ) {
+    const run = async (db: PrismaService | Prisma.TransactionClient) => {
+      const batch = await db.batch.findUnique({
+        where: { id: batchId },
+        include: { semester: true },
+      });
+      if (!batch) throw new NotFoundException('Batch not found.');
+      this.access.assertCanManageCampus(user, batch.semester.campusId);
+      const parsed = await parseBatchTimetable(
+        file,
+        formatIsoDate(batch.semester.startDate),
+        formatIsoDate(batch.semester.endDate),
+      );
+      const offerings = await db.subjectOffering.findMany({
+        where: { batchId },
+        select: { id: true, subject: { select: { name: true, code: true } } },
+      });
+      const rows: Array<
+        CreateTimetableEntryInput & {
+          source: string;
+          offeringId: string;
+          subject: string;
+          teacher: string;
+          existing: boolean;
+        }
+      > = [];
+      const errors = [...parsed.errors];
+      const key = (v: string) => v.trim().toLowerCase();
+      const cache = new Map<
+        string,
+        Awaited<ReturnType<TimetableService['requireOffering']>>
+      >();
+      for (const row of parsed.rows) {
+        try {
+          const matches = offerings.filter(
+            (o) =>
+              key(o.subject.code) === key(row.subject) ||
+              key(o.subject.name) === key(row.subject),
+          );
+          if (matches.length !== 1)
+            throw new Error(
+              `Subject “${row.subject}” must match one subject linked to this batch. Use its exact code.`,
+            );
+          const match = matches[0]!;
+          let offering = cache.get(match.id);
+          if (!offering) {
+            offering = await this.requireOffering(match.id, db);
+            cache.set(match.id, offering);
+          }
+          const assignments = offering.faculty.filter(
+            (a) =>
+              a.active &&
+              a.staffProfile.active &&
+              formatIsoDate(a.startDate) <= row.effectiveFrom &&
+              (!a.endDate || formatIsoDate(a.endDate) >= row.effectiveTo) &&
+              (!row.teacher ||
+                [a.staffProfile.user.name, a.staffProfile.user.email].some(
+                  (v) => key(v) === key(row.teacher),
+                )),
+          );
+          if (assignments.length !== 1)
+            throw new Error(
+              row.teacher
+                ? `Teacher “${row.teacher}” must match one active assignment for this subject and date range.`
+                : 'Add a teacher email; this subject needs exactly one active teacher assignment covering these dates.',
+            );
+          const facultyAssignmentId = assignments[0]!.id;
+          const input = {
+            weekday: row.weekday,
+            startTime: row.startTime,
+            endTime: row.endTime,
+            effectiveFrom: row.effectiveFrom,
+            effectiveTo: row.effectiveTo,
+            facultyAssignmentId,
+          };
+          const duplicate = offering.timetableEntries.find(
+            (e) =>
+              e.active &&
+              e.weekday === row.weekday &&
+              formatTimetableTime(e.startTime) === row.startTime &&
+              formatTimetableTime(e.endTime) === row.endTime &&
+              formatIsoDate(e.effectiveFrom) === row.effectiveFrom &&
+              formatIsoDate(e.effectiveTo || batch.semester.endDate) ===
+                row.effectiveTo &&
+              e.facultyAssignmentId === facultyAssignmentId,
+          );
+          await this.validateEntry(offering, input, duplicate?.id, db);
+          const overlap = rows.find(
+            (r) =>
+              r.weekday === row.weekday &&
+              r.startTime < row.endTime &&
+              r.endTime > row.startTime &&
+              r.effectiveFrom <= row.effectiveTo &&
+              r.effectiveTo >= row.effectiveFrom,
+          );
+          if (overlap)
+            throw new Error(
+              `Overlaps another class in this file (${overlap.source}).`,
+            );
+          rows.push({
+            ...input,
+            source: row.source,
+            offeringId: match.id,
+            subject: `${match.subject.code} · ${match.subject.name}`,
+            teacher: assignments[0]!.staffProfile.user.name,
+            existing: !!duplicate,
+          });
+        } catch (e) {
+          errors.push({ source: row.source, message: (e as Error).message });
+        }
+      }
+      if (commit && errors.length)
+        throw new BadRequestException({
+          message: 'Correct the marked timetable rows and preview again.',
+          errors,
+        });
+      const additions = rows.filter((r) => !r.existing);
+      if (commit && additions.length)
+        await db.timetableEntry.createMany({
+          data: additions.map((r) => ({
+            offeringId: r.offeringId,
+            facultyAssignmentId: r.facultyAssignmentId,
+            weekday: r.weekday,
+            startTime: timetableTime(r.startTime),
+            endTime: timetableTime(r.endTime),
+            effectiveFrom: parseIsoDate(r.effectiveFrom),
+            effectiveTo: parseIsoDate(r.effectiveTo),
+          })),
+        });
+      return {
+        batch: { id: batch.id, name: batch.name },
+        rows,
+        errors,
+        valid: !errors.length && !!rows.length,
+        added: commit ? additions.length : 0,
+      };
+    };
+    if (!commit) return run(this.prisma);
+    // Re-read all matches and conflicts at commit; a preview is never authorization.
+    const result = await this.prisma.$transaction((tx) => run(tx), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 10_000,
+      timeout: 30_000,
+    });
+    const warnings: string[] = [];
+    for (const offeringId of new Set(result.rows.map((r) => r.offeringId))) {
+      try {
+        await this.regenerateOffering(offeringId, user);
+      } catch {
+        warnings.push(
+          `${result.rows.find((r) => r.offeringId === offeringId)!.subject}: weekly slots saved, but class dates need a retry. Select the subject and click Update class dates.`,
+        );
+      }
+    }
+    return { ...result, warnings };
+  }
+
   private async validateEntry(
     offering: Awaited<ReturnType<TimetableService['requireOffering']>>,
     input: CreateTimetableEntryInput,
     excludeEntryId?: string,
+    db: PrismaService | Prisma.TransactionClient = this.prisma,
   ) {
     try {
       durationMinutes(input.startTime, input.endTime);
@@ -299,7 +464,7 @@ export class TimetableService {
         },
       });
     }
-    const conflict = await this.prisma.timetableEntry.findFirst({
+    const conflict = await db.timetableEntry.findFirst({
       where: {
         id: excludeEntryId ? { not: excludeEntryId } : undefined,
         active: true,
@@ -396,12 +561,14 @@ export class TimetableService {
     let updated = 0;
     let preserved = 0;
 
-    const removed = await this.prisma.$transaction(async (transaction) => {
-      for (const session of desired) {
-        const current = existingByKey.get(session.sourceKey);
-        if (!current) {
-          await transaction.scheduledSession.create({
-            data: {
+    const removed = await this.prisma.$transaction(
+      async (transaction) => {
+        const additions = desired.filter(
+          (session) => !existingByKey.has(session.sourceKey),
+        );
+        if (additions.length) {
+          const inserted = await transaction.scheduledSession.createMany({
+            data: additions.map((session) => ({
               sourceKey: session.sourceKey,
               offeringId,
               timetableEntryId: session.timetableEntryId,
@@ -409,47 +576,54 @@ export class TimetableService {
               sessionDate: parseIsoDate(session.sessionDate),
               startsAt: session.startsAt,
               endsAt: session.endsAt,
-            },
+            })),
+            skipDuplicates: true,
           });
-          created += 1;
-        } else if (
-          current.status === ScheduledSessionStatus.SCHEDULED &&
-          current._count.logs === 0
-        ) {
-          await transaction.scheduledSession.update({
-            where: { id: current.id },
-            data: {
-              timetableEntryId: session.timetableEntryId,
-              facultyAssignmentId: session.facultyAssignmentId,
-              sessionDate: parseIsoDate(session.sessionDate),
-              startsAt: session.startsAt,
-              endsAt: session.endsAt,
-            },
-          });
-          updated += 1;
-        } else {
-          preserved += 1;
+          created = inserted.count;
         }
-      }
+        for (const session of desired) {
+          const current = existingByKey.get(session.sourceKey);
+          if (!current) continue;
+          if (
+            current.status === ScheduledSessionStatus.SCHEDULED &&
+            current._count.logs === 0
+          ) {
+            await transaction.scheduledSession.update({
+              where: { id: current.id },
+              data: {
+                timetableEntryId: session.timetableEntryId,
+                facultyAssignmentId: session.facultyAssignmentId,
+                sessionDate: parseIsoDate(session.sessionDate),
+                startsAt: session.startsAt,
+                endsAt: session.endsAt,
+              },
+            });
+            updated += 1;
+          } else {
+            preserved += 1;
+          }
+        }
 
-      const staleIds = existing
-        .filter(
-          (session) =>
-            !desiredKeys.has(session.sourceKey) &&
-            session.status === ScheduledSessionStatus.SCHEDULED &&
-            session._count.logs === 0,
-        )
-        .map((session) => session.id);
-      if (!staleIds.length) return 0;
-      const result = await transaction.scheduledSession.deleteMany({
-        where: {
-          id: { in: staleIds },
-          status: ScheduledSessionStatus.SCHEDULED,
-          logs: { none: {} },
-        },
-      });
-      return result.count;
-    });
+        const staleIds = existing
+          .filter(
+            (session) =>
+              !desiredKeys.has(session.sourceKey) &&
+              session.status === ScheduledSessionStatus.SCHEDULED &&
+              session._count.logs === 0,
+          )
+          .map((session) => session.id);
+        if (!staleIds.length) return 0;
+        const result = await transaction.scheduledSession.deleteMany({
+          where: {
+            id: { in: staleIds },
+            status: ScheduledSessionStatus.SCHEDULED,
+            logs: { none: {} },
+          },
+        });
+        return result.count;
+      },
+      { maxWait: 10_000, timeout: 30_000 },
+    );
 
     const plan = await this.prisma.lessonPlan.findFirst({
       where: { offeringId, status: { in: ['ACTIVE', 'DRAFT'] } },
@@ -479,8 +653,11 @@ export class TimetableService {
       });
   }
 
-  private requireOffering(offeringId: string) {
-    return this.prisma.subjectOffering
+  private requireOffering(
+    offeringId: string,
+    db: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    return db.subjectOffering
       .findUnique({
         where: { id: offeringId },
         include: {

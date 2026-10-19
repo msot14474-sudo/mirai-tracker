@@ -2,9 +2,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { CalendarFileImport } from './CalendarFileImport';
+import { academicApi } from './academic';
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+});
+it('keeps an HTTP error out of the preview and allows retrying', async () => {
+  vi.spyOn(academicApi, 'semesters').mockResolvedValue([{id:'semester',name:'Autumn',startDate:'2026-07-01',endDate:'2026-12-31',workingSaturdayRule:'SECOND_AND_FOURTH',campusId:'campus',status:'ACTIVE'}]);
+  vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({message:'Calendar service unavailable'}),{status:503,headers:{'Content-Type':'application/json'}}));
+  render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><CalendarFileImport campusId="campus" /></QueryClientProvider>);
+  await screen.findByText(/Autumn/);
+  fireEvent.change(screen.getByLabelText('1. Choose semester'),{target:{value:'semester'}});
+  fireEvent.change(screen.getByLabelText('2. Upload calendar'),{target:{files:[new File(['date,title'],'calendar.csv')]}});
+  fireEvent.click(screen.getByText('Read and verify calendar'));
+  expect(await screen.findByRole('alert')).toHaveTextContent(/unavailable/i);
+  expect(screen.queryByText('Save calendar changes')).not.toBeInTheDocument();
+  expect(screen.getByText('Read and verify calendar')).toBeEnabled();
 });
 it('requires verification and review, supports deleting extracted entries before saving', async () => {
   const entries = ['Holiday', 'Optional event'].map((title, i) => ({

@@ -1058,6 +1058,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -1280,6 +1281,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   }
 
   function openView(view: DashboardView) {
+    setNavigationOpen(false);
     setProfileMenuOpen(false);
     if (view === activeView) return;
     if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
@@ -1341,7 +1343,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'semester-import':
         return (
           <SemesterImport
-            canImportProgress={roles.includes('ADMIN')}
             key={selectedCampusId}
             campusId={selectedCampusId || undefined}
           />
@@ -1407,7 +1408,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             steps: ['Choose a campus and create its semester.', 'Set working days, holidays and exam windows, or import the calendar.', 'Review campus progress and exam readiness, then export reports.'],
           } : canManageTimetable ? {
             title: 'Manage your campus teaching',
-            steps: ['Open User access to add faculty and assign subjects.', 'Build the weekly timetable. Faculty manage lesson plans and individual class changes.', 'Review campus progress and follow up on missed-log alerts.'],
+            steps: ['Open User access to add faculty and assign subjects.', 'In Timetable, select a semester and use Upload batch timetable for Excel or CSV. Preview and confirm, then use Edit on a weekly class to make changes manually.', 'Faculty manage lesson plans and individual class changes. Review campus progress and follow up on missed-log alerts.'],
           } : canLogSessions ? {
             title: 'Plan, teach and log your subjects',
             steps: ['Upload your lesson plan and select each exam’s topics.', 'Check Planned dates for your upcoming classes.', 'After each lecture, open Daily logging and record coverage and leftovers.', 'Review your subject progress and exam readiness. Use Planned dates to adjust your assigned classes.'],
@@ -1444,7 +1445,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     <main
       className={`dashboard-shell ${activeView === 'ai-insights' ? 'dashboard-ai-focus' : ''} ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
     >
-      <aside className="app-sidebar">
+      <aside className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''}`} onKeyDown={(event) => { if (event.key === 'Escape') { setNavigationOpen(false); setProfileMenuOpen(false); } }}>
         <button
           type="button"
           className="sidebar-brand"
@@ -1461,7 +1462,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           />
         </button>
 
-        <nav className="sidebar-navigation" aria-label="Workspace navigation">
+        <button type="button" className="sidebar-menu-toggle" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => { setNavigationOpen(!navigationOpen); setProfileMenuOpen(false); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>Menu</button>
+        <nav id="workspace-navigation" className="sidebar-navigation" aria-label="Workspace navigation">
           {navigation.map((item) => (
             <button
               type="button"
@@ -1482,7 +1484,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         <div
           className={`sidebar-account-wrap ${profileMenuOpen ? 'open' : ''}`}
         >
-          <div className="sidebar-account-menu" role="menu">
+          <div className="sidebar-account-menu" role="menu" hidden={!profileMenuOpen}>
             <button
               type="button"
               role="menuitem"
@@ -1525,7 +1527,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             aria-label={`Open account menu for ${user.name}`}
             aria-haspopup="menu"
             aria-expanded={profileMenuOpen}
-            onClick={() => setProfileMenuOpen((open) => !open)}
+            onClick={() => { setProfileMenuOpen((open) => !open); setNavigationOpen(false); }}
           >
             <span className="account-avatar">{initials}</span>
             <span>
