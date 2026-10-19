@@ -123,3 +123,132 @@ describe('Calendar file import protections', () => {
     expect(db.calendarDayOverride.upsert).not.toHaveBeenCalled();
   });
 });
+
+describe('Calendar extraction and resumable AI verification', () => {
+  const env = { ...process.env };
+  afterEach(() => {
+    jest.restoreAllMocks();
+    process.env = { ...env };
+  });
+  function fixture() {
+    const store = new Map<string, string>();
+    const semester = {
+      id: 'semester',
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2026-12-31'),
+      workingSaturdayRule: 'SECOND_AND_FOURTH',
+      calendarDays: [],
+      examWindows: [],
+    };
+    const redis = {
+      get: jest.fn(async (key: string) => store.get(key)),
+      setWithExpiry: jest.fn(async (key: string, value: string) => {
+        store.set(key, value);
+      }),
+      incrementWithExpiry: jest.fn().mockResolvedValue(1),
+      acquireLock: jest.fn().mockResolvedValue(true),
+      consumeIfValue: jest.fn(),
+    };
+    const db = {
+      semester: { findUnique: jest.fn().mockResolvedValue(semester) },
+    };
+    return {
+      redis,
+      store,
+      service: new CalendarFileService(
+        db as any,
+        { assertGlobalManager: jest.fn() } as any,
+        redis as any,
+        {} as any,
+      ),
+      semester,
+    };
+  }
+  const file = (text: string) =>
+    ({ originalname: 'calendar.csv', buffer: Buffer.from(text) }) as any;
+  it('reads a recognised CSV without calling AI or requiring an API key', async () => {
+    delete process.env.OLLAMA_API_KEY;
+    const fetch = jest.spyOn(globalThis, 'fetch');
+    const { service } = fixture();
+    const result = await service.inspect(
+      file('Event,Date,Type\nGandhi Jayanti,2026-10-02,HOLIDAY'),
+      'semester',
+      user,
+    );
+    expect(result.verified).toBe(true);
+    expect(result.method).toBe('direct');
+    expect(result.entries[0]?.start).toBe('2026-10-02');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('keeps completed AI work after a provider failure and resumes the next pass', async () => {
+    const { service, redis } = fixture();
+    const ai = jest
+      .spyOn(service as any, 'ai')
+      .mockResolvedValueOnce({ entries: [entry()], warnings: [] })
+      .mockRejectedValueOnce(new Error('provider busy'))
+      .mockResolvedValueOnce({ entries: [entry()], warnings: [] });
+    const preview = await service.inspect(
+      file('Calendar notices\nHoliday on 2 October 2026'),
+      'semester',
+      user,
+    );
+    const first = await service.verify(preview.token, user);
+    expect(first.verified).toBe(false);
+    expect(first.progress.completed).toBe(1);
+    await expect(service.verify(preview.token, user)).rejects.toThrow(
+      'provider busy',
+    );
+    const final = await service.verify(preview.token, user);
+    expect(final.verified).toBe(true);
+    expect(ai.mock.calls[2]?.[2]).toEqual([entry()]);
+    expect(redis.consumeIfValue).toHaveBeenCalledTimes(3);
+  });
+  it('rejects parallel verification without processing the same draft twice', async () => {
+    const { service, redis } = fixture();
+    redis.acquireLock.mockResolvedValue(false);
+    await expect(service.verify('token', user)).rejects.toThrow(
+      'already being checked',
+    );
+    expect(redis.get).not.toHaveBeenCalled();
+  });
+  it('reports rejected credentials and does not send unsupported thinking options to other models', async () => {
+    const { service, semester } = fixture();
+    process.env.OLLAMA_API_KEY = 'test-only';
+    process.env.AI_MODEL = 'example-model';
+    const fetch = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 401 }));
+    await expect((service as any).ai('source', semester)).rejects.toThrow(
+      'credentials were rejected',
+    );
+    expect(
+      JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)),
+    ).not.toHaveProperty('think');
+  });
+  it('rejects truncated and malformed AI output instead of certifying incomplete dates', async () => {
+    const { service, semester } = fixture();
+    process.env.OLLAMA_API_KEY = 'test-only';
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            done: true,
+            done_reason: 'length',
+            message: { content: '{}' },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ done: true, message: { content: 'invalid' } }),
+        ),
+      );
+    await expect((service as any).ai('source', semester)).rejects.toThrow(
+      'incomplete',
+    );
+    await expect((service as any).ai('source', semester)).rejects.toThrow(
+      'invalid format',
+    );
+  });
+});

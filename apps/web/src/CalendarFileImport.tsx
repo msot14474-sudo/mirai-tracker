@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicApi } from './academic';
 import { apiFetch, apiUrl } from './http';
@@ -19,10 +19,23 @@ type Preview = {
   entries: Entry[];
   warnings: string[];
   verified: boolean;
+  method?: 'direct' | 'ai';
+  progress?: {
+    completed: number;
+    total: number;
+    section: number;
+    sections: number;
+    phase: string;
+  };
 };
-async function request(path: string, body?: FormData | object) {
+async function request(
+  path: string,
+  body?: FormData | object,
+  signal?: AbortSignal,
+) {
   const response = await apiFetch(`${apiUrl}/imports/calendar/${path}`, {
     method: 'POST',
+    signal,
     ...(body instanceof FormData
       ? { body }
       : {
@@ -31,11 +44,19 @@ async function request(path: string, body?: FormData | object) {
         }),
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(' ') : result.message || 'The calendar request could not be completed. Please retry.');
+  if (!response.ok)
+    throw new Error(
+      Array.isArray(result.message)
+        ? result.message.join(' ')
+        : result.message ||
+            'The calendar request could not be completed. Please retry.',
+    );
   return result;
 }
 export function CalendarFileImport({ campusId }: { campusId?: string }) {
   const client = useQueryClient();
+  const reading = useRef<AbortController | null>(null);
+  useEffect(() => () => reading.current?.abort(), []);
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
     queryFn: () => academicApi.semesters(campusId!),
@@ -56,19 +77,49 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
     setError('');
   }
   async function verify(p: Preview) {
-    setBusy('Double-checking dates against the file…');
-    const result = (await request(`${p.token}/verify`)) as Preview;
-    setPreview(result);
+    const controller = reading.current || new AbortController();
+    reading.current = controller;
+    let current = p;
+    while (!current.verified && !controller.signal.aborted) {
+      const progress = current.progress;
+      setBusy(
+        progress
+          ? `${progress.phase === 'checking' ? 'Checking' : 'Reading'} calendar section ${progress.section} of ${progress.sections}…`
+          : 'Double-checking dates against the file…',
+      );
+      const next = (await request(
+        `${p.token}/verify`,
+        undefined,
+        controller.signal,
+      )) as Preview;
+      setPreview(next);
+      if (
+        !next.verified &&
+        progress &&
+        next.progress &&
+        next.progress.completed <= progress.completed
+      )
+        throw new Error(
+          'Calendar checking paused. Retry verification to continue.',
+        );
+      current = next;
+    }
   }
   async function read() {
     if (!file || !semesterId) return;
     reset();
+    reading.current?.abort();
+    reading.current = new AbortController();
     setBusy('Reading holidays, events and exams…');
     try {
       const form = new FormData();
       form.set('file', file);
       form.set('semesterId', semesterId);
-      const result = (await request('preview', form)) as Preview;
+      const result = (await request(
+        'preview',
+        form,
+        reading.current.signal,
+      )) as Preview;
       setPreview(result);
       await verify(result);
     } catch (e) {
@@ -127,7 +178,15 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           dates you approve below will change.
         </p>
       </header>
-      {semesters.isSuccess && !semesters.data.length && <div className="empty-state"><h3>Create a semester first</h3><p>Open Semester setup, add the semester dates, then return here to upload its calendar.</p></div>}
+      {semesters.isSuccess && !semesters.data.length && (
+        <div className="empty-state">
+          <h3>Create a semester first</h3>
+          <p>
+            Open Semester setup, add the semester dates, then return here to
+            upload its calendar.
+          </p>
+        </div>
+      )}
       <fieldset disabled={!!busy}>
         <div className="calendar-file-inputs">
           <label>
@@ -140,7 +199,11 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
                 reset();
               }}
             >
-              <option value="">{semesters.isLoading ? 'Loading semesters…' : 'Select a semester'}</option>
+              <option value="">
+                {semesters.isLoading
+                  ? 'Loading semesters…'
+                  : 'Select a semester'}
+              </option>
               {semesters.data?.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} · {s.startDate.slice(0, 10)} –{' '}
@@ -193,14 +256,17 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           <h3>Review {preview.entries.length} detected entries</h3>
           <p>
             {preview.verified
-              ? 'Two AI passes completed. Check the dates and resolve any concerns before saving.'
-              : 'Second verification is not complete. Nothing has been saved.'}
+              ? preview.method === 'direct'
+                ? 'CSV dates and events read directly. Check any flagged rows and review the entries before saving.'
+                : 'AI reading and verification completed. Check the dates and resolve any concerns before saving.'
+              : 'Calendar reading and verification are in progress. Nothing has been saved.'}
           </p>
           {!preview.verified && (
             <button
               type="button"
               onClick={async () => {
                 setError('');
+                reading.current = new AbortController();
                 try {
                   await verify(preview);
                 } catch (e) {
@@ -210,7 +276,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
                 }
               }}
             >
-              Retry verification
+              Continue verification
             </button>
           )}
           {preview.warnings.length > 0 && (
@@ -220,7 +286,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
               ))}
             </ul>
           )}
-          <div className="calendar-file-entries">
+          <div className="calendar-file-entries" hidden={!preview.verified}>
             {preview.entries.map((e, i) => {
               const outside =
                 semester &&
@@ -375,6 +441,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           <button
             type="button"
             className="secondary"
+            disabled={!preview.verified}
             onClick={() => {
               setReviewed(false);
               setPreview(
