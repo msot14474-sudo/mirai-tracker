@@ -52,6 +52,31 @@ export class AcademicCalendarController {
     return this.calendar.listAccessibleCampuses(user);
   }
 
+  @Get('semesters/:semesterId/subjects')
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER, UserRole.CAMPUS_MANAGER)
+  semesterCourses(@Param('semesterId') semesterId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.calendar.semesterCourses(id(semesterId), user);
+  }
+
+  @Post('semesters/:semesterId/subjects')
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
+  connectSubjects(@Param('semesterId') semesterId: string, @Body() body: unknown, @CurrentUser() user: AuthenticatedUser) {
+    return this.calendar.connectSemesterSubjects(id(semesterId), parse(z.object({
+      batchId: z.string().uuid().optional(),
+      batchName: z.string().trim().min(1).max(160).optional(),
+      batchCode: z.string().trim().min(1).max(64).optional(),
+      trackName: z.string().trim().min(1).max(160).optional(),
+      trackCode: z.string().trim().min(1).max(32).optional(),
+      subjectIds: z.array(z.string().uuid()).min(1).max(200),
+    }).strict(), body), user);
+  }
+
+  @Get('my-subjects')
+  @Roles(UserRole.FACULTY)
+  mySubjects(@CurrentUser() user: AuthenticatedUser) {
+    return this.calendar.listFacultySubjects(user);
+  }
+
   @Get('subjects')
   subjects(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,7 +97,7 @@ export class AcademicCalendarController {
   }
 
   @Post('subjects/:subjectId/teacher')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
+  @Roles(UserRole.CAMPUS_MANAGER)
   assignTeacher(
     @Param('subjectId') subjectId: string,
     @Body() body: unknown,

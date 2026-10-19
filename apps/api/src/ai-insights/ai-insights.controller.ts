@@ -37,6 +37,7 @@ function parse<T extends z.ZodTypeAny>(schema: T, value: unknown): z.output<T> {
   UserRole.ADMIN,
   UserRole.PROGRAM_MANAGER,
   UserRole.CAMPUS_MANAGER,
+  UserRole.FACULTY,
 )
 export class AiInsightsController {
   constructor(

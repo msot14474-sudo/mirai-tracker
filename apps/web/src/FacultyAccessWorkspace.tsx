@@ -21,6 +21,7 @@ export function FacultyAccessWorkspace({
   currentUserId = '',
   readOnly = false,
   facultyOnly = false,
+  canAssignTeachers = true,
 }: {
   initialCampusId?: string;
   campusLocked?: boolean;
@@ -29,6 +30,7 @@ export function FacultyAccessWorkspace({
   currentUserId?: string;
   readOnly?: boolean;
   facultyOnly?: boolean;
+  canAssignTeachers?: boolean;
 }) {
   const queryClient = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
@@ -50,12 +52,14 @@ export function FacultyAccessWorkspace({
   const detail = useQuery({
     queryKey: ['faculty-access', campusId],
     queryFn: () => facultyAccessApi.campus(campusId),
+    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
     enabled: Boolean(campusId) && !readOnly,
   });
   const subjectCatalog = useQuery({queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId), enabled: Boolean(campusId) && !readOnly});
   const network = useQuery({
     queryKey: ['faculty-access', 'network'],
     queryFn: facultyAccessApi.network,
+    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
   });
   const accounts = useQuery({
     queryKey: ['managed-accounts', campusId],
@@ -148,7 +152,7 @@ export function FacultyAccessWorkspace({
         ...account,
         employeeCode: String(values.get('employeeCode') ?? ''),
         staffType: String(values.get('staffType')) as 'REGULAR' | 'VISITING',
-        offeringIds: values.getAll('offeringIds').map(String),
+        offeringIds: canAssignTeachers ? values.getAll('offeringIds').map(String) : [],
       });
       return;
     }
@@ -293,7 +297,7 @@ export function FacultyAccessWorkspace({
 
       {!readOnly && <details className="setup-card"><summary>Assign teachers to campus subjects</summary>
         {subjectCatalog.error && <p role="alert">{subjectCatalog.error.message}</p>}
-        {Array.isArray(subjectCatalog.data) && subjectCatalog.data.map(subject => <article key={subject.id}><h4>{subject.name}</h4><SubjectTeacherAssignment subject={subject} campusId={campusId} /></article>)}
+        {Array.isArray(subjectCatalog.data) && subjectCatalog.data.map(subject => <article key={subject.id}><h4>{subject.name}</h4><SubjectTeacherAssignment subject={subject} campusId={campusId} readOnly={!canAssignTeachers} /></article>)}
       </details>}
       {!readOnly && <section
         className="managed-accounts"
@@ -564,7 +568,7 @@ export function FacultyAccessWorkspace({
                         </label>
                       </div>
 
-                      <fieldset className="faculty-offering-picker">
+                      {canAssignTeachers && <fieldset className="faculty-offering-picker">
                         <legend>Subject access</legend>
                         <div>
                           {detail.data?.offerings.map((offering) => (
@@ -572,6 +576,7 @@ export function FacultyAccessWorkspace({
                               <input
                                 type="checkbox"
                                 name="offeringIds"
+                                disabled={!canAssignTeachers}
                                 value={offering.id}
                               />
                               <span>
@@ -587,7 +592,7 @@ export function FacultyAccessWorkspace({
                             </p>
                           ) : null}
                         </div>
-                      </fieldset>
+                      </fieldset>}
                     </>
                   ) : null}
 

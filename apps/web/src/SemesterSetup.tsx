@@ -1,3 +1,4 @@
+import { SemesterSubjects } from './SemesterSubjects';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
@@ -205,6 +206,7 @@ export function SemesterSetup({
               </p>
             ) : calendar.data ? (
               <>
+                <SemesterSubjects key={semesterId} semesterId={semesterId} campusId={campusId} />
                 <div className="calendar-summary">
                   <div>
                     <span>Total dates</span>

@@ -96,7 +96,13 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type SemesterBatch = {
+  id: string; name: string; code: string; track: { name: string };
+  subjectOfferings: { id: string; subject: { name: string }; faculty: { staffProfile: { user: { name: string } } }[] }[];
+};
 export const academicApi = {
+  semesterCourses: (id: string) => api<SemesterBatch[]>(`/academic/semesters/${id}/subjects`),
+  connectSubjects: (id: string, input: { batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string; subjectIds: string[] }) => api(`/academic/semesters/${id}/subjects`, { method: 'POST', body: JSON.stringify(input) }),
   deleteSemester: (id: string) =>
     api<void>(`/academic/semesters/${id}`, { method: 'DELETE' }),
   subjectFaculty: (campusId: string) =>

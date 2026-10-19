@@ -325,6 +325,7 @@ describe('App authentication', () => {
         );
 
       if (
+        url.endsWith('/academic/my-subjects') ||
         url.endsWith('/topic-schedules/offerings') ||
         url.endsWith('/academic/campuses')
       )
@@ -651,6 +652,9 @@ describe('App authentication', () => {
     expect(
       screen.getByRole('button', { name: 'Timetable' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lesson plans' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Planned dates' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Campus semesters' })).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();

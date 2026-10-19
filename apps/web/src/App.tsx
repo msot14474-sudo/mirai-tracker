@@ -1,5 +1,7 @@
-import { CampusAnalytics } from './CampusAnalytics';
 import { StudentLectureFeedback } from './StudentLectureFeedback';
+import { CampusAcademicOverview } from './CampusAcademicOverview';
+import { FacultyOverview } from './FacultyOverview';
+import { CampusAnalytics } from './CampusAnalytics';
 import { advanceSessionGeneration, apiUrl, sessionExpiredEvent } from './http';
 import { RequestRecovery, AppErrorBoundary } from './RequestRecovery';
 import {
@@ -1076,11 +1078,11 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const canManageAcademicCalendar = roles.some(
     (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
   );
-  const canManageTimetable = roles.some(role => role === 'ADMIN' || role === 'CAMPUS_MANAGER');
+  const canManageTimetable = roles.includes('CAMPUS_MANAGER');
   const canManageFaculty = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role));
-  const canManageLessonPlans = roles.some(role => role === 'ADMIN' || role === 'FACULTY');
-  const canManageSessions = roles.some(role => role === 'ADMIN' || role === 'CAMPUS_MANAGER');
-  const canViewAi = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role));
+  const canManageLessonPlans = roles.includes('FACULTY');
+  const canManageSessions = roles.includes('FACULTY');
+  const canViewAi = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER', 'FACULTY'].includes(role));
   const canLogSessions = roles.includes('FACULTY');
   const canViewStudentOverview = roles.includes('STUDENT');
   const canViewAlerts = roles.some(
@@ -1173,6 +1175,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           },
         ]
       : []),
+    ...(!canManageAcademicCalendar && roles.includes('CAMPUS_MANAGER') ? [{ id: 'academic-setup' as const, label: 'Campus semesters', icon: 'academic' as const }] : []),
     ...(canManageFaculty
       ? [
           {
@@ -1327,9 +1330,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           />
         );
       case 'academic-setup':
+        if (!canManageAcademicCalendar) return <CampusAcademicOverview />;
         return (
           <SemesterSetup
-            canAssignTeachers={roles.includes('ADMIN')}
+            canAssignTeachers={roles.includes('CAMPUS_MANAGER')}
             key={selectedCampusId}
             initialCampusId={selectedCampusId}
           />
@@ -1345,6 +1349,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'faculty-access':
         return (
           <FacultyAccessWorkspace
+            canAssignTeachers={roles.includes('CAMPUS_MANAGER')}
             key={selectedCampusId}
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
@@ -1402,17 +1407,19 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             steps: ['Choose a campus and create its semester.', 'Set working days, holidays and exam windows, or import the calendar.', 'Review campus progress and exam readiness, then export reports.'],
           } : canManageTimetable ? {
             title: 'Manage your campus teaching',
-            steps: ['Open User access to add faculty and assign subjects.', 'Build the weekly timetable; use Planned dates for individual class changes.', 'Review campus progress and follow up on missed-log alerts.'],
+            steps: ['Open User access to add faculty and assign subjects.', 'Build the weekly timetable. Faculty manage lesson plans and individual class changes.', 'Review campus progress and follow up on missed-log alerts.'],
           } : canLogSessions ? {
             title: 'Plan, teach and log your subjects',
-            steps: ['Upload your lesson plan and select each exam’s topics.', 'Check Planned dates for your upcoming classes.', 'After each lecture, open Daily logging and record coverage and leftovers.', 'Review your subject progress and exam readiness. Ask your campus manager to change class times.'],
+            steps: ['Upload your lesson plan and select each exam’s topics.', 'Check Planned dates for your upcoming classes.', 'After each lecture, open Daily logging and record coverage and leftovers.', 'Review your subject progress and exam readiness. Use Planned dates to adjust your assigned classes.'],
           } : undefined}
         />;
       case 'overview':
       default:
         return (
           <>
-            {canViewProgressDashboard ? (
+            {canLogSessions && progressScope === 'faculty' ? (
+              <FacultyOverview userId={user.id} name={user.name} onOpen={openView} />
+            ) : canViewProgressDashboard ? (
               <CampusAnalytics
                 campusId={selectedCampusId || undefined}
                 campusName={selectedCampus?.name}

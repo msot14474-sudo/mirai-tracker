@@ -83,7 +83,7 @@ export class LessonPlanController {
   }
 
   @Post('offerings/:offeringId/preview')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   @UseInterceptors(upload)
   preview(
     @Param('offeringId') offeringId: string,
@@ -94,7 +94,7 @@ export class LessonPlanController {
   }
 
   @Post('offerings/:offeringId/import')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   @UseInterceptors(upload)
   execute(
     @Param('offeringId') offeringId: string,
@@ -105,7 +105,7 @@ export class LessonPlanController {
   }
 
   @Patch('units/:unitId')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   updateUnit(
     @Param('unitId') unitId: string,
     @Body() body: unknown,
@@ -119,7 +119,7 @@ export class LessonPlanController {
   }
 
   @Patch('topics/:topicId')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   updateTopic(
     @Param('topicId') topicId: string,
     @Body() body: unknown,
@@ -133,7 +133,7 @@ export class LessonPlanController {
   }
 
   @Put('plans/:planId/exam-scopes/:examWindowId')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   setScope(
     @Param('planId') planId: string,
     @Param('examWindowId') examWindowId: string,
@@ -149,7 +149,7 @@ export class LessonPlanController {
   }
 
   @Post('plans/:planId/activate')
-  @Roles(UserRole.ADMIN, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   activate(
     @Param('planId') planId: string,
     @CurrentUser() user: AuthenticatedUser,

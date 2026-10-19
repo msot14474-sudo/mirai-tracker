@@ -461,6 +461,9 @@ export class FacultyAccessService {
     await this.requireCampus(campusId);
     this.access.assertCanManageCampus(actor, campusId);
 
+    if (input.offeringIds.length && !actor.roles.some(r => r.role === 'CAMPUS_MANAGER' && r.campusId === campusId)) {
+      throw new ForbiddenException('The campus manager assigns teaching subjects.');
+    }
     const offerings = input.offeringIds.length
       ? await this.prisma.subjectOffering.findMany({
           where: {

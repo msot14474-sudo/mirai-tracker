@@ -39,12 +39,12 @@ it('lets campus managers manage timetables and faculty, but not faculty lesson p
 });
 it('keeps faculty logging workflow editing available to faculty', () => {
   expect(roles(LessonPlanController.prototype.execute)).toContain('FACULTY');
-  expect(roles(TopicScheduleController.prototype.move)).not.toContain(
+  expect(roles(TopicScheduleController.prototype.move)).toContain(
     'FACULTY',
   );
   expect(
     roles(TopicScheduleController.prototype.setCancellation),
-  ).not.toContain('FACULTY');
+  ).toContain('FACULTY');
   expect(roles(TimetableController.prototype.create)).not.toContain('FACULTY');
 });
 
@@ -61,11 +61,11 @@ it.each([
   [SemesterImportController, 'previewProgress', [false, false, false]],
   [SemesterImportController, 'inspectProgress', [false, false, false]],
   [SemesterImportController, 'calendarCommit', [true, false, false]],
-  [TopicScheduleController, 'move', [false, true, false]],
-  [TopicScheduleController, 'setCancellation', [false, true, false]],
+  [TopicScheduleController, 'move', [false, false, true]],
+  [TopicScheduleController, 'setCancellation', [false, false, true]],
   [TimetableController, 'create', [false, true, false]],
   [LessonPlanController, 'execute', [false, false, true]],
-  [AiInsightsController, 'report', [true, true, false]],
+  [AiInsightsController, 'report', [true, true, true]],
   [MissedLogAlertController, 'testEmail', [false, false, false]],
 ] as const)(
   'enforces PDF boundaries on %p.%s',
@@ -82,3 +82,15 @@ it.each([
     });
   },
 );
+
+it('keeps administrators out of teaching-operation writes', () => {
+  for (const method of [TimetableController.prototype.create, TimetableController.prototype.update, TimetableController.prototype.archive, TimetableController.prototype.generate, LessonPlanController.prototype.execute, LessonPlanController.prototype.activate, LessonPlanController.prototype.updateTopic, TopicScheduleController.prototype.move, TopicScheduleController.prototype.setCancellation]) {
+    expect(roles(method)).not.toContain('ADMIN');
+  }
+});
+
+it('keeps campus managers out of faculty plan and individual class operations', () => {
+  for (const method of [LessonPlanController.prototype.execute, LessonPlanController.prototype.activate, TopicScheduleController.prototype.calculate, TopicScheduleController.prototype.move, TopicScheduleController.prototype.setCancellation]) {
+    expect(roles(method)).not.toContain('CAMPUS_MANAGER');
+  }
+});

@@ -15,7 +15,7 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
   const offerings = useQuery({
     queryKey: ['lesson-plans', 'offerings', campusId],
     queryFn: () => lessonPlanApi.offerings(campusId),
-    staleTime: 60_000,
+    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
   });
   const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
   const detail = useQuery({

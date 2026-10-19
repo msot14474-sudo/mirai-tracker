@@ -132,6 +132,80 @@ export class AcademicCalendarService {
     });
   }
 
+  async semesterCourses(semesterId: string, user: AuthenticatedUser) {
+    const semester = await this.prisma.semester.findUnique({ where: { id: semesterId } });
+    if (!semester) throw new NotFoundException('Semester not found.');
+    this.access.assertCanManageCampus(user, semester.campusId);
+    return this.prisma.batch.findMany({
+      where: { semesterId, active: true },
+      include: { track: true, subjectOfferings: { where: { status: { not: 'ARCHIVED' } }, include: { subject: true, faculty: { where: { active: true }, include: { staffProfile: { include: { user: { select: { name: true } } } } } } } } },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async connectSemesterSubjects(semesterId: string, input: {
+    batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string; subjectIds: string[];
+  }, user: AuthenticatedUser) {
+    this.access.assertGlobalManager(user);
+    return this.prisma.$transaction(async tx => {
+      const semester = await tx.semester.findUnique({ where: { id: semesterId } });
+      if (!semester) throw new NotFoundException('Semester not found.');
+      if (semester.status === 'ARCHIVED') throw new BadRequestException('This semester is archived.');
+      const subjectIds = [...new Set(input.subjectIds)];
+      const subjects = await tx.subject.findMany({ where: { id: { in: subjectIds }, active: true, OR: [{ campusId: semester.campusId }, { offerings: { some: { batch: { semester: { campusId: semester.campusId } } } } }] } });
+      if (subjects.length !== subjectIds.length) throw new BadRequestException('Choose subjects belonging to this campus.');
+      let batch;
+      if (input.batchId) {
+        batch = await tx.batch.findFirst({ where: { id: input.batchId, semesterId, active: true } });
+        if (!batch) throw new BadRequestException('Choose a batch from this semester.');
+      } else {
+        if (!input.batchName || !input.batchCode || !input.trackName || !input.trackCode) throw new BadRequestException('Enter the batch and track details.');
+        const existing = await tx.batch.findUnique({ where: { semesterId_code: { semesterId, code: input.batchCode } } });
+        if (existing) throw new ConflictException('This batch code already exists. Select the existing batch.');
+        const track = await tx.track.upsert({ where: { code: input.trackCode }, create: { code: input.trackCode, name: input.trackName }, update: {} });
+        if (!track.active) throw new BadRequestException('This track is inactive.');
+        batch = await tx.batch.create({ data: { semesterId, trackId: track.id, name: input.batchName, code: input.batchCode } });
+      }
+      for (const subjectId of subjectIds) {
+        const offering = await tx.subjectOffering.upsert({ where: { batchId_subjectId: { batchId: batch.id, subjectId } }, create: { batchId: batch.id, subjectId, targetFinishDate: semester.endDate }, update: {} });
+        if (offering.status === 'ARCHIVED') throw new BadRequestException('This batch has an archived subject. Choose an active batch or subject.');
+        await inheritSubjectTeacher(tx, offering.id);
+      }
+      await tx.auditEvent.create({ data: { actorId: user.id, campusId: semester.campusId, action: 'CREATE', entityType: 'SemesterSubjects', entityId: semesterId, metadata: { batchId: batch.id, subjectIds } } });
+      return { batchId: batch.id, subjectsLinked: subjectIds.length };
+    }).catch(error => {
+      if (isUniqueConstraintError(error)) throw new ConflictException('This batch or track already exists. Select the existing batch or use the existing track code.');
+      throw error;
+    });
+  }
+
+  async listFacultySubjects(user: AuthenticatedUser) {
+    const campusIds = user.roles.filter(r => r.role === 'FACULTY' && r.campusId).map(r => r.campusId!);
+    if (!user.staffProfileId || !campusIds.length) return [];
+    const offeringScope = {
+      status: { not: 'ARCHIVED' as const },
+      batch: { semester: { campusId: { in: campusIds } } },
+      faculty: { some: { staffProfileId: user.staffProfileId, active: true } },
+    };
+    return this.prisma.subject.findMany({
+      where: {
+        active: true,
+        OR: [
+          { teachers: { some: { staffProfileId: user.staffProfileId, campusId: { in: campusIds } } } },
+          { offerings: { some: offeringScope } },
+        ],
+      },
+      select: {
+        id: true, name: true, code: true,
+        offerings: {
+          where: offeringScope,
+          select: { id: true, batch: { select: { name: true, semester: { select: { name: true } } } } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async assignSubjectTeacher(
     subjectId: string,
     input: { campusId: string; staffProfileId: string; offeringId?: string },

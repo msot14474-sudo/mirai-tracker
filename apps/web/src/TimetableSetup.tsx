@@ -33,11 +33,13 @@ export function TimetableSetup({
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
     queryFn: () => academicApi.semesters(campusId),
+    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
     enabled: Boolean(campusId),
   });
   const offerings = useQuery({
     queryKey: ['timetable', 'offerings', semesterId],
     queryFn: () => timetableApi.offerings(semesterId),
+    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
     enabled: Boolean(semesterId),
   });
   const detail = useQuery({

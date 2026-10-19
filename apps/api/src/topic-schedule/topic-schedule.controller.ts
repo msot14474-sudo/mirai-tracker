@@ -54,7 +54,7 @@ export class TopicScheduleController {
   }
 
   @Post('offerings/:offeringId/calculate')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER, UserRole.FACULTY)
+  @Roles(UserRole.FACULTY)
   calculate(
     @Param('offeringId') offeringId: string,
     @Body() body: unknown,
@@ -68,7 +68,7 @@ export class TopicScheduleController {
   }
 
   @Post('sessions/:sessionId/move')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
+  @Roles(UserRole.FACULTY)
   move(
     @Param('sessionId') sessionId: string,
     @Body() body: unknown,
@@ -90,7 +90,7 @@ export class TopicScheduleController {
   }
 
   @Patch('sessions/:sessionId')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
+  @Roles(UserRole.FACULTY)
   setCancellation(
     @Param('sessionId') sessionId: string,
     @Body() body: unknown,
