@@ -12,8 +12,10 @@ const saturdayLabels: Record<SaturdayRule, string> = {
 
 export function SemesterSetup({
   initialCampusId,
+  canAssignTeachers = true,
 }: {
   initialCampusId: string;
+  canAssignTeachers?: boolean;
 }) {
   const queryClient = useQueryClient();
   const campusId = initialCampusId;
@@ -116,6 +118,7 @@ export function SemesterSetup({
 
       {setupView === 'subjects' ? (
         <SubjectSetup
+          canAssignTeachers={canAssignTeachers}
           campusId={campusId}
           showCreate={showCreate}
           onCreated={() => setShowCreate(false)}
@@ -290,10 +293,12 @@ export function SemesterSetup({
 
 function SubjectSetup({
   campusId,
+  canAssignTeachers,
   showCreate,
   onCreated,
 }: {
   campusId: string;
+  canAssignTeachers: boolean;
   showCreate: boolean;
   onCreated: () => void;
 }) {
@@ -414,7 +419,7 @@ function SubjectSetup({
               <div>
                 <strong>{subject.name}</strong>
                 {subject.description ? <p>{subject.description}</p> : null}
-                <SubjectTeacherAssignment subject={subject} campusId={campusId} />
+                <SubjectTeacherAssignment readOnly={!canAssignTeachers} subject={subject} campusId={campusId} />
               </div>
               <button type="button" className="academic-delete" disabled={deletion.isPending}
                 aria-label={`Delete subject ${subject.name}`}

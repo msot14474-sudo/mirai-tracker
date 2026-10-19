@@ -210,6 +210,7 @@ function setup() {
     auditEvent: { create: jest.fn() },
   };
   const prisma = {
+    topicScheduleVersion: { findFirst: jest.fn().mockResolvedValue(null) },
     subjectOffering: { findMany: jest.fn(), findUnique: jest.fn() },
     scheduledSession: { findUnique: jest.fn() },
     $transaction: jest.fn(

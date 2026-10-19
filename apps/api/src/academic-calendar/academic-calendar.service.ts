@@ -59,7 +59,8 @@ export class AcademicCalendarService {
   }
 
   listSubjects(user: AuthenticatedUser, campusId?: string) {
-    this.access.assertGlobalManager(user);
+    if (campusId) this.access.assertCanManageCampus(user, campusId);
+    else this.access.assertGlobalManager(user);
     return this.prisma.subject.findMany({
       where: {
         active: true,

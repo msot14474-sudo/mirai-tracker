@@ -146,6 +146,7 @@ export class SessionLogService {
     sessionId: string,
     input: CreateSessionLogInput,
     user: AuthenticatedUser,
+    externalRequestId?: string,
   ) {
     const staffProfileId = assertFaculty(user);
     const session = await this.prisma.scheduledSession.findUnique({
@@ -159,6 +160,13 @@ export class SessionLogService {
       );
     }
 
+    if (externalRequestId) {
+      const existing = await this.prisma.sessionLog.findUnique({
+        where: { externalRequestId },
+        include: { topicUpdates: true },
+      });
+      if (existing) return { ...serializeLog(existing), scheduleVersion: null };
+    }
     const plan = preferredPlan(session.offering.lessonPlans);
     const topics = plan?.units.flatMap((unit) => unit.topics) ?? [];
     const topicById = new Map(topics.map((topic) => [topic.id, topic]));
@@ -224,6 +232,7 @@ export class SessionLogService {
       const log = await transaction.sessionLog.create({
         data: {
           scheduledSessionId: session.id,
+          ...(externalRequestId ? { externalRequestId } : {}),
           revision,
           status: input.status,
           overallCompletionPercentage: input.overallCompletionPercentage,

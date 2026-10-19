@@ -123,6 +123,7 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
     await queryClient.invalidateQueries({
       queryKey: ['lesson-plans', 'offerings'],
     });
+    await Promise.all(['topic-schedules', 'session-logs', 'progress-dashboard', 'exam-readiness', 'student-overview'].map(key => queryClient.invalidateQueries({queryKey: [key]})));
   };
   const activate = useMutation({
     mutationFn: () => lessonPlanApi.activate(detail.plan!.id),

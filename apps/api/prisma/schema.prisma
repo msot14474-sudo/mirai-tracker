@@ -196,6 +196,7 @@ enum AuditAction {
 }
 
 model User {
+  whatsappLink WhatsAppLink?
   id                     String                 @id @default(uuid()) @db.Uuid
   name                   String                 @db.VarChar(160)
   email                  String                 @unique @db.VarChar(320)
@@ -580,6 +581,7 @@ model TopicSchedule {
 }
 
 model SessionLog {
+  externalRequestId String? @unique @db.VarChar(200)
   id                          String               @id @default(uuid()) @db.Uuid
   scheduledSessionId          String               @db.Uuid
   revision                    Int
@@ -806,4 +808,17 @@ model SubjectTeacher {
   staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
   @@unique([subjectId, campusId])
   @@index([staffProfileId])
+}
+
+model WhatsAppLink {
+  userId String @id @db.Uuid
+  phone String @unique @db.VarChar(16)
+  linkedAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model WhatsAppReceipt {
+  userId String? @db.Uuid
+  id String @id @db.VarChar(200)
+  reply String @db.Text
+  createdAt DateTime @default(now())
 }

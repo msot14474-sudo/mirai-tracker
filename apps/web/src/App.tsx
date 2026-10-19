@@ -111,7 +111,7 @@ const HelpWorkspace = lazy(() =>
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Administrator',
-  PROGRAM_MANAGER: 'Administrator',
+  PROGRAM_MANAGER: 'Program Manager',
   CAMPUS_MANAGER: 'Campus Manager',
   FACULTY: 'Faculty',
   STUDENT: 'Student',
@@ -1076,20 +1076,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const canManageAcademicCalendar = roles.some(
     (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
   );
-  const canManageTimetable = roles.some(
-    (role) =>
-      role === 'ADMIN' ||
-      role === 'PROGRAM_MANAGER' ||
-      role === 'CAMPUS_MANAGER',
-  );
-  const canManageFaculty = canManageTimetable;
-  const canManageLessonPlans = roles.some(
-    (role) =>
-      role === 'ADMIN' ||
-      role === 'PROGRAM_MANAGER' ||
-      role === 'CAMPUS_MANAGER' ||
-      role === 'FACULTY',
-  );
+  const canManageTimetable = roles.some(role => role === 'ADMIN' || role === 'CAMPUS_MANAGER');
+  const canManageFaculty = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role));
+  const canManageLessonPlans = roles.some(role => role === 'ADMIN' || role === 'FACULTY');
   const canLogSessions = roles.includes('FACULTY');
   const canViewStudentOverview = roles.includes('STUDENT');
   const canViewAlerts = roles.some(
@@ -1330,6 +1319,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'academic-setup':
         return (
           <SemesterSetup
+            canAssignTeachers={roles.includes('ADMIN')}
             key={selectedCampusId}
             initialCampusId={selectedCampusId}
           />
@@ -1348,12 +1338,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
             currentUserId={user.id}
-            canCreateCampusManagers={roles.some(
-              (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
-            )}
-            canCreateAdministrators={roles.some(
-              (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
-            )}
+            readOnly={!roles.includes('ADMIN') && !roles.includes('CAMPUS_MANAGER')}
+            facultyOnly={!roles.includes('ADMIN')}
+            canCreateCampusManagers={roles.includes('ADMIN')}
+            canCreateAdministrators={roles.includes('ADMIN')}
           />
         );
       case 'timetable':

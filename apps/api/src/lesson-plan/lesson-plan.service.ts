@@ -1,3 +1,4 @@
+import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
 import {
   AuditAction,
   ImportType,
@@ -34,6 +35,7 @@ export class LessonPlanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessPolicyService,
+    private readonly schedules: TopicScheduleService,
   ) {}
 
   async listOfferings(user: AuthenticatedUser, campusId?: string) {
@@ -390,6 +392,7 @@ export class LessonPlanService {
       });
       return active;
     });
+    await this.schedules.calculate(plan.offeringId, {}, user);
     return { id: updated.id, status: updated.status };
   }
 

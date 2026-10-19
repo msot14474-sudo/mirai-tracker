@@ -57,9 +57,21 @@ export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
             <button
               key={offering.id}
               className={offering.id === selectedOfferingId ? 'selected' : ''}
-              onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['topic-schedules', 'offering', offering.id], queryFn: () => topicScheduleApi.offering(offering.id), staleTime: 60_000 })}
-                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['topic-schedules', 'offering', offering.id], queryFn: () => topicScheduleApi.offering(offering.id), staleTime: 60_000 })}
-                onClick={() => setOfferingId(offering.id)}
+              onMouseEnter={() =>
+                void queryClient.prefetchQuery({
+                  queryKey: ['topic-schedules', 'offering', offering.id],
+                  queryFn: () => topicScheduleApi.offering(offering.id),
+                  staleTime: 60_000,
+                })
+              }
+              onFocus={() =>
+                void queryClient.prefetchQuery({
+                  queryKey: ['topic-schedules', 'offering', offering.id],
+                  queryFn: () => topicScheduleApi.offering(offering.id),
+                  staleTime: 60_000,
+                })
+              }
+              onClick={() => setOfferingId(offering.id)}
             >
               <strong>{offering.subject.name}</strong>
               <span>
@@ -102,6 +114,7 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
     await Promise.all(
       [
         'timetable',
+        'session-logs',
         'topic-schedules',
         'progress-dashboard',
         'exam-readiness',
@@ -126,7 +139,17 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
       <div className="empty-state compact-empty">
         <span>02</span>
         <h3>Lesson plan required</h3>
-        <p>Import an M07 lesson plan before calculating topic dates.</p>
+        <p>
+          Your timetable is ready below. Upload your units, topics and planned
+          hours in Lesson plans to allocate the teaching time.
+        </p>
+        {detail.sessions.map((session) => (
+          <SessionCapacityRow
+            key={session.id}
+            session={session}
+            onChanged={refresh}
+          />
+        ))}
       </div>
     );
   }
@@ -188,6 +211,81 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
         <span>{summary.excludedSessions} excluded classes</span>
         <span>Target finish {displayDate(detail.targetFinishDate)}</span>
       </div>
+
+      {detail.baseline && (
+        <details className="panel">
+          <summary>
+            Original saved plan · version {detail.baseline.version}
+          </summary>
+          {detail.baseline.entries.map((entry) => (
+            <p key={entry.topicId}>
+              {detail.coverage?.find((t) => t.id === entry.topicId)?.title ||
+                'Topic'}{' '}
+              · {displayDate(entry.plannedStartDate)} –{' '}
+              {displayDate(entry.plannedFinishDate)}
+            </p>
+          ))}
+        </details>
+      )}
+      {detail.forecast && (
+        <section className="panel" aria-label="Remaining teaching forecast">
+          <h3>What needs to be covered next</h3>
+          <p>
+            Unfinished topic hours are placed into upcoming unlogged classes.
+            The planned timeline below remains available for comparison.
+          </p>
+          <div className="schedule-metrics">
+            <Metric
+              label="Remaining work"
+              value={formatTeachingTime(
+                detail.forecast.summary.requiredMinutes,
+              )}
+            />
+            <Metric
+              label="Future class time"
+              value={formatTeachingTime(
+                detail.forecast.summary.availableMinutes,
+              )}
+            />
+            <Metric
+              label="Unallocated work"
+              value={formatTeachingTime(
+                detail.forecast.summary.shortfallMinutes,
+              )}
+              danger={detail.forecast.summary.shortfallMinutes > 0}
+            />
+          </div>
+          {detail.forecast.allocations.map((topic) => (
+            <div className="timeline-row" key={topic.id}>
+              <strong>{topic.title}</strong>
+              <span>{formatTeachingTime(topic.requiredMinutes)}</span>
+              <span>{displayDate(topic.plannedStartDate)}</span>
+              <span>
+                {displayDate(topic.plannedFinishDate)}
+                {topic.afterTarget ? ' · After deadline' : ''}
+              </span>
+            </div>
+          ))}
+          {detail.forecast.unscheduledTopics.map((topic) => (
+            <p className="form-error" key={topic.id}>
+              {topic.title}: {formatTeachingTime(topic.remainingMinutes)} needs
+              additional teaching time.
+            </p>
+          ))}
+          {detail.forecast.summary.requiredMinutes === 0 && (
+            <p>All in-scope topics are covered.</p>
+          )}
+          <details>
+            <summary>Topic completion</summary>
+            {detail.coverage?.map((topic) => (
+              <p key={topic.id}>
+                {topic.title} · {topic.completionPercentage}% ·{' '}
+                {topic.status.replaceAll('_', ' ')}
+              </p>
+            ))}
+          </details>
+        </section>
+      )}
 
       <div className="schedule-columns">
         <section
@@ -303,6 +401,18 @@ function SessionCapacityRow({
   onChanged: () => Promise<void>;
 }) {
   const [reason, setReason] = useState(session.cancellationReason ?? '');
+  const [moving, setMoving] = useState(false);
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const move = useMutation({
+    mutationFn: () =>
+      topicScheduleApi.move(session.id, { date, startTime, endTime, reason }),
+    onSuccess: async () => {
+      setMoving(false);
+      await onChanged();
+    },
+  });
   const cancelled = session.status === 'CANCELLED';
   const mutation = useMutation({
     mutationFn: () =>
@@ -341,7 +451,7 @@ function SessionCapacityRow({
       ) : (
         <input
           aria-label={`Cancellation reason for ${session.sessionDate}`}
-          placeholder="Cancellation reason"
+          placeholder="Reason for cancelling or moving"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           disabled={session.hasLogs}
@@ -359,6 +469,67 @@ function SessionCapacityRow({
             ? 'Restore'
             : 'Cancel class'}
       </button>
+      {!session.hasLogs && session.status === 'SCHEDULED' && (
+        <>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setMoving(!moving)}
+          >
+            Move class
+          </button>
+          {moving && (
+            <div className="lecture-move-fields">
+              <label>
+                New date
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </label>
+              <label>
+                Starts (campus time)
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </label>
+              <label>
+                Ends (campus time)
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </label>
+              <p>
+                Enter the reason above. Holidays, non-working Saturdays and
+                timetable clashes are checked before saving.
+              </p>
+              <button
+                type="button"
+                disabled={
+                  move.isPending ||
+                  !date ||
+                  !startTime ||
+                  !endTime ||
+                  !reason.trim()
+                }
+                onClick={() => move.mutate()}
+              >
+                {move.isPending ? 'Moving…' : 'Save new class time'}
+              </button>
+            </div>
+          )}
+          {move.error && (
+            <p role="alert" className="form-error">
+              {move.error.message}
+            </p>
+          )}
+        </>
+      )}
       {session.hasLogs ? (
         <small className="protected-note">Protected: class log exists</small>
       ) : null}

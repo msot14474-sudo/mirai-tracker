@@ -33,6 +33,101 @@ export class FacultyAccessService {
     private readonly access: AccessPolicyService,
   ) {}
 
+  async network(actor: AuthenticatedUser) {
+    const campusIds = actor.roles
+      .filter((r) => r.role === UserRole.CAMPUS_MANAGER && r.campusId)
+      .map((r) => r.campusId!);
+    const campuses = await this.prisma.campus.findMany({
+      where: this.access.isGlobalManager(actor)
+        ? { active: true }
+        : { active: true, id: { in: campusIds } },
+      select: {
+        id: true,
+        name: true,
+        roleAssignments: {
+          where: {
+            role: { in: [UserRole.CAMPUS_MANAGER, UserRole.FACULTY] },
+            user: { status: { in: ['ACTIVE', 'INVITED'] } },
+          },
+          select: {
+            role: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                staffProfile: {
+                  select: {
+                    subjectTeachers: {where: this.access.isGlobalManager(actor) ? {} : {campusId: {in: campusIds}}, select: {campusId: true, subject: {select: {id: true, name: true}}}},
+                    facultyAssignments: {
+                      where: {
+                        active: true,
+                        offering: {
+                          batch: {
+                            semester: this.access.isGlobalManager(actor)
+                              ? {}
+                              : { campusId: { in: campusIds } },
+                          },
+                        },
+                      },
+                      select: {
+                        offering: {
+                          select: {
+                            id: true,
+                            subject: { select: { name: true } },
+                            batch: {
+                              select: {
+                                name: true,
+                                semester: {
+                                  select: { name: true, campusId: true },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    return campuses.map((campus) => {
+      const people = campus.roleAssignments.map((r) => ({
+        id: r.user.id,
+        name: r.user.name,
+        role: r.role,
+        status: r.user.status,
+        defaultSubjects: (r.user.staffProfile?.subjectTeachers ?? []).filter(t => t.campusId === campus.id).map(t => t.subject),
+        subjects: (r.user.staffProfile?.facultyAssignments ?? [])
+          .filter((a) => a.offering.batch.semester.campusId === campus.id)
+          .map((a) => ({
+            offeringId: a.offering.id,
+            subject: a.offering.subject.name,
+            batch: a.offering.batch.name,
+            semester: a.offering.batch.semester.name,
+          })),
+      }));
+      return {
+        id: campus.id,
+        name: campus.name,
+        managerCount: new Set(
+          people
+            .filter((p) => p.role === UserRole.CAMPUS_MANAGER)
+            .map((p) => p.id),
+        ).size,
+        facultyCount: new Set(
+          people.filter((p) => p.role === UserRole.FACULTY).map((p) => p.id),
+        ).size,
+        people,
+      };
+    });
+  }
+
   async accounts(campusId: string, actor: AuthenticatedUser) {
     await this.requireCampus(campusId);
     this.access.assertCanManageCampus(actor, campusId);
@@ -50,7 +145,7 @@ export class FacultyAccessService {
                   },
                 ],
               }
-            : { campusId, role: { in: [UserRole.FACULTY, UserRole.STUDENT] } },
+            : { campusId, role: UserRole.FACULTY },
         },
       },
       select: {
@@ -119,7 +214,6 @@ export class FacultyAccessService {
       ]);
       const campusAccountRoles = new Set<UserRole>([
         UserRole.FACULTY,
-        UserRole.STUDENT,
       ]);
       const elevated = target.roleAssignments.some((assignment) =>
         elevatedRoles.has(assignment.role),
@@ -132,7 +226,7 @@ export class FacultyAccessService {
       );
       if (elevated || !withinScope) {
         throw new ForbiddenException(
-          'Campus Managers can update only faculty and students in their campus.',
+          'Campus Managers can update only faculty in their campus.',
         );
       }
     }

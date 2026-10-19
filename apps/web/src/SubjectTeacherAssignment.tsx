@@ -4,9 +4,11 @@ import { academicApi, Subject } from './academic';
 export function SubjectTeacherAssignment({
   subject,
   campusId,
+  readOnly = false,
 }: {
   subject: Subject;
   campusId: string;
+  readOnly?: boolean;
 }) {
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -51,7 +53,7 @@ export function SubjectTeacherAssignment({
             : 'No teacher assigned'}
         </p>
       ))}
-      <button
+      {!readOnly && <button
         type="button"
         className="secondary"
         onClick={() => {
@@ -60,7 +62,7 @@ export function SubjectTeacherAssignment({
         }}
       >
         {open ? 'Cancel' : 'Assign teacher'}
-      </button>
+      </button>}
       {assignment.isSuccess && !open && (
         <p role="status">Teacher assignment saved.</p>
       )}

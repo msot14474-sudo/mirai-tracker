@@ -11,7 +11,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { CurrentUser } from '../auth/auth.decorators';
+import { UserRole } from '@prisma/client';
+import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import {
   calendarRangeSchema,
@@ -71,6 +72,7 @@ export class AcademicCalendarController {
   }
 
   @Post('subjects/:subjectId/teacher')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   assignTeacher(
     @Param('subjectId') subjectId: string,
     @Body() body: unknown,

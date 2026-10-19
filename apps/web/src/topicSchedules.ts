@@ -94,6 +94,21 @@ export type TopicScheduleDetail = {
     hasLogs: boolean;
     isExtraSession: boolean;
   }>;
+  baseline?: {
+    version: number;
+    entries: Array<{
+      topicId: string;
+      plannedStartDate: string;
+      plannedFinishDate: string;
+    }>;
+  } | null;
+  forecast?: TopicSchedulePreview;
+  coverage?: Array<{
+    id: string;
+    title: string;
+    completionPercentage: number;
+    status: string;
+  }>;
   preview: TopicSchedulePreview;
   latestVersion: {
     id: string;
@@ -137,6 +152,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const topicScheduleApi = {
+  move: (
+    sessionId: string,
+    input: { date: string; startTime: string; endTime: string; reason: string },
+  ) =>
+    api(`/topic-schedules/sessions/${sessionId}/move`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   offerings: (campusId?: string) =>
     api<TopicScheduleOffering[]>(
       `/topic-schedules/offerings${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,

@@ -162,3 +162,28 @@ function isoDate(value: Date | string) {
   if (!match) throw new RangeError('Session dates must use YYYY-MM-DD.');
   return match[0];
 }
+
+/** Remaining work uses future, unlogged slots only; baseline dates stay unchanged. */
+export function calculateRemainingSchedule(
+  topics: Array<
+    TopicDemand & { completionPercentage: number; skipped?: boolean }
+  >,
+  sessions: Array<TeachingSession & { hasLogs?: boolean }>,
+  now: Date,
+) {
+  return calculateTopicSchedule(
+    topics
+      .filter((t) => !t.skipped && t.completionPercentage < 100)
+      .map((t) => ({
+        ...t,
+        requiredMinutes: Math.ceil(
+          t.requiredMinutes *
+            (1 - Math.max(0, Math.min(100, t.completionPercentage)) / 100),
+        ),
+      }))
+      .filter((t) => t.requiredMinutes > 0),
+    sessions.filter(
+      (s) => !s.hasLogs && s.status === 'SCHEDULED' && s.startsAt >= now,
+    ),
+  );
+}

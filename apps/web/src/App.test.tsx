@@ -519,10 +519,10 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'User access' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add new' }));
-    expect(
-      await screen.findByRole('button', { name: 'Administrator' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', {name: 'Campus team and subject assignments'})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Add new'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Timetable'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Lesson plans'})).not.toBeInTheDocument();
   });
 
   it('asks administrators to choose a campus before opening the full workspace', async () => {

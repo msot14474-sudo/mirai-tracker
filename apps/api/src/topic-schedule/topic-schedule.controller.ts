@@ -10,7 +10,10 @@ import {
   Post,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
+import {
+  isoDateSchema,
+  uuidSchema,
+} from '../academic-calendar/academic-calendar.schemas';
 import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import {
@@ -51,6 +54,7 @@ export class TopicScheduleController {
   }
 
   @Post('offerings/:offeringId/calculate')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER, UserRole.FACULTY)
   calculate(
     @Param('offeringId') offeringId: string,
     @Body() body: unknown,
@@ -63,7 +67,30 @@ export class TopicScheduleController {
     );
   }
 
+  @Post('sessions/:sessionId/move')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER, UserRole.FACULTY)
+  move(
+    @Param('sessionId') sessionId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.schedules.moveSession(
+      id(sessionId),
+      parse(
+        z.object({
+          date: isoDateSchema,
+          startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+          endTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+          reason: z.string().trim().min(1).max(1000),
+        }),
+        body,
+      ),
+      user,
+    );
+  }
+
   @Patch('sessions/:sessionId')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER, UserRole.FACULTY)
   setCancellation(
     @Param('sessionId') sessionId: string,
     @Body() body: unknown,

@@ -1,3 +1,4 @@
+import { WhatsAppAccount } from './WhatsAppAccount';
 import { useMutation } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { AuthenticatedUser, updateOwnAccount, UserRole } from './auth';
@@ -208,6 +209,7 @@ export function AccountWorkspace({
           </button>
         </footer>
       </form>
+      {user.roles.some(r => r.role === 'FACULTY') && <WhatsAppAccount />}
     </div>
   );
 }

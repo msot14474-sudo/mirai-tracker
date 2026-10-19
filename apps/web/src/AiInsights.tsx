@@ -11,6 +11,7 @@ type Subject = {
   name: string;
   batch: string;
   campus: { name: string };
+  monitoring?: {status: string; remainingHours: number; availableHours: number; bufferRatio: number | null; paceVsPlanHours: number} | null;
   completion: number | null;
   plan: { version: number; status: string } | null;
   teachers: string[];
@@ -96,6 +97,8 @@ export function AiInsights({
   const query = useQuery({
     queryKey: ['ai-insights', campusId ?? '', ''],
     queryFn: () => getSnapshot(campusId),
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
   const chatQuery = new URLSearchParams(scope).toString();
   const chats = useQuery({
@@ -498,6 +501,7 @@ export function AiInsights({
                           : `${subject.completion}% covered`}
                       </strong>
                     </header>
+                    {subject.monitoring && <p>{subject.monitoring.status.replaceAll('_', ' ')} · {subject.monitoring.remainingHours}h remaining · {subject.monitoring.availableHours}h available · Pace {subject.monitoring.paceVsPlanHours}h</p>}
                     {subject.issues.length ? (
                       <ul>
                         {subject.issues.map((issue) => (

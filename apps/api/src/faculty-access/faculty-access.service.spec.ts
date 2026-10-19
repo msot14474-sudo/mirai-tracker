@@ -263,47 +263,10 @@ describe('FacultyAccessService', () => {
     expect(userCreate).not.toHaveBeenCalled();
   });
 
-  it('lets a campus manager update a student in the same campus', async () => {
-    userFindUnique.mockResolvedValue({
-      id: 'student-user-a',
-      name: 'Student One',
-      email: 'student@example.edu',
-      notificationEmail: null,
-      status: UserStatus.ACTIVE,
-      roleAssignments: [{ role: UserRole.STUDENT, campusId }],
-    });
-
-    const result = await service().updateAccount(
-      'student-user-a',
-      {
-        name: 'Student One',
-        email: 'student.one@example.edu',
-        password: 'a-new-student-password',
-      },
-      actor,
-    );
-
-    expect(userUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'student-user-a' },
-        data: expect.objectContaining({
-          passwordCredential: {
-            upsert: {
-              create: expect.objectContaining({
-                passwordHash: expect.any(String),
-              }),
-              update: expect.objectContaining({
-                passwordHash: expect.any(String),
-              }),
-            },
-          },
-        }),
-      }),
-    );
-    expect(JSON.stringify(auditCreate.mock.calls.at(-1)?.[0])).not.toContain(
-      'a-new-student-password',
-    );
-    expect(result).toMatchObject({ passwordChanged: true });
+  it('rejects student account editing by a campus manager', async () => {
+    userFindUnique.mockResolvedValue({id:'student-user-a', roleAssignments:[{role:UserRole.STUDENT,campusId}]});
+    await expect(service().updateAccount('student-user-a', {name:'Changed'}, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(userUpdate).not.toHaveBeenCalled();
   });
 
   it('prevents a campus manager from changing an elevated account', async () => {
@@ -490,7 +453,7 @@ describe('FacultyAccessService', () => {
           roleAssignments: {
             some: {
               campusId,
-              role: { in: [UserRole.FACULTY, UserRole.STUDENT] },
+              role: UserRole.FACULTY,
             },
           },
         },

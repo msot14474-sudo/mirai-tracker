@@ -1,3 +1,4 @@
+import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
@@ -18,12 +19,16 @@ export function FacultyAccessWorkspace({
   canCreateCampusManagers = false,
   canCreateAdministrators = false,
   currentUserId = '',
+  readOnly = false,
+  facultyOnly = false,
 }: {
   initialCampusId?: string;
   campusLocked?: boolean;
   canCreateCampusManagers?: boolean;
   canCreateAdministrators?: boolean;
   currentUserId?: string;
+  readOnly?: boolean;
+  facultyOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
@@ -45,12 +50,17 @@ export function FacultyAccessWorkspace({
   const detail = useQuery({
     queryKey: ['faculty-access', campusId],
     queryFn: () => facultyAccessApi.campus(campusId),
-    enabled: Boolean(campusId),
+    enabled: Boolean(campusId) && !readOnly,
+  });
+  const subjectCatalog = useQuery({queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId), enabled: Boolean(campusId) && !readOnly});
+  const network = useQuery({
+    queryKey: ['faculty-access', 'network'],
+    queryFn: facultyAccessApi.network,
   });
   const accounts = useQuery({
     queryKey: ['managed-accounts', campusId],
     queryFn: () => facultyAccessApi.accounts(campusId),
-    enabled: Boolean(campusId),
+    enabled: Boolean(campusId) && !readOnly,
   });
   const createFaculty = useMutation({
     mutationFn: (input: CreateFacultyInput) =>
@@ -59,7 +69,7 @@ export function FacultyAccessWorkspace({
       form.current?.reset();
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ['faculty-access', campusId],
+          queryKey: ['faculty-access'],
         }),
         queryClient.invalidateQueries({
           queryKey: ['managed-accounts', campusId],
@@ -87,7 +97,7 @@ export function FacultyAccessWorkspace({
           queryKey: ['managed-accounts', campusId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ['faculty-access', campusId],
+          queryKey: ['faculty-access'],
         }),
       ]);
     },
@@ -107,7 +117,7 @@ export function FacultyAccessWorkspace({
           queryKey: ['managed-accounts', campusId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ['faculty-access', campusId],
+          queryKey: ['faculty-access'],
         }),
       ]);
     },
@@ -229,6 +239,63 @@ export function FacultyAccessWorkspace({
       ) : null}
 
       <section
+        className="setup-card"
+        aria-label="Campus people and assignments"
+      >
+        <h3>Campus team and subject assignments</h3>
+        <p>
+          Managers, faculty and teaching assignments are connected to their
+          campus. Suspended and removed accounts are excluded.
+        </p>
+        {network.isLoading && (
+          <LoadingSkeleton variant="list" label="Loading campus team" />
+        )}
+        {network.error && (
+          <p role="alert" className="form-error">
+            {network.error.message}
+          </p>
+        )}
+        {network.data?.map((campus) => (
+          <details key={campus.id} open={campus.id === campusId}>
+            <summary>
+              {campus.name} · {campus.managerCount} campus managers ·{' '}
+              {campus.facultyCount} faculty
+            </summary>
+            {campus.people.map((person) => (
+              <article
+                key={`${person.id}-${person.role}`}
+                className="campus-person-row"
+              >
+                <strong>{person.name}</strong>
+                <span>
+                  {person.role === 'CAMPUS_MANAGER'
+                    ? 'Campus manager'
+                    : 'Faculty'}{' '}
+                  · {person.status}
+                </span>
+                {person.defaultSubjects?.map(subject => <p key={subject.id}>Subject teacher: {subject.name}</p>)}
+                {person.subjects.map((subject) => (
+                  <p key={subject.offeringId}>
+                    {subject.subject} · {subject.batch} · {subject.semester}
+                  </p>
+                ))}
+                {person.role === 'FACULTY' && !person.subjects.length && (
+                  <p>No batch subject assigned yet.</p>
+                )}
+              </article>
+            ))}
+            {!campus.people.length && (
+              <p>No managers or faculty assigned yet.</p>
+            )}
+          </details>
+        ))}
+      </section>
+
+      {!readOnly && <details className="setup-card"><summary>Assign teachers to campus subjects</summary>
+        {subjectCatalog.error && <p role="alert">{subjectCatalog.error.message}</p>}
+        {Array.isArray(subjectCatalog.data) && subjectCatalog.data.map(subject => <article key={subject.id}><h4>{subject.name}</h4><SubjectTeacherAssignment subject={subject} campusId={campusId} /></article>)}
+      </details>}
+      {!readOnly && <section
         className="managed-accounts"
         aria-labelledby="managed-accounts-title"
       >
@@ -259,9 +326,9 @@ export function FacultyAccessWorkspace({
           >
             <option value="ALL">All roles</option>
             <option value="FACULTY">Faculty</option>
-            <option value="CAMPUS_MANAGER">Campus managers</option>
+            {!facultyOnly && <><option value="CAMPUS_MANAGER">Campus managers</option>
             <option value="ADMIN">Administrators</option>
-            <option value="STUDENT">Students</option>
+            <option value="STUDENT">Students</option></>}
           </select>
         </label>
         {accounts.isLoading ? (
@@ -690,7 +757,7 @@ export function FacultyAccessWorkspace({
             )}
           </div>
         )}
-      </section>
+      </section>}
     </section>
   );
 }
@@ -698,7 +765,7 @@ export function FacultyAccessWorkspace({
 function accountRoleLabel(account: ManagedAccount) {
   const labels = {
     ADMIN: 'Administrator',
-    PROGRAM_MANAGER: 'Administrator',
+    PROGRAM_MANAGER: 'Program Manager',
     CAMPUS_MANAGER: 'Campus Manager',
     FACULTY: 'Faculty',
     STUDENT: 'Student',

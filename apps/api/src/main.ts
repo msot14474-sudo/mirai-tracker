@@ -9,7 +9,7 @@ config({ path: resolve(process.cwd(), '../../.env') });
 validateEnvironment(process.env);
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(helmet());
   app.enableCors({
     origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',

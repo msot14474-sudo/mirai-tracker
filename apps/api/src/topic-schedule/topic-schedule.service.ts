@@ -1,4 +1,8 @@
 import {
+  buildTimetableSessions,
+  isoWeekday,
+} from '../timetable/timetable-engine';
+import {
   AuditAction,
   LessonPlanStatus,
   Prisma,
@@ -21,6 +25,7 @@ import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 import {
   calculateTopicSchedule,
+  calculateRemainingSchedule,
   TeachingSession,
   TopicDemand,
   TopicScheduleCalculation,
@@ -120,7 +125,15 @@ export class TopicScheduleService {
   async offering(offeringId: string, user: AuthenticatedUser) {
     await this.access.assertCanManageOffering(user, offeringId);
     const offering = await this.requirePlanningOffering(offeringId);
-    return serializeDetail(offering);
+    const baseline = await this.prisma.topicScheduleVersion.findFirst({
+      where: { offeringId },
+      orderBy: { version: 'asc' },
+      include: { entries: true },
+    });
+    return {
+      ...serializeDetail(offering),
+      baseline: baseline ? serializeVersion(baseline) : null,
+    };
   }
 
   async calculate(
@@ -211,6 +224,15 @@ export class TopicScheduleService {
       );
     }
 
+    if (
+      !input.cancelled &&
+      (await this.prisma.scheduledSession.findUnique({
+        where: { sourceKey: `move:${session.id}` },
+      }))
+    )
+      throw new ConflictException(
+        'This class was moved. Manage its replacement instead.',
+      );
     const nextStatus = input.cancelled
       ? ScheduledSessionStatus.CANCELLED
       : ScheduledSessionStatus.SCHEDULED;
@@ -251,6 +273,157 @@ export class TopicScheduleService {
       },
       user,
     );
+  }
+
+  async moveSession(
+    sessionId: string,
+    input: { date: string; startTime: string; endTime: string; reason: string },
+    user: AuthenticatedUser,
+  ) {
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const session = await tx.scheduledSession.findUnique({
+          where: { id: sessionId },
+          include: {
+            _count: { select: { logs: true } },
+            offering: {
+              include: {
+                faculty: { where: { active: true } },
+                batch: {
+                  include: {
+                    semester: { include: { campus: true, calendarDays: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!session) throw new NotFoundException('Class not found.');
+        await this.access.assertCanManageOffering(user, session.offeringId);
+        if (session.status !== 'SCHEDULED' || session._count.logs > 0)
+          throw new ConflictException(
+            'Only an unlogged scheduled class can be moved.',
+          );
+        const semester = session.offering.batch.semester;
+        const date = parseIsoDate(input.date);
+        if (date < semester.startDate || date > semester.endDate)
+          throw new BadRequestException('Choose a date inside this semester.');
+        const faculty = session.offering.faculty.filter(
+          (f) => f.startDate <= date && (!f.endDate || f.endDate >= date),
+        );
+        if (
+          user.roles.some((r) => r.role === 'FACULTY') &&
+          !this.access.canManageCampus(user, semester.campusId) &&
+          !faculty.some((f) => f.staffProfileId === user.staffProfileId)
+        )
+          throw new BadRequestException(
+            'Your assignment does not cover the selected date.',
+          );
+        let planned;
+        try {
+          planned = buildTimetableSessions({
+            offeringId: session.offeringId,
+            timezone: semester.campus.timezone,
+            semesterStart: input.date,
+            semesterEnd: input.date,
+            saturdayRule: semester.workingSaturdayRule,
+            overrides: semester.calendarDays.map((d) => ({
+              ...d,
+              date: formatIsoDate(d.date),
+            })),
+            entries: [
+              {
+                id: session.id,
+                weekday: isoWeekday(input.date),
+                startTime: input.startTime,
+                endTime: input.endTime,
+                effectiveFrom: input.date,
+                effectiveTo: input.date,
+                facultyAssignmentId: session.facultyAssignmentId,
+              },
+            ],
+          })[0];
+        } catch {
+          throw new BadRequestException(
+            'Choose valid start and end times, up to eight hours apart.',
+          );
+        }
+        if (!planned)
+          throw new BadRequestException(
+            'This is not a teaching day under the campus calendar and Saturday rule.',
+          );
+        if (planned.startsAt <= new Date())
+          throw new BadRequestException('Choose a future class time.');
+        const conflict = await tx.scheduledSession.findFirst({
+          where: {
+            id: { not: sessionId },
+            status: { notIn: ['CANCELLED', 'SKIPPED', 'MERGED'] },
+            startsAt: { lt: planned.endsAt },
+            endsAt: { gt: planned.startsAt },
+            OR: [
+              { offering: { batchId: session.offering.batchId } },
+              {
+                offering: {
+                  faculty: {
+                    some: {
+                      active: true,
+                      staffProfileId: {
+                        in: faculty.map((f) => f.staffProfileId),
+                      },
+                      startDate: { lte: date },
+                      OR: [{ endDate: null }, { endDate: { gte: date } }],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        });
+        if (conflict)
+          throw new ConflictException(
+            'This time overlaps another class for the batch or teacher.',
+          );
+        await tx.scheduledSession.update({
+          where: { id: sessionId },
+          data: {
+            status: 'CANCELLED',
+            cancellationReason: `Moved to ${input.date}: ${input.reason}`,
+          },
+        });
+        const moved = await tx.scheduledSession.create({
+          data: {
+            sourceKey: `move:${sessionId}`,
+            offeringId: session.offeringId,
+            facultyAssignmentId: session.facultyAssignmentId,
+            sessionDate: date,
+            startsAt: planned.startsAt,
+            endsAt: planned.endsAt,
+            isExtraSession: true,
+          },
+        });
+        await tx.auditEvent.create({
+          data: {
+            actorId: user.id,
+            campusId: semester.campusId,
+            action: AuditAction.UPDATE,
+            entityType: 'ScheduledSession',
+            entityId: sessionId,
+            before: {
+              startsAt: session.startsAt.toISOString(),
+              endsAt: session.endsAt.toISOString(),
+            },
+            after: {
+              replacementId: moved.id,
+              date: input.date,
+              reason: input.reason,
+            },
+          },
+        });
+        return { offeringId: session.offeringId, sessionId: moved.id };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    return result;
   }
 
   private offeringScope(
@@ -419,6 +592,40 @@ function serializeDetail(offering: PlanningOffering) {
       hasLogs: session._count.logs > 0,
       isExtraSession: session.isExtraSession,
     })),
+    forecast: plan
+      ? decorateCalculation(
+          calculateRemainingSchedule(
+            plan.units.flatMap((unit) =>
+              unit.topics.map((topic) => ({
+                id: topic.id,
+                unitSequence: unit.sequence,
+                topicSequence: topic.sequence,
+                unitTitle: unit.title,
+                title: topic.title,
+                requiredMinutes: topic.plannedMinutes,
+                completionPercentage: Number(topic.currentCompletionPercentage),
+                skipped: topic.status === 'SKIPPED',
+              })),
+            ),
+            offering.sessions.map((session) => ({
+              ...session,
+              hasLogs: session._count.logs > 0,
+            })),
+            new Date(),
+          ),
+          offering.targetFinishDate,
+        )
+      : emptyCalculation(0),
+    coverage: plan
+      ? plan.units.flatMap((unit) =>
+          unit.topics.map((topic) => ({
+            id: topic.id,
+            title: topic.title,
+            completionPercentage: Number(topic.currentCompletionPercentage),
+            status: topic.status,
+          })),
+        )
+      : [],
     preview: decorateCalculation(calculation, offering.targetFinishDate),
     latestVersion: offering.scheduleVersions[0]
       ? serializeVersion(offering.scheduleVersions[0])

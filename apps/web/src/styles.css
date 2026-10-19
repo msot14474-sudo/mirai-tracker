@@ -9646,3 +9646,15 @@ body:has(.auth-shell) {
 .ai-markdown th { background: #f5f7fb; font-weight: 600; }
 .ai-markdown input[type="checkbox"] { width: auto; margin-right: 8px; }
 .ai-composer .ai-actions { flex-wrap: wrap; }
+
+.whatsapp-account { margin-top: 24px; padding: 28px; border: 1px solid #dce4f1; border-radius: 18px; background: white; }
+.whatsapp-account form, .whatsapp-account label { display: grid; gap: 12px; }
+.whatsapp-account form { max-width: 480px; }
+.whatsapp-account code { display: block; overflow-wrap: anywhere; padding: 14px; background: #f3f6fb; border-radius: 8px; }
+.whatsapp-account button { width: auto; justify-self: start; }
+
+.lecture-move-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 16px; background: #f7f9fd; border-radius: 12px; }
+.lecture-move-fields label { display: grid; gap: 6px; }
+.lecture-move-fields p { grid-column: 1 / -1; }
+.campus-person-row { padding: 16px 0; border-bottom: 1px solid #e5eaf2; }
+.campus-person-row > span { display: block; color: #61718a; margin: 4px 0; }

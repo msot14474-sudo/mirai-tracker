@@ -1,3 +1,4 @@
+import { calculateSubjectProgress, calculateExamReadiness } from '@mirai/calculations';
 import {
   BadRequestException,
   ForbiddenException,
@@ -55,6 +56,7 @@ export class AiContextService {
       orderBy: { id: 'asc' },
       include: {
         subject: { select: { name: true, code: true } },
+        sessions: {select: {sessionDate: true, startsAt: true, endsAt: true, status: true}},
         timetableEntries: {
           where: { active: true },
           select: {
@@ -73,6 +75,7 @@ export class AiContextService {
               select: {
                 name: true,
                 campus: { select: { id: true, name: true, timezone: true } },
+                defaultOnTrackThreshold: true, defaultTightThreshold: true,
                 examWindows: {
                   select: {
                     id: true,
@@ -311,11 +314,18 @@ export class AiContextService {
             examIds: t.examScopes.map((e) => e.examWindowId),
           })),
         ) ?? [];
-      const minutes = topics.reduce((a, t) => a + t.minutes, 0);
-      const completedMinutes = topics.reduce(
-        (a, t) => a + (t.minutes * t.completion) / 100,
+      const inScope = topics.filter(t => t.status !== 'SKIPPED');
+      const minutes = inScope.reduce((a, t) => a + t.minutes, 0);
+      const completedMinutes = inScope.reduce(
+        (a, t) => a + (t.status === 'COMPLETED' ? t.minutes : (t.minutes * t.completion) / 100),
         0,
       );
+      const monitoring = plan && o.targetFinishDate ? calculateSubjectProgress({
+        asOfDate: today, targetFinishDate: o.targetFinishDate.toISOString().slice(0,10),
+        thresholds: {onTrack: Number(o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold ?? 1.15), tight: Number(o.tightThreshold ?? o.batch.semester.defaultTightThreshold ?? 1)},
+        topics: topics.map(t => ({id:t.id,title:t.title,plannedMinutes:t.minutes,status:t.status,completionPercentage:t.completion,plannedFinishDate:t.finishDate})),
+        sessions: (o.sessions ?? []).map(session => ({sessionDate:session.sessionDate.toISOString().slice(0,10),plannedMinutes:Math.round((session.endsAt.getTime()-session.startsAt.getTime())/60000),status:session.status})),
+      }) : null;
       const overdue = topics.filter(
         (t) =>
           t.finishDate &&
@@ -340,6 +350,9 @@ export class AiContextService {
           `Follow up on ${unlogged} lecture${unlogged === 1 ? '' : 's'} without logs.`,
         );
       if (!o.faculty.length) issues.push('Assign a faculty member.');
+      if (!o.timetableEntries?.length) issues.push('Create the weekly timetable.');
+      if (monitoring?.status === 'DANGER') issues.push(`Teaching capacity is below remaining work: ${monitoring.availableHours} hours available, ${monitoring.remainingHours} hours remaining before the deadline.`);
+      if (monitoring?.status === 'TIGHT') issues.push('The timetable has little recovery buffer before the deadline.');
       const recentHelp = recentGaps.filter(
         (g) => g.session.offeringId === o.id,
       ).length;
@@ -352,28 +365,30 @@ export class AiContextService {
           (e) => (e.endDate ?? e.startDate).toISOString().slice(0, 10) >= today,
         )
         .map((e) => {
-          const scoped = topics.filter((t) => t.examIds.includes(e.id));
+          const scoped = inScope.filter((t) => t.examIds.includes(e.id));
+          const readiness = calculateExamReadiness(scoped.map(t => ({id:t.id,title:t.title,plannedMinutes:t.minutes,status:t.status,completionPercentage:t.completion})));
           return {
+            readiness,
             name: e.name,
             date: e.startDate.toISOString().slice(0, 10),
             syllabusDeadline: e.syllabusDeadline.toISOString().slice(0, 10),
             endDate: (e.endDate ?? e.startDate).toISOString().slice(0, 10),
             scopeDefined: scoped.length > 0,
-            plannedMinutes: scoped.reduce((sum, t) => sum + t.minutes, 0),
-            remainingMinutes: scoped.reduce(
-              (sum, t) => sum + t.minutes * (1 - t.completion / 100),
-              0,
-            ),
+            plannedMinutes: readiness.minutes.planned,
+            remainingMinutes: readiness.minutes.stillNeeded,
             scopeTopics: scoped.length,
             incompleteTopics: scoped.filter((t) => t.completion < 100).length,
           };
         });
-      for (const e of exams)
+      for (const e of exams) {
+        if (!e.scopeDefined) issues.push(`${e.name}: define the exam syllabus scope.`);
         if (e.syllabusDeadline <= today && e.incompleteTopics)
           issues.push(
             `${e.name}: ${e.incompleteTopics} exam topics remain at the syllabus deadline.`,
           );
+      }
       return {
+        monitoring,
         id: o.id,
         status: o.status,
         localDate: today,

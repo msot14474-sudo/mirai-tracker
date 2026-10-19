@@ -115,6 +115,28 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const facultyAccessApi = {
+  network: () =>
+    api<
+      Array<{
+        id: string;
+        name: string;
+        managerCount: number;
+        facultyCount: number;
+        people: Array<{
+          id: string;
+          name: string;
+          role: string;
+          status: string;
+          defaultSubjects?: Array<{id: string; name: string}>;
+          subjects: Array<{
+            offeringId: string;
+            subject: string;
+            batch: string;
+            semester: string;
+          }>;
+        }>;
+      }>
+    >('/faculty-access/network'),
   campus: (campusId: string) =>
     api<FacultyAccessDetail>(`/faculty-access/campuses/${campusId}`),
   create: (campusId: string, input: CreateFacultyInput) =>

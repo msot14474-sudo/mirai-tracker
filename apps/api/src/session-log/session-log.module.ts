@@ -9,5 +9,6 @@ import { TopicScheduleModule } from '../topic-schedule/topic-schedule.module';
   imports: [DatabaseModule, AuthModule, TopicScheduleModule],
   controllers: [SessionLogController],
   providers: [SessionLogService],
+  exports: [SessionLogService],
 })
 export class SessionLogModule {}

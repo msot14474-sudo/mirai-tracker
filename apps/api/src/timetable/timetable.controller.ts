@@ -48,6 +48,7 @@ export class TimetableController {
   }
 
   @Post('offerings/:offeringId/entries')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   create(
     @Param('offeringId') offeringId: string,
     @Body() body: unknown,
@@ -61,6 +62,7 @@ export class TimetableController {
   }
 
   @Patch('entries/:entryId')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   update(
     @Param('entryId') entryId: string,
     @Body() body: unknown,
@@ -74,6 +76,7 @@ export class TimetableController {
   }
 
   @Delete('entries/:entryId')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   @HttpCode(204)
   async archive(
     @Param('entryId') entryId: string,
@@ -83,6 +86,7 @@ export class TimetableController {
   }
 
   @Post('offerings/:offeringId/generate')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   generate(
     @Param('offeringId') offeringId: string,
     @CurrentUser() user: AuthenticatedUser,

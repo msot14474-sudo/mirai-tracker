@@ -30,6 +30,10 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
     return this.client.ping();
   }
 
+  async acquireLock(key: string, value: string, seconds: number) {
+    return (await this.client.set(key, value, 'EX', seconds, 'NX')) === 'OK';
+  }
+
   async get(key: string) {
     return this.client.get(key);
   }

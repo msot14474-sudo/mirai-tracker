@@ -231,7 +231,11 @@ function setup() {
     prisma,
     access,
     transaction,
-    service: new LessonPlanService(prisma as never, access as never),
+    service: new LessonPlanService(
+      prisma as never,
+      access as never,
+      { calculate: jest.fn().mockResolvedValue({}) } as never,
+    ),
   };
 }
 

@@ -30,6 +30,11 @@ const managers = [
 export class FacultyAccessController {
   constructor(private readonly facultyAccess: FacultyAccessService) {}
 
+  @Get('network')
+  network(@CurrentUser() user: AuthenticatedUser) {
+    return this.facultyAccess.network(user);
+  }
+
   @Get('campuses/:campusId')
   campus(
     @Param('campusId') campusId: string,
@@ -47,6 +52,7 @@ export class FacultyAccessController {
   }
 
   @Patch('accounts/:userId')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   updateAccount(
     @Param('userId') userId: string,
     @Body() body: unknown,
@@ -60,6 +66,7 @@ export class FacultyAccessController {
   }
 
   @Post('campuses/:campusId/faculty')
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   createFaculty(
     @Param('campusId') campusId: string,
     @Body() body: unknown,
@@ -73,7 +80,7 @@ export class FacultyAccessController {
   }
 
   @Post('campuses/:campusId/managers')
-  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
+  @Roles(UserRole.ADMIN)
   createCampusManager(
     @Param('campusId') campusId: string,
     @Body() body: unknown,
@@ -87,7 +94,7 @@ export class FacultyAccessController {
   }
 
   @Post('administrators')
-  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
+  @Roles(UserRole.ADMIN)
   createAdministrator(
     @Body() body: unknown,
     @CurrentUser() user: AuthenticatedUser,

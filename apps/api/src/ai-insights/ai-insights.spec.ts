@@ -372,3 +372,20 @@ it('marks provider-truncated replies as incomplete and never caches them as fini
   expect(result).toMatchObject({ incomplete: true, text: 'An unfinished answer' });
   expect(redis.setWithExpiry).not.toHaveBeenCalled();
 });
+
+it('uses dashboard calculations and excludes skipped work from AI monitoring', async () => {
+  const {db, context} = setup();
+  const rows = await db.subjectOffering.findMany();
+  const offering = rows[0] as any;
+  offering.targetFinishDate = new Date('2099-12-31');
+  offering.sessions = [];
+  offering.timetableEntries = [];
+  offering.lessonPlans[0].units[0].topics.push({id:'skipped',title:'Excluded',plannedMinutes:900,status:'SKIPPED',currentCompletionPercentage:0,examScopes:[]});
+  db.subjectOffering.findMany.mockResolvedValue([offering]);
+  const result = await context.snapshot(user('ADMIN'));
+  expect(result.subjects[0]?.plannedMinutes).toBe(200);
+  expect(result.subjects[0]?.coveredMinutes).toBe(50);
+  expect(result.subjects[0]?.monitoring?.status).toBe('DANGER');
+  expect(result.subjects[0]?.monitoring?.remainingHours).toBe(2.5);
+  expect(result.subjects[0]?.issues).toContain('Create the weekly timetable.');
+});
