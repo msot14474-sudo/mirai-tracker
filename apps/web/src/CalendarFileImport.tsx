@@ -11,6 +11,7 @@ type Entry = {
   teachingAllowed: boolean;
   examType: string;
   deadline?: string;
+  deadlineDefaulted?: boolean;
   evidence: string;
   concern: string;
 };
@@ -28,6 +29,75 @@ type Preview = {
     phase: string;
   };
 };
+function preparePreview(preview: Preview): Preview {
+  return {
+    ...preview,
+    entries: preview.entries.map((entry) =>
+      entry.kind === 'EXAM' && !entry.deadline
+        ? { ...entry, deadline: entry.start, deadlineDefaulted: true }
+        : entry,
+    ),
+  };
+}
+function calendarIssues(
+  entries: Entry[],
+  semesterStart: string,
+  semesterEnd: string,
+) {
+  const validDate = (date: string) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    Number.isFinite(Date.parse(date)) &&
+    new Date(date).toISOString().slice(0, 10) === date;
+  return entries.map((entry, index) => {
+    const problems: string[] = [];
+    if (!entry.title.trim()) problems.push('Enter an event title.');
+    else if (entry.title.trim().length > 160)
+      problems.push('Keep the title within 160 characters.');
+    const datesValid = validDate(entry.start) && validDate(entry.end);
+    if (!datesValid) problems.push('Choose a valid start and end date.');
+    else if (entry.end < entry.start)
+      problems.push('End date must be on or after the start date.');
+    else if (entry.start < semesterStart || entry.end > semesterEnd)
+      problems.push(
+        `Outside this semester (${semesterStart} to ${semesterEnd}). Correct the dates or remove this entry.`,
+      );
+    if (
+      entry.kind === 'EXAM' &&
+      (!entry.deadline ||
+        !validDate(entry.deadline) ||
+        entry.deadline < semesterStart ||
+        entry.deadline > entry.start)
+    )
+      problems.push(
+        'Syllabus deadline must be within the semester and on or before the exam starts.',
+      );
+    if (
+      datesValid &&
+      entries.some(
+        (other, i) =>
+          i !== index &&
+          validDate(other.start) &&
+          validDate(other.end) &&
+          entry.start <= other.end &&
+          entry.end >= other.start,
+      )
+    )
+      problems.push(
+        'These dates overlap another entry. Combine the events or correct their dates before saving.',
+      );
+    if (
+      entry.kind === 'EXAM' &&
+      entries.some(
+        (other, i) =>
+          i !== index && other.kind === 'EXAM' && other.title === entry.title,
+      )
+    )
+      problems.push(
+        'Another exam has this name. Use a distinct name or combine its dates.',
+      );
+    return problems;
+  });
+}
 async function request(
   path: string,
   body?: FormData | object,
@@ -56,6 +126,7 @@ async function request(
 export function CalendarFileImport({ campusId }: { campusId?: string }) {
   const client = useQueryClient();
   const reading = useRef<AbortController | null>(null);
+  const entryCards = useRef<Array<HTMLDetailsElement | null>>([]);
   useEffect(() => () => reading.current?.abort(), []);
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
@@ -70,6 +141,19 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
   const [message, setMessage] = useState('');
   const [reviewed, setReviewed] = useState(false);
   const semester = semesters.data?.find((s) => s.id === semesterId);
+  const issues = calendarIssues(
+    preview?.entries || [],
+    semester?.startDate.slice(0, 10) || '',
+    semester?.endDate.slice(0, 10) || '',
+  );
+  const issueCount = issues.filter((problems) => problems.length).length;
+  const outsideCount =
+    preview?.entries.filter(
+      (entry) =>
+        semester &&
+        (entry.end < semester.startDate.slice(0, 10) ||
+          entry.start > semester.endDate.slice(0, 10)),
+    ).length || 0;
   function reset() {
     setPreview(null);
     setReviewed(false);
@@ -92,7 +176,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
         undefined,
         controller.signal,
       )) as Preview;
-      setPreview(next);
+      setPreview(preparePreview(next));
       if (
         !next.verified &&
         progress &&
@@ -120,7 +204,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
         form,
         reading.current.signal,
       )) as Preview;
-      setPreview(result);
+      setPreview(preparePreview(result));
       await verify(result);
     } catch (e) {
       setError(
@@ -131,7 +215,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
     }
   }
   async function save() {
-    if (!preview) return;
+    if (!preview || !preview.verified || !reviewed || issueCount) return;
     setBusy('Saving dates and recalculating teaching sessions…');
     setError('');
     try {
@@ -159,12 +243,33 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
   function edit(index: number, changes: Partial<Entry>) {
     setReviewed(false);
     setMessage('');
+    setError('');
     setPreview(
       (p) =>
         p && {
           ...p,
           entries: p.entries.map((e, i) =>
-            i === index ? { ...e, ...changes } : e,
+            i === index
+              ? {
+                  ...e,
+                  ...changes,
+                  ...(changes.start && (!e.end || e.end === e.start)
+                    ? { end: changes.start }
+                    : {}),
+                  ...(changes.start && e.deadlineDefaulted
+                    ? { deadline: changes.start }
+                    : {}),
+                  ...(changes.kind === 'EXAM' && !e.deadline
+                    ? {
+                        deadline: changes.start || e.start,
+                        deadlineDefaulted: true,
+                      }
+                    : {}),
+                  ...(changes.deadline !== undefined
+                    ? { deadlineDefaulted: false }
+                    : {}),
+                }
+              : e,
           ),
         },
     );
@@ -239,7 +344,23 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           Read and verify calendar
         </button>
       </fieldset>
-      {busy && <p role="status">{busy}</p>}
+      {busy && (
+        <div className="calendar-reading-status" role="status">
+          <span>{busy}</span>
+          {preview?.progress && !preview.verified && (
+            <progress
+              aria-label="Calendar verification progress"
+              value={preview.progress.completed}
+              max={preview.progress.total || 1}
+            />
+          )}
+          <small>
+            {preview?.verified
+              ? 'Your changes are being saved.'
+              : 'You can leave this page open. Verification continues automatically.'}
+          </small>
+        </div>
+      )}
       {error && (
         <p role="alert" className="error-message">
           {error}
@@ -261,7 +382,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
                 : 'AI reading and verification completed. Check the dates and resolve any concerns before saving.'
               : 'Calendar reading and verification are in progress. Nothing has been saved.'}
           </p>
-          {!preview.verified && (
+          {!preview.verified && !busy && (
             <button
               type="button"
               onClick={async () => {
@@ -279,210 +400,332 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
               Continue verification
             </button>
           )}
-          {preview.warnings.length > 0 && (
-            <ul className="calendar-file-warnings">
-              {preview.warnings.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
+          {preview.verified && (
+            <p className="calendar-deadline-note">
+              Exam syllabus deadlines use the exam start date when the file does
+              not supply one. You can change each deadline below.
+            </p>
+          )}
+          {preview.warnings.length > 0 && preview.verified && (
+            <details className="calendar-source-notes">
+              <summary>File notes ({preview.warnings.length})</summary>
+              <ul>
+                {preview.warnings.map((warning, i) => (
+                  <li key={i}>{warning}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {preview.verified && issueCount > 0 && (
+            <div className="calendar-validation-summary" role="alert">
+              <div>
+                <strong>
+                  {issueCount}{' '}
+                  {issueCount === 1 ? 'entry needs' : 'entries need'} attention
+                </strong>
+                <p>
+                  Correct the marked fields or remove entries you do not want to
+                  import.
+                </p>
+              </div>
+              <div className="calendar-action-row">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    const card =
+                      entryCards.current[
+                        issues.findIndex((item) => item.length)
+                      ];
+                    if (card) {
+                      card.open = true;
+                      card.scrollIntoView({ block: 'center' });
+                    }
+                  }}
+                >
+                  Go to first issue
+                </button>
+                {outsideCount > 0 && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setReviewed(false);
+                      setError('');
+                      setPreview(
+                        (p) =>
+                          p && {
+                            ...p,
+                            entries: p.entries.filter(
+                              (entry) =>
+                                entry.end >= semester!.startDate.slice(0, 10) &&
+                                entry.start <= semester!.endDate.slice(0, 10),
+                            ),
+                          },
+                      );
+                    }}
+                  >
+                    Remove {outsideCount}{' '}
+                    {outsideCount === 1 ? 'entry' : 'entries'} outside semester
+                  </button>
+                )}
+              </div>
+            </div>
           )}
           <div className="calendar-file-entries" hidden={!preview.verified}>
             {preview.entries.map((e, i) => {
-              const outside =
-                semester &&
-                (e.start < semester.startDate.slice(0, 10) ||
-                  e.end > semester.endDate.slice(0, 10));
               return (
-                <article className="calendar-file-entry" key={i}>
-                  <div className="calendar-file-entry-heading">
-                    <strong>Entry {i + 1}</strong>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => {
-                        setReviewed(false);
-                        setPreview(
-                          (p) =>
-                            p && {
-                              ...p,
-                              entries: p.entries.filter((_, j) => i !== j),
-                            },
-                        );
-                      }}
+                <details
+                  className={`calendar-file-entry${issues[i]?.length ? ' has-issues' : ''}`}
+                  key={i}
+                  ref={(element) => {
+                    entryCards.current[i] = element;
+                  }}
+                  open={!!issues[i]?.length || preview.entries.length === 1}
+                >
+                  <summary className="calendar-entry-summary">
+                    <span className="calendar-entry-number">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span>
+                      <strong>{e.title || 'New calendar entry'}</strong>
+                      <small>
+                        {e.start || 'Choose date'}
+                        {e.end && e.end !== e.start ? ` – ${e.end}` : ''} ·{' '}
+                        {e.kind.replaceAll('_', ' ').toLowerCase()}
+                      </small>
+                    </span>
+                    <span
+                      className={`calendar-entry-state${issues[i]?.length ? ' needs-attention' : ''}`}
                     >
-                      Remove entry
-                    </button>
-                  </div>
-                  <label>
-                    Title
-                    <input
-                      value={e.title}
-                      onChange={(v) => edit(i, { title: v.target.value })}
-                    />
-                  </label>
-                  <div className="calendar-file-inputs">
-                    <label>
-                      From
-                      <input
-                        type="date"
-                        value={e.start}
-                        onChange={(v) => edit(i, { start: v.target.value })}
-                      />
-                    </label>
-                    <label>
-                      To
-                      <input
-                        type="date"
-                        value={e.end}
-                        onChange={(v) => edit(i, { end: v.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Type
-                      <select
-                        value={e.kind}
-                        onChange={(v) =>
-                          edit(i, {
-                            kind: v.target.value,
-                            teachingAllowed: [
-                              'HOLIDAY',
-                              'CAMPUS_CLOSED',
-                              'EXAM',
-                            ].includes(v.target.value)
-                              ? false
-                              : e.teachingAllowed,
-                          })
-                        }
+                      {issues[i]?.length
+                        ? 'Needs attention'
+                        : e.concern
+                          ? 'Check source'
+                          : 'Ready'}
+                    </span>
+                  </summary>
+                  <div className="calendar-entry-fields">
+                    <div className="calendar-file-entry-heading">
+                      <strong>Edit entry {i + 1}</strong>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setReviewed(false);
+                          setError('');
+                          setPreview(
+                            (p) =>
+                              p && {
+                                ...p,
+                                entries: p.entries.filter((_, j) => i !== j),
+                              },
+                          );
+                        }}
                       >
-                        {[
-                          'HOLIDAY',
-                          'EVENT',
-                          'EXTRA_WORKING_DAY',
-                          'CAMPUS_CLOSED',
-                          'EXAM',
-                        ].map((k) => (
-                          <option key={k} value={k}>
-                            {k.replaceAll('_', ' ')}
-                          </option>
+                        Remove entry
+                      </button>
+                    </div>
+                    {!!issues[i]?.length && (
+                      <ul className="calendar-entry-errors">
+                        {issues[i]!.map((problem) => (
+                          <li key={problem}>{problem}</li>
                         ))}
-                      </select>
+                      </ul>
+                    )}
+                    <label>
+                      Title
+                      <input
+                        maxLength={160}
+                        value={e.title}
+                        onChange={(v) => edit(i, { title: v.target.value })}
+                      />
                     </label>
-                  </div>
-                  {e.kind === 'EXAM' && (
                     <div className="calendar-file-inputs">
                       <label>
-                        Exam type
+                        From
+                        <input
+                          type="date"
+                          min={semester?.startDate.slice(0, 10)}
+                          max={semester?.endDate.slice(0, 10)}
+                          value={e.start}
+                          onChange={(v) => edit(i, { start: v.target.value })}
+                        />
+                      </label>
+                      <label>
+                        To
+                        <input
+                          type="date"
+                          min={e.start || semester?.startDate.slice(0, 10)}
+                          max={semester?.endDate.slice(0, 10)}
+                          value={e.end}
+                          onChange={(v) => edit(i, { end: v.target.value })}
+                        />
+                      </label>
+                      <label>
+                        Type
                         <select
-                          value={e.examType}
+                          value={e.kind}
                           onChange={(v) =>
-                            edit(i, { examType: v.target.value })
+                            edit(i, {
+                              kind: v.target.value,
+                              teachingAllowed: [
+                                'HOLIDAY',
+                                'CAMPUS_CLOSED',
+                                'EXAM',
+                              ].includes(v.target.value)
+                                ? false
+                                : v.target.value === 'EXTRA_WORKING_DAY'
+                                  ? true
+                                  : e.teachingAllowed,
+                            })
                           }
                         >
                           {[
-                            'SESSIONAL',
-                            'MID_TERM',
-                            'PUT',
-                            'END_TERM',
-                            'OTHER',
+                            'HOLIDAY',
+                            'EVENT',
+                            'EXTRA_WORKING_DAY',
+                            'CAMPUS_CLOSED',
+                            'EXAM',
                           ].map((k) => (
-                            <option key={k}>{k}</option>
+                            <option key={k} value={k}>
+                              {k.replaceAll('_', ' ')}
+                            </option>
                           ))}
                         </select>
                       </label>
-                      <label>
-                        Syllabus deadline
+                    </div>
+                    {e.kind === 'EXAM' && (
+                      <div className="calendar-file-inputs">
+                        <label>
+                          Exam type
+                          <select
+                            value={e.examType}
+                            onChange={(v) =>
+                              edit(i, { examType: v.target.value })
+                            }
+                          >
+                            {[
+                              'SESSIONAL',
+                              'MID_TERM',
+                              'PUT',
+                              'END_TERM',
+                              'OTHER',
+                            ].map((k) => (
+                              <option key={k}>{k}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Syllabus deadline
+                          <input
+                            type="date"
+                            value={e.deadline || ''}
+                            max={e.start}
+                            min={semester?.startDate.slice(0, 10)}
+                            onChange={(v) =>
+                              edit(i, { deadline: v.target.value })
+                            }
+                          />
+                          <small>
+                            {e.deadlineDefaulted
+                              ? 'Defaults to the exam start date; choose an earlier date if needed.'
+                              : 'Syllabus coverage must finish by this date.'}
+                          </small>
+                        </label>
+                      </div>
+                    )}
+                    {!['HOLIDAY', 'CAMPUS_CLOSED'].includes(e.kind) && (
+                      <label className="calendar-file-check">
                         <input
-                          type="date"
-                          value={e.deadline || ''}
-                          max={e.start}
-                          min={semester?.startDate.slice(0, 10)}
+                          type="checkbox"
+                          checked={e.teachingAllowed}
                           onChange={(v) =>
-                            edit(i, { deadline: v.target.value })
+                            edit(i, { teachingAllowed: v.target.checked })
                           }
                         />
-                        <small>
-                          Choose when syllabus coverage must finish.
-                        </small>
+                        Regular teaching is allowed on these dates
                       </label>
-                    </div>
-                  )}
-                  {!['HOLIDAY', 'CAMPUS_CLOSED'].includes(e.kind) && (
-                    <label className="calendar-file-check">
-                      <input
-                        type="checkbox"
-                        checked={e.teachingAllowed}
-                        onChange={(v) =>
-                          edit(i, { teachingAllowed: v.target.checked })
-                        }
-                      />
-                      Regular teaching is allowed on these dates
-                    </label>
-                  )}
-                  {outside && (
-                    <p role="alert">
-                      Outside the selected semester. Remove this entry or
-                      correct its dates.
-                    </p>
-                  )}
-                  {e.concern && (
-                    <p className="calendar-file-warnings">Check: {e.concern}</p>
-                  )}
-                  <details>
-                    <summary>Source evidence</summary>
-                    <p>
-                      {e.evidence ||
-                        'No evidence provided — check this entry against the original file.'}
-                    </p>
-                  </details>
-                </article>
+                    )}
+                    {e.concern && (
+                      <p className="calendar-file-warnings">
+                        Check: {e.concern}
+                      </p>
+                    )}
+                    <details>
+                      <summary>Source evidence</summary>
+                      <p>
+                        {e.evidence ||
+                          'No evidence provided — check this entry against the original file.'}
+                      </p>
+                    </details>
+                  </div>
+                </details>
               );
             })}
           </div>
-          <button
-            type="button"
-            className="secondary"
-            disabled={!preview.verified}
-            onClick={() => {
-              setReviewed(false);
-              setPreview(
-                (p) =>
-                  p && {
-                    ...p,
-                    entries: [
-                      ...p.entries,
-                      {
-                        title: '',
-                        start: '',
-                        end: '',
-                        kind: 'EVENT',
-                        teachingAllowed: true,
-                        examType: 'OTHER',
-                        evidence: 'Manually added during review',
-                        concern: '',
-                      },
-                    ],
-                  },
-              );
-            }}
-          >
-            Add a missing date
-          </button>
-          <label className="calendar-file-check">
-            <input
-              type="checkbox"
-              checked={reviewed}
-              onChange={(e) => setReviewed(e.target.checked)}
-            />
-            I checked the source, corrected ambiguous dates and approved
-            replacing existing entries on these dates.
-          </label>
-          <button
-            type="button"
-            disabled={!preview.verified || !reviewed || !preview.entries.length}
-            onClick={save}
-          >
-            Save calendar changes
-          </button>
+          {preview.verified && (
+            <div className="calendar-review-footer">
+              <div className="calendar-action-row">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setReviewed(false);
+                    setError('');
+                    setPreview(
+                      (p) =>
+                        p && {
+                          ...p,
+                          entries: [
+                            ...p.entries,
+                            {
+                              title: '',
+                              start: '',
+                              end: '',
+                              kind: 'EVENT',
+                              teachingAllowed: true,
+                              examType: 'OTHER',
+                              evidence: 'Manually added during review',
+                              concern: '',
+                            },
+                          ],
+                        },
+                    );
+                  }}
+                >
+                  Add a missing date
+                </button>
+                <span className="calendar-review-count">
+                  {preview.entries.length} entries ·{' '}
+                  {issueCount
+                    ? `${issueCount} ${issueCount === 1 ? 'needs' : 'need'} attention`
+                    : 'Ready for your review'}
+                </span>
+              </div>
+              <label className="calendar-file-check">
+                <input
+                  type="checkbox"
+                  checked={reviewed}
+                  onChange={(e) => setReviewed(e.target.checked)}
+                />
+                I checked the source, corrected ambiguous dates and approved
+                replacing existing entries on these dates.
+              </label>
+              <button
+                type="button"
+                disabled={
+                  !preview.verified ||
+                  !reviewed ||
+                  !preview.entries.length ||
+                  issueCount > 0
+                }
+                onClick={save}
+              >
+                Save calendar changes
+              </button>
+            </div>
+          )}
         </fieldset>
       )}
     </section>

@@ -7,7 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { academicApi } from './academic';
+import { academicApi, Subject } from './academic';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 afterEach(() => {
   cleanup();
@@ -79,6 +79,90 @@ it('explains an unlinked subject instead of allowing a disconnected assignment',
     </QueryClientProvider>,
   );
   expect(screen.getByText(/Pending semester link/)).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Assign teacher' }),
+  ).not.toBeInTheDocument();
+});
+
+it('updates the saved teacher in the catalog without waiting for another read', async () => {
+  const subject: Subject = {
+    id: 's',
+    name: 'Math',
+    code: 'M',
+    active: true,
+    description: null,
+    offerings: [
+      {
+        id: 'o',
+        batch: { name: 'A', semester: { name: 'Term' } },
+        faculty: [],
+      },
+    ],
+  };
+  const saved = {
+    ...subject,
+    offerings: [
+      {
+        ...subject.offerings![0]!,
+        faculty: [{ staffProfile: { id: 't', user: { name: 'Asha' } } }],
+      },
+    ],
+  };
+  vi.spyOn(academicApi, 'subjectFaculty').mockResolvedValue([
+    { id: 't', user: { name: 'Asha' } },
+  ]);
+  vi.spyOn(academicApi, 'assignSubjectTeacher').mockResolvedValue({
+    assigned: true,
+    subject: saved,
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(['academic', 'subjects', 'campus'], [subject]);
+  render(
+    <QueryClientProvider client={client}>
+      <SubjectTeacherAssignment campusId="campus" subject={subject} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Assign teacher' }));
+  await screen.findByText('Asha');
+  fireEvent.change(screen.getByLabelText('Teacher'), {
+    target: { value: 't' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save teacher' }));
+  await screen.findByText('Teacher assignment saved.');
+  expect(client.getQueryData(['academic', 'subjects', 'campus'])).toEqual([
+    saved,
+  ]);
+});
+
+it('shows linked teachers without assignment controls for read-only users', () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SubjectTeacherAssignment
+        readOnly
+        campusId="campus"
+        subject={{
+          id: 's',
+          name: 'DSA',
+          code: 'DSA',
+          description: null,
+          active: true,
+          offerings: [
+            {
+              id: 'o',
+              batch: { name: 'Section A', semester: { name: 'Sem 1' } },
+              faculty: [{ staffProfile: { id: 't', user: { name: 'Asha' } } }],
+            },
+          ],
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText('Sem 1')).toBeInTheDocument();
+  expect(screen.getByText('Section A')).toBeInTheDocument();
+  expect(screen.getByText('Asha')).toBeInTheDocument();
+  expect(screen.queryByText('Not assigned')).not.toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: 'Assign teacher' }),
   ).not.toBeInTheDocument();

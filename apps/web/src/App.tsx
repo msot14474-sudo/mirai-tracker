@@ -1335,7 +1335,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         if (!canManageAcademicCalendar) return <CampusAcademicOverview />;
         return (
           <SemesterSetup
-            canAssignTeachers={roles.includes('CAMPUS_MANAGER')}
+            canAssignTeachers={roles.includes('ADMIN') || roles.includes('CAMPUS_MANAGER')}
             key={selectedCampusId}
             initialCampusId={selectedCampusId}
           />
@@ -1350,7 +1350,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'faculty-access':
         return (
           <FacultyAccessWorkspace
-            canAssignTeachers={roles.includes('CAMPUS_MANAGER')}
+            canAssignTeachers={roles.includes('ADMIN') || roles.includes('CAMPUS_MANAGER')}
             key={selectedCampusId}
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}

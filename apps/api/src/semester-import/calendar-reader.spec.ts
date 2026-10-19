@@ -18,6 +18,8 @@ describe('Calendar file reading', () => {
       ...semester,
     );
     expect(result.needsAi).toBe(false);
+    expect(result.source).toContain('Event: Mid-Term');
+    expect(result.source).toContain('Start date: 05-Oct-2026');
     expect(result.warnings).toEqual([]);
     expect(result.entries).toEqual(
       expect.arrayContaining([
@@ -51,6 +53,7 @@ describe('Calendar file reading', () => {
     expect(result.warnings).toHaveLength(3);
     expect(result.warnings[0]).toContain('row 2');
     expect(readCalendarDate('25-Dec', [2026, 2027])).toBeUndefined();
+    expect(readCalendarDate('25/12/2026', [2026], 'MDY')).toBeUndefined();
   });
   it('supports explicit Indian date formats and named months without changing partial semester dates', () => {
     const result = readCalendarSheets(
@@ -145,4 +148,59 @@ describe('Calendar file reading', () => {
       ]),
     ).toHaveLength(2);
   });
+});
+
+import { reconcileCalendarEntries } from './calendar-reader';
+it('retains every structured source row when AI misses or changes a date', () => {
+  const source = readCalendarSheets(
+    [
+      {
+        name: 'Calendar',
+        rows: [
+          ['Date', 'Event', 'Category'],
+          ['2026-09-28', 'Sessional', 'Exam'],
+          ['2026-10-02', 'Gandhi Jayanti', 'Holiday'],
+        ],
+      },
+    ],
+    '2026-07-18',
+    '2026-12-18',
+  ).entries;
+  const result = reconcileCalendarEntries(
+    source,
+    [{ ...source[0]!, start: '2026-09-29', end: '2026-09-29' }],
+    true,
+  );
+  expect(result).toHaveLength(2);
+  expect(result.map((entry) => entry.start)).toEqual([
+    '2026-09-28',
+    '2026-10-02',
+  ]);
+  expect(result[0]!.concern).toContain('file values were kept');
+});
+it('skips undated legend sheets while keeping dated tables', () => {
+  const result = readCalendarSheets(
+    [
+      {
+        name: 'Academic Calendar',
+        rows: [
+          ['Date', 'Event'],
+          ['2026-10-02', 'Holiday'],
+        ],
+      },
+      {
+        name: 'Legend',
+        rows: [
+          ['Category / Legend item', 'Meaning / Notes'],
+          ['Exam', 'Examination'],
+        ],
+      },
+    ],
+    '2026-07-18',
+    '2026-12-18',
+  );
+  expect(result.needsAi).toBe(false);
+  expect(result.entries).toHaveLength(1);
+  expect(result.source).not.toContain('Sheet: Legend');
+  expect(result.warnings).toEqual([]);
 });

@@ -28,7 +28,16 @@ export function SubjectTeacherAssignment({
         staffProfileId,
         ...(offeringId ? { offeringId } : {}),
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result.subject) {
+        const key = ['academic', 'subjects', campusId];
+        await client.cancelQueries({ queryKey: key });
+        client.setQueryData<Subject[]>(key, (current) =>
+          current?.map((item) =>
+            item.id === subject.id ? result.subject! : item,
+          ),
+        );
+      }
       setOpen(false);
       setStaff('');
       await client.invalidateQueries();
@@ -39,22 +48,40 @@ export function SubjectTeacherAssignment({
   )?.staffProfile;
   return (
     <div className="subject-teacher-assignment">
-      <p>
-        <b>Default teacher:</b>{' '}
-        {teacher
-          ? `${teacher.user.name}${!teacher.active || teacher.user.status !== 'ACTIVE' ? ' (inactive)' : ''}`
-          : 'Not assigned'}
-      </p>
-      {subject.offerings?.map((o) => (
-        <p key={o.id}>
-          <b>
-            {o.batch.name} · {o.batch.semester.name}:
-          </b>{' '}
-          {o.faculty.length
-            ? o.faculty.map((f) => f.staffProfile.user.name).join(', ')
-            : 'No teacher assigned'}
+      {teacher && (
+        <p className="subject-default-teacher">
+          <b>Default for new batches:</b> {teacher.user.name}
+          {!teacher.active || teacher.user.status !== 'ACTIVE'
+            ? ' (inactive)'
+            : ''}
         </p>
-      ))}
+      )}
+      <div className="subject-batch-list">
+        {subject.offerings?.map((o) => (
+          <dl className="subject-batch-row" key={o.id}>
+            <div>
+              <dt>Semester</dt>
+              <dd>{o.batch.semester.name}</dd>
+            </div>
+            <div>
+              <dt>Batch</dt>
+              <dd>{o.batch.name}</dd>
+            </div>
+            <div>
+              <dt>Assigned teacher</dt>
+              <dd className={o.faculty.length ? '' : 'subject-unassigned'}>
+                {o.faculty.length
+                  ? [
+                      ...new Set(
+                        o.faculty.map((f) => f.staffProfile.user.name),
+                      ),
+                    ].join(', ')
+                  : 'Not assigned'}
+              </dd>
+            </div>
+          </dl>
+        ))}
+      </div>
       {!subject.offerings?.length && (
         <p role="status">
           Pending semester link. The admin/program manager must link this
@@ -66,8 +93,15 @@ export function SubjectTeacherAssignment({
         <button
           type="button"
           className="secondary"
+          aria-expanded={open}
           onClick={() => {
             assignment.reset();
+            if (!open) {
+              setOffering(
+                subject.offerings?.length === 1 ? subject.offerings[0]!.id : '',
+              );
+              setStaff('');
+            }
             setOpen((v) => !v);
           }}
         >

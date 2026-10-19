@@ -128,20 +128,18 @@ it('shows direct CSV verification without making an AI request', async () => {
       status: 'ACTIVE',
     },
   ]);
-  const fetch = vi
-    .spyOn(globalThis, 'fetch')
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          token: 'token',
-          entries: [],
-          warnings: [],
-          method: 'direct',
-          verified: true,
-        }),
-        { headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
+  const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        token: 'token',
+        entries: [],
+        warnings: [],
+        method: 'direct',
+        verified: true,
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    ),
+  );
   render(
     <QueryClientProvider client={new QueryClient()}>
       <CalendarFileImport campusId="campus" />
@@ -220,7 +218,8 @@ it('automatically continues sections and resumes verification after a failure', 
   });
   fireEvent.click(screen.getByText('Read and verify calendar'));
   expect(await screen.findByRole('alert')).toHaveTextContent('AI is busy');
-  expect(screen.getByText('Save calendar changes')).toBeDisabled();
+  expect(screen.queryByText('Save calendar changes')).not.toBeInTheDocument();
+  expect(screen.queryByText('Add a missing date')).not.toBeInTheDocument();
   fireEvent.click(screen.getByText('Continue verification'));
   await screen.findByText(/AI reading and verification completed/);
   expect(
@@ -229,4 +228,100 @@ it('automatically continues sections and resumes verification after a failure', 
   expect(
     fetch.mock.calls.filter(([url]) => String(url).endsWith('/verify')),
   ).toHaveLength(5);
+});
+
+it('prefills missing exam deadlines, blocks invalid edits inline and saves a corrected date without a reload', async () => {
+  vi.spyOn(academicApi, 'semesters').mockResolvedValue([
+    {
+      id: 'semester',
+      name: 'Autumn',
+      startDate: '2026-07-18',
+      endDate: '2026-12-18',
+      workingSaturdayRule: 'SECOND_AND_FOURTH',
+      campusId: 'campus',
+      status: 'ACTIVE',
+    },
+  ]);
+  const fetch = vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(
+      async (url) =>
+        new Response(
+          JSON.stringify(
+            String(url).endsWith('/commit')
+              ? { saved: true, message: 'Saved calendar' }
+              : {
+                  token: 'token',
+                  verified: true,
+                  method: 'ai',
+                  warnings: [],
+                  entries: [
+                    {
+                      title: '1st Sessional',
+                      kind: 'EXAM',
+                      start: '2026-09-28',
+                      end: '2026-09-30',
+                      examType: 'SESSIONAL',
+                      teachingAllowed: false,
+                      evidence: 'Academic Calendar row 17',
+                      concern: '',
+                    },
+                  ],
+                },
+          ),
+          { headers: { 'Content-Type': 'application/json' } },
+        ),
+    );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CalendarFileImport campusId="campus" />
+    </QueryClientProvider>,
+  );
+  await screen.findByText(/Autumn/);
+  fireEvent.change(screen.getByLabelText('1. Choose semester'), {
+    target: { value: 'semester' },
+  });
+  fireEvent.change(screen.getByLabelText('2. Upload calendar'), {
+    target: { files: [new File(['calendar'], 'calendar.xlsx')] },
+  });
+  fireEvent.click(screen.getByText('Read and verify calendar'));
+  await screen.findByText(/AI reading and verification completed/);
+  expect(screen.getByLabelText(/Syllabus deadline/)).toHaveValue('2026-09-28');
+  fireEvent.change(screen.getByLabelText(/Syllabus deadline/), {
+    target: { value: '2026-10-02' },
+  });
+  expect(screen.getByText('1 entry needs attention')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(/I checked the source/));
+  expect(screen.getByText('Save calendar changes')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(/Syllabus deadline/), {
+    target: { value: '2026-09-27' },
+  });
+  expect(screen.queryByText('1 entry needs attention')).not.toBeInTheDocument();
+  expect(screen.getByLabelText(/I checked the source/)).not.toBeChecked();
+  fireEvent.click(screen.getByText('Add a missing date'));
+  fireEvent.change(screen.getAllByLabelText('Title')[1]!, {
+    target: { value: 'College holiday' },
+  });
+  fireEvent.change(screen.getAllByLabelText('From')[1]!, {
+    target: { value: '2026-10-02' },
+  });
+  expect(screen.getAllByLabelText('To')[1]).toHaveValue('2026-10-02');
+  fireEvent.change(screen.getAllByLabelText('Type')[1]!, {
+    target: { value: 'HOLIDAY' },
+  });
+  fireEvent.click(screen.getByLabelText(/I checked the source/));
+  fireEvent.click(screen.getByText('Save calendar changes'));
+  await screen.findByText('Saved calendar');
+  const saved = JSON.parse(
+    String(
+      fetch.mock.calls.find(([url]) => String(url).endsWith('/commit'))?.[1]
+        ?.body,
+    ),
+  );
+  expect(saved.entries[0].deadline).toBe('2026-09-27');
+  expect(saved.entries[1]).toMatchObject({
+    start: '2026-10-02',
+    end: '2026-10-02',
+    teachingAllowed: false,
+  });
 });

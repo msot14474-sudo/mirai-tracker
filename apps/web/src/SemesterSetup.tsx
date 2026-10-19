@@ -7,6 +7,7 @@ import {
   dateOnly,
   SaturdayRule,
   GeneratedCalendar,
+  Subject,
 } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -378,9 +379,14 @@ function SubjectSetup({
     enabled: !!semesterId,
   });
 
+  const subjectQueryKey = ['academic', 'subjects', campusId];
   const deletion = useMutation({
     mutationFn: academicApi.deleteSubject,
-    onSuccess: async () => {
+    onSuccess: async (_, deletedId) => {
+      await queryClient.cancelQueries({ queryKey: subjectQueryKey });
+      queryClient.setQueryData<Subject[]>(subjectQueryKey, (current) =>
+        current?.filter((subject) => subject.id !== deletedId),
+      );
       setSavedSubject('');
       await queryClient.invalidateQueries();
     },
@@ -401,7 +407,15 @@ function SubjectSetup({
           : { batchName, batchCode, trackName, trackCode }),
         description: description.trim() || null,
       }),
+    onMutate: () => queryClient.cancelQueries({ queryKey: subjectQueryKey }),
     onSuccess: async (subject) => {
+      // A read started before the write must not replace the saved subject with an old list.
+      await queryClient.cancelQueries({ queryKey: subjectQueryKey });
+      queryClient.setQueryData<Subject[]>(subjectQueryKey, (current = []) =>
+        [...current.filter((item) => item.id !== subject.id), subject].sort(
+          (a, b) => a.code.localeCompare(b.code),
+        ),
+      );
       setCode('');
       setName('');
       setDescription('');
@@ -426,8 +440,8 @@ function SubjectSetup({
         >
           <h3>Add subject</h3>
           <p>
-            Create the subject in a semester batch so the campus manager can
-            assign a teacher and schedule classes.
+            Create the subject in a semester batch, then assign its teacher. The
+            campus manager can schedule its classes in Timetable.
           </p>
           <label>
             Semester
@@ -559,7 +573,13 @@ function SubjectSetup({
       >
         <div className="subheading-row">
           <h3 id="subject-catalog-title">Subject catalog</h3>
-          <span>{subjects.data?.length ?? 0} subjects</span>
+          <span className="subject-count">
+            {subjects.data
+              ? `${subjects.data.length} ${subjects.data.length === 1 ? 'subject' : 'subjects'}`
+              : subjects.isLoading
+                ? 'Loading…'
+                : 'Unavailable'}
+          </span>
         </div>
         {subjects.isLoading ? (
           <LoadingSkeleton variant="cards" label="Loading subjects" />
@@ -581,19 +601,40 @@ function SubjectSetup({
         ) : null}
         <div className="subject-list">
           {subjects.data?.map((subject) => (
-            <article key={subject.id}>
-              <span>{subject.code}</span>
-              <div>
-                <strong>{subject.name}</strong>
-                {subject.description ? <p>{subject.description}</p> : null}
-                <SubjectTeacherAssignment
-                  readOnly={!canAssignTeachers}
-                  subject={subject}
-                  campusId={campusId}
-                />
+            <article key={subject.id} className="subject-card">
+              <header className="subject-card-heading">
+                <div className="subject-card-identity">
+                  <span className="subject-code">{subject.code}</span>
+                  <h4>{subject.name}</h4>
+                  {subject.description ? <p>{subject.description}</p> : null}
+                </div>
+                <button
+                  type="button"
+                  className="academic-delete"
+                  disabled={deletion.isPending}
+                  aria-label={`Delete subject ${subject.name}`}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`,
+                      )
+                    )
+                      deletion.mutate(subject.id);
+                  }}
+                >
+                  Delete
+                </button>
+              </header>
+              <SubjectTeacherAssignment
+                readOnly={!canAssignTeachers}
+                subject={subject}
+                campusId={campusId}
+              />
+              <div className="subject-card-link">
                 <button
                   type="button"
                   className="secondary"
+                  aria-expanded={linkSubjectId === subject.id}
                   onClick={() =>
                     setLinkSubjectId(
                       linkSubjectId === subject.id ? '' : subject.id,
@@ -607,7 +648,7 @@ function SubjectSetup({
                       : 'Link to semester and batch'}
                 </button>
                 {linkSubjectId === subject.id && (
-                  <div>
+                  <div className="subject-link-form">
                     <label>
                       Semester to link
                       <select
@@ -634,22 +675,6 @@ function SubjectSetup({
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                className="academic-delete"
-                disabled={deletion.isPending}
-                aria-label={`Delete subject ${subject.name}`}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`,
-                    )
-                  )
-                    deletion.mutate(subject.id);
-                }}
-              >
-                Delete
-              </button>
             </article>
           ))}
         </div>

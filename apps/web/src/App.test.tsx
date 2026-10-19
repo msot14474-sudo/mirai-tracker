@@ -550,6 +550,9 @@ describe('App authentication', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
+      if (url.endsWith('/academic/subjects?campusId=campus-a')) {
+        return new Response(JSON.stringify([{ id: 'subject', name: 'DSA', code: 'CS-DSA', active: true, description: null, offerings: [{ id: 'offering', batch: { name: 'Section A', semester: { name: 'Sem 1' } }, faculty: [] }] }]), { headers: { 'Content-Type': 'application/json' } });
+      }
       if (url.includes('/faculty-access/campuses/')) {
         return facultyAccessResponse();
       }
@@ -594,6 +597,10 @@ describe('App authentication', () => {
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Subjects' }));
+    expect(await screen.findByRole('button', { name: 'Assign teacher' })).toBeInTheDocument();
+    expect(screen.getByText('Section A')).toBeInTheDocument();
+    expect(screen.getByText('Sem 1')).toBeInTheDocument();
   });
 
   it('gives campus managers timetable access without global setup tools', async () => {

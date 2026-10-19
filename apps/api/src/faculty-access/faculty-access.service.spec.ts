@@ -151,6 +151,31 @@ describe('FacultyAccessService', () => {
     expect(result).toMatchObject({ assignedOfferings: 1 });
   });
 
+  it('allows an administrator to assign campus subjects when granting faculty access', async () => {
+    const admin = {
+      ...actor,
+      roles: [{ role: UserRole.ADMIN, campusId: null }],
+    };
+    await service().createFaculty(
+      campusId,
+      {
+        name: 'Dr Asha',
+        email: 'asha@example.edu',
+        notificationEmail: null,
+        employeeCode: 'FAC-101',
+        staffType: StaffType.REGULAR,
+        password: 'a-strong-temporary-password',
+        offeringIds: [offeringId],
+      },
+      admin,
+    );
+    expect(assignmentCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ offeringId, staffProfileId: 'staff-a' }),
+      ],
+    });
+  });
+
   it('rejects subject offerings outside the managed campus', async () => {
     offeringFindMany.mockResolvedValue([]);
 
@@ -264,8 +289,13 @@ describe('FacultyAccessService', () => {
   });
 
   it('rejects student account editing by a campus manager', async () => {
-    userFindUnique.mockResolvedValue({id:'student-user-a', roleAssignments:[{role:UserRole.STUDENT,campusId}]});
-    await expect(service().updateAccount('student-user-a', {name:'Changed'}, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    userFindUnique.mockResolvedValue({
+      id: 'student-user-a',
+      roleAssignments: [{ role: UserRole.STUDENT, campusId }],
+    });
+    await expect(
+      service().updateAccount('student-user-a', { name: 'Changed' }, actor),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userUpdate).not.toHaveBeenCalled();
   });
 

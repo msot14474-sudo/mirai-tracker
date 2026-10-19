@@ -638,3 +638,362 @@
   align-items: start;
   margin-bottom: 18px;
 }
+
+/* Subject catalog: keep the identity, campus links and actions easy to scan. */
+.dashboard-shell .subject-catalog {
+  min-width: 0;
+  min-height: 0;
+}
+.dashboard-shell .subject-count {
+  white-space: nowrap;
+  font-size: 13px;
+  color: #65738b;
+}
+.dashboard-shell .subject-list {
+  gap: 16px;
+}
+.dashboard-shell .subject-list > .subject-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #dfe6f0;
+  border-radius: 16px;
+  background: #fff;
+}
+.dashboard-shell .subject-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+.dashboard-shell .subject-card-identity {
+  min-width: 0;
+}
+.dashboard-shell .subject-code {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #eef3fc;
+  color: #345899;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .subject-card-identity h4 {
+  margin: 9px 0 4px;
+  font-size: 17px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .subject-card-identity p {
+  max-width: 72ch;
+  line-height: 1.6;
+}
+.dashboard-shell .subject-card-heading .academic-delete {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.dashboard-shell .subject-card .subject-teacher-assignment {
+  margin: 0;
+}
+.dashboard-shell .subject-batch-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.dashboard-shell .subject-batch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 18px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e6ebf3;
+  border-radius: 10px;
+  background: #f8fafd;
+}
+.dashboard-shell .subject-batch-row > div {
+  min-width: 0;
+}
+.dashboard-shell .subject-batch-row dt {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #65738b;
+}
+.dashboard-shell .subject-batch-row dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .subject-batch-row .subject-unassigned {
+  color: #8a6132;
+  font-weight: 400;
+}
+.dashboard-shell .subject-teacher-assignment > button {
+  margin-top: 14px;
+}
+.dashboard-shell .subject-card .subject-card-link {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f5;
+}
+.dashboard-shell .subject-card-link > button {
+  width: auto;
+  justify-self: start;
+}
+.dashboard-shell .subject-link-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.dashboard-shell .subject-teacher-assignment form {
+  margin-top: 14px;
+  max-width: 620px;
+}
+@media (max-width: 600px) {
+  .dashboard-shell .subject-list > .subject-card {
+    padding: 16px;
+    gap: 14px;
+  }
+  .dashboard-shell .subject-batch-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .dashboard-shell .subject-card-heading {
+    gap: 10px;
+  }
+}
+
+/* Calendar review is a sequence of grouped actions, with errors beside each entry. */
+.dashboard-shell .calendar-file-import > fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+.dashboard-shell .calendar-file-import > fieldset > button,
+.dashboard-shell .calendar-review-footer > button {
+  width: auto;
+  align-self: flex-start;
+}
+.dashboard-shell .calendar-file-import > fieldset > h3,
+.dashboard-shell .calendar-file-import > fieldset > p {
+  margin: 0;
+}
+.dashboard-shell .calendar-file-import .calendar-file-inputs {
+  margin: 0;
+}
+.dashboard-shell .calendar-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.dashboard-shell .calendar-action-row button {
+  width: auto;
+}
+.dashboard-shell .calendar-reading-status {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  margin: 0 0 20px;
+  border-radius: 12px;
+  background: #f1f5fc;
+  color: #365784;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .calendar-reading-status progress {
+  width: 100%;
+  height: 6px;
+  accent-color: #345dc6;
+}
+.dashboard-shell .calendar-reading-status small,
+.dashboard-shell .calendar-deadline-note,
+.dashboard-shell .calendar-review-count {
+  color: #65738b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.dashboard-shell .calendar-source-notes {
+  padding: 12px 16px;
+  border: 1px solid #e1e7f0;
+  border-radius: 10px;
+  background: #fafbfd;
+  color: #52637e;
+}
+.dashboard-shell .calendar-source-notes summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 550;
+}
+.dashboard-shell .calendar-source-notes li {
+  font-size: 12px;
+  margin: 8px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .calendar-validation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #efd5b3;
+  border-radius: 12px;
+  background: #fffbf4;
+}
+.dashboard-shell .calendar-validation-summary strong {
+  color: #8b5f2e;
+  font-size: 13px;
+}
+.dashboard-shell .calendar-validation-summary p {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.dashboard-shell .calendar-file-entries {
+  margin: 0;
+  gap: 10px;
+}
+.dashboard-shell .calendar-file-entry {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.dashboard-shell .calendar-file-entry.has-issues {
+  border-color: #e1bb8c;
+}
+.dashboard-shell .calendar-entry-summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.dashboard-shell .calendar-entry-summary::-webkit-details-marker {
+  display: none;
+}
+.dashboard-shell .calendar-entry-summary::after {
+  content: '+';
+  color: #65738b;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.dashboard-shell .calendar-file-entry[open] > .calendar-entry-summary::after {
+  content: '−';
+}
+.dashboard-shell .calendar-entry-summary > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.dashboard-shell .calendar-entry-summary strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .calendar-entry-summary small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #65738b;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .calendar-entry-number {
+  font-size: 11px;
+  color: #8a98ad;
+  font-variant-numeric: tabular-nums;
+}
+.dashboard-shell .calendar-entry-state {
+  font-size: 11px;
+  color: #547066;
+  white-space: nowrap;
+}
+.dashboard-shell .calendar-entry-state.needs-attention {
+  color: #98672e;
+}
+.dashboard-shell .calendar-entry-fields {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid #e6ebf3;
+  padding: 20px;
+}
+.dashboard-shell .calendar-file-entry-heading {
+  margin: 0;
+}
+.dashboard-shell .calendar-file-entry-heading strong {
+  font-size: 12px;
+  color: #65738b;
+}
+.dashboard-shell .calendar-file-entry-heading button {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.dashboard-shell .calendar-entry-errors {
+  margin: 0;
+  padding: 12px 12px 12px 30px;
+  border-radius: 8px;
+  background: #fff5ef;
+  color: #9b4c31;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.dashboard-shell .calendar-file-entry .calendar-file-check,
+.dashboard-shell .calendar-review-footer .calendar-file-check {
+  margin: 0;
+  align-items: flex-start;
+}
+.dashboard-shell .calendar-file-check input {
+  margin: 2px 0 0;
+  height: 18px;
+  width: 18px;
+}
+.dashboard-shell .calendar-file-entry .calendar-file-warnings {
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+}
+.dashboard-shell .calendar-review-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e4eaf3;
+}
+@media (max-width: 600px) {
+  .dashboard-shell .calendar-entry-summary {
+    gap: 10px;
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+  .dashboard-shell .calendar-entry-number {
+    display: none;
+  }
+  .dashboard-shell .calendar-entry-state {
+    order: 1;
+    width: 100%;
+  }
+  .dashboard-shell .calendar-entry-fields {
+    padding: 14px;
+  }
+  .dashboard-shell .calendar-action-row {
+    align-items: stretch;
+  }
+  .dashboard-shell .calendar-action-row button {
+    flex: 1 1 180px;
+  }
+}

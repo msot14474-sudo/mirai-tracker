@@ -65,10 +65,11 @@ export function readCalendarDate(
     const a = +m[1]!,
       b = +m[2]!,
       y = +m[3]!;
+    if (order === 'DMY') return dateValue(y, b, a);
+    if (order === 'MDY') return dateValue(y, a, b);
     if (a > 12 && b <= 12) return dateValue(y, b, a);
     if (b > 12 && a <= 12) return dateValue(y, a, b);
-    if (a === b || order === 'DMY') return dateValue(y, b, a);
-    if (order === 'MDY') return dateValue(y, a, b);
+    if (a === b) return dateValue(y, b, a);
   }
   return undefined;
 }
@@ -121,8 +122,34 @@ export function readCalendarSheets(
           ),
         ) && row.some((v) => aliases.title.includes(normalize(v))),
     );
+    // A legend is reference material, not a second event table. Do not send it
+    // as a separate AI section and manufacture "no events" warnings for it.
+    if (
+      headerIndex < 0 &&
+      /^(legend|key|instructions|read\s*me|notes)$/i.test(sheet.name.trim()) &&
+      !sheet.rows.some((row) =>
+        row.some((cell) =>
+          /(?:20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]20\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))/i.test(
+            cell,
+          ),
+        ),
+      )
+    )
+      continue;
+    const sourceHeader = sheet.rows[headerIndex];
     sources.push(
-      `Sheet: ${sheet.name}\n${sheet.rows.map((r, i) => `Row ${i + 1}: ${JSON.stringify(r)}`).join('\n')}`,
+      `Sheet: ${sheet.name}\n${sheet.rows
+        .map((r, i) => {
+          const cells =
+            sourceHeader && i > headerIndex
+              ? r.map(
+                  (value, col) =>
+                    `${sourceHeader[col] || `Column ${col + 1}`}: ${value}`,
+                )
+              : r;
+          return `Row ${i + 1}: ${JSON.stringify(cells)}`;
+        })
+        .join('\n')}`,
     );
     if (headerIndex < 0) {
       needsAi = true;
@@ -360,4 +387,48 @@ export function mergeCalendarEntries(entries: CalendarEntry[]) {
     } else result.push({ ...entry });
   }
   return result;
+}
+
+/** Structured source dates are authoritative; AI may flag a discrepancy, not erase a row. */
+export function reconcileCalendarEntries(
+  source: CalendarEntry[],
+  checked: CalendarEntry[],
+  structuredOnly: boolean,
+) {
+  const sameTitle = (a: string, b: string) => normalize(a) === normalize(b);
+  const result = source.map((entry) => {
+    const match = checked.find(
+      (candidate) =>
+        candidate.start === entry.start &&
+        candidate.end === entry.end &&
+        sameTitle(candidate.title, entry.title),
+    );
+    const concern = match
+      ? match.kind !== entry.kind ||
+        match.teachingAllowed !== entry.teachingAllowed ||
+        match.examType !== entry.examType ||
+        (match.deadline && match.deadline !== entry.deadline)
+        ? 'AI suggested a different category, teaching rule or deadline. The file values were kept; check this entry.'
+        : match.concern
+      : 'AI did not confirm this exact date range. The file values were kept; check the source.';
+    return {
+      ...entry,
+      concern: [...new Set([entry.concern, concern].filter(Boolean))]
+        .join(' ')
+        .slice(0, 2000),
+    };
+  });
+  if (!structuredOnly)
+    result.push(
+      ...checked.filter(
+        (entry) =>
+          !source.some(
+            (s) =>
+              sameTitle(s.title, entry.title) &&
+              s.start <= entry.end &&
+              s.end >= entry.start,
+          ),
+      ),
+    );
+  return mergeCalendarEntries(result);
 }

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -8,6 +9,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SemesterSetup } from './SemesterSetup';
+import { academicApi } from './academic';
 
 afterEach(() => {
   cleanup();
@@ -32,9 +34,20 @@ function renderSetup() {
 }
 
 describe('SemesterSetup subjects', () => {
-  it('creates a subject together with its semester batch link', async () => {
+  it('shows a saved subject and its count even when an older read finishes late and the refresh fails', async () => {
     let submitted: unknown;
-    let subjects: unknown[] = [];
+    let subjectReads = 0;
+    let resolveOldRead!: (response: Response) => void;
+    const oldRead = new Promise<Response>((resolve) => {
+      resolveOldRead = resolve;
+    });
+    const read = vi
+      .spyOn(academicApi, 'subjects')
+      .mockImplementation(async () => {
+        subjectReads++;
+        if (subjectReads === 1) return (await oldRead).json();
+        throw new Error('Could not refresh subjects.');
+      });
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url.endsWith('/academic/campuses')) {
@@ -64,7 +77,7 @@ describe('SemesterSetup subjects', () => {
         url.endsWith('/academic/subjects?campusId=campus-a') &&
         (init?.method ?? 'GET') === 'GET'
       ) {
-        return json(subjects);
+        throw new Error('Subject reads use the deferred API mock.');
       }
       if (url.endsWith('/academic/subjects') && init?.method === 'POST') {
         submitted = JSON.parse(String(init.body));
@@ -72,8 +85,15 @@ describe('SemesterSetup subjects', () => {
           id: 'subject-a',
           ...(submitted as object),
           active: true,
+          offerings: [
+            {
+              id: 'offering',
+              batch: { name: 'First Year A', semester: { name: 'Semester 1' } },
+              faculty: [],
+            },
+          ],
+          teachers: [],
         };
-        subjects = [created];
         return json(created);
       }
       throw new Error(`Unexpected request: ${init?.method ?? 'GET'} ${url}`);
@@ -118,6 +138,23 @@ describe('SemesterSetup subjects', () => {
     expect(
       screen.getByText('Data Structures and Algorithms added.'),
     ).toHaveTextContent('Data Structures and Algorithms added.');
+    expect(screen.getByText('1 subject')).toBeInTheDocument();
+    expect(screen.getByText('First Year A')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Assign teacher' }),
+    ).toBeInTheDocument();
+    await act(async () => {
+      resolveOldRead(json([]));
+    });
+    await screen.findByText('Could not refresh subjects.');
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('1 subject')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No subjects added yet.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Data Structures and Algorithms'),
+    ).toBeInTheDocument();
   });
 });
 

@@ -113,7 +113,7 @@ export const academicApi = {
     subjectId: string,
     input: { campusId: string; staffProfileId: string; offeringId?: string },
   ) =>
-    api(`/academic/subjects/${subjectId}/teacher`, {
+    api<{ assigned: boolean; subject?: Subject }>(`/academic/subjects/${subjectId}/teacher`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),

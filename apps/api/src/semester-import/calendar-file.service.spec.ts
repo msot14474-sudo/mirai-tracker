@@ -166,6 +166,23 @@ describe('Calendar extraction and resumable AI verification', () => {
   }
   const file = (text: string) =>
     ({ originalname: 'calendar.csv', buffer: Buffer.from(text) }) as any;
+  it('offers an editable exam-start deadline when the source omits one and preserves existing deadlines', async () => {
+    const { service, semester } = fixture();
+    const csv = file('Date,Event,Category\n2026-09-28,1st Sessional,Exam');
+    const first = await service.inspect(csv, 'semester', user);
+    expect(first.entries[0]).toMatchObject({
+      deadline: '2026-09-28',
+      deadlineDefaulted: true,
+    });
+    (semester.examWindows as any[]).push({
+      name: '1st Sessional',
+      syllabusDeadline: new Date('2026-09-25'),
+    });
+    const second = await service.inspect(csv, 'semester', user);
+    expect(second.entries[0]!.deadline).toBe('2026-09-25');
+    expect((second.entries[0] as any).deadlineDefaulted).toBe(false);
+  });
+
   it('reads a recognised CSV without calling AI or requiring an API key', async () => {
     delete process.env.OLLAMA_API_KEY;
     const fetch = jest.spyOn(globalThis, 'fetch');

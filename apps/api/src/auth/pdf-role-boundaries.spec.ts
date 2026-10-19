@@ -39,12 +39,10 @@ it('lets campus managers manage timetables and faculty, but not faculty lesson p
 });
 it('keeps faculty logging workflow editing available to faculty', () => {
   expect(roles(LessonPlanController.prototype.execute)).toContain('FACULTY');
-  expect(roles(TopicScheduleController.prototype.move)).toContain(
+  expect(roles(TopicScheduleController.prototype.move)).toContain('FACULTY');
+  expect(roles(TopicScheduleController.prototype.setCancellation)).toContain(
     'FACULTY',
   );
-  expect(
-    roles(TopicScheduleController.prototype.setCancellation),
-  ).toContain('FACULTY');
   expect(roles(TimetableController.prototype.create)).not.toContain('FACULTY');
 });
 
@@ -84,13 +82,47 @@ it.each([
 );
 
 it('keeps administrators out of teaching-operation writes', () => {
-  for (const method of [TimetableController.prototype.create, TimetableController.prototype.update, TimetableController.prototype.archive, TimetableController.prototype.generate, LessonPlanController.prototype.execute, LessonPlanController.prototype.activate, LessonPlanController.prototype.updateTopic, TopicScheduleController.prototype.move, TopicScheduleController.prototype.setCancellation]) {
+  for (const method of [
+    TimetableController.prototype.create,
+    TimetableController.prototype.update,
+    TimetableController.prototype.archive,
+    TimetableController.prototype.generate,
+    LessonPlanController.prototype.execute,
+    LessonPlanController.prototype.activate,
+    LessonPlanController.prototype.updateTopic,
+    TopicScheduleController.prototype.move,
+    TopicScheduleController.prototype.setCancellation,
+  ]) {
     expect(roles(method)).not.toContain('ADMIN');
   }
 });
 
 it('keeps campus managers out of faculty plan and individual class operations', () => {
-  for (const method of [LessonPlanController.prototype.execute, LessonPlanController.prototype.activate, TopicScheduleController.prototype.calculate, TopicScheduleController.prototype.move, TopicScheduleController.prototype.setCancellation]) {
+  for (const method of [
+    LessonPlanController.prototype.execute,
+    LessonPlanController.prototype.activate,
+    TopicScheduleController.prototype.calculate,
+    TopicScheduleController.prototype.move,
+    TopicScheduleController.prototype.setCancellation,
+  ]) {
     expect(roles(method)).not.toContain('CAMPUS_MANAGER');
   }
+});
+
+import { AcademicCalendarController } from '../academic-calendar/academic-calendar.controller';
+it.each([
+  ['ADMIN', true],
+  ['CAMPUS_MANAGER', true],
+  ['PROGRAM_MANAGER', false],
+  ['FACULTY', false],
+  ['STUDENT', false],
+])('checks %s teacher-assignment access', (role, allowed) => {
+  const context = {
+    getClass: () => AcademicCalendarController,
+    getHandler: () => AcademicCalendarController.prototype.assignTeacher,
+    switchToHttp: () => ({
+      getRequest: () => ({ user: { roles: [{ role }] } }),
+    }),
+  } as unknown as ExecutionContext;
+  expect(guard.canActivate(context)).toBe(allowed);
 });

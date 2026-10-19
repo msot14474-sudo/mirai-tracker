@@ -38,6 +38,49 @@ function isUniqueConstraintError(error: unknown) {
 // These atomic setup operations include several remote database round trips.
 const SETUP_TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 };
 
+function subjectSelection(campusId?: string) {
+  return {
+    id: true,
+    code: true,
+    name: true,
+    description: true,
+    active: true,
+    teachers: {
+      where: campusId ? { campusId } : {},
+      select: {
+        campusId: true,
+        staffProfile: {
+          select: {
+            id: true,
+            active: true,
+            user: { select: { name: true, status: true } },
+          },
+        },
+      },
+    },
+    offerings: {
+      where: {
+        status: { not: 'ARCHIVED' },
+        ...(campusId ? { batch: { semester: { campusId } } } : {}),
+      },
+      select: {
+        id: true,
+        batch: {
+          select: { name: true, semester: { select: { name: true } } },
+        },
+        faculty: {
+          where: { active: true },
+          select: {
+            staffProfile: {
+              select: { id: true, user: { select: { name: true } } },
+            },
+          },
+        },
+      },
+    },
+  } as const satisfies Prisma.SubjectSelect;
+}
+
 @Injectable()
 export class AcademicCalendarService {
   constructor(
@@ -79,46 +122,7 @@ export class AcademicCalendarService {
             }
           : {}),
       },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        description: true,
-        active: true,
-        teachers: {
-          where: campusId ? { campusId } : {},
-          select: {
-            campusId: true,
-            staffProfile: {
-              select: {
-                id: true,
-                active: true,
-                user: { select: { name: true, status: true } },
-              },
-            },
-          },
-        },
-        offerings: {
-          where: {
-            status: { not: 'ARCHIVED' },
-            ...(campusId ? { batch: { semester: { campusId } } } : {}),
-          },
-          select: {
-            id: true,
-            batch: {
-              select: { name: true, semester: { select: { name: true } } },
-            },
-            faculty: {
-              where: { active: true },
-              select: {
-                staffProfile: {
-                  select: { id: true, user: { select: { name: true } } },
-                },
-              },
-            },
-          },
-        },
-      },
+      select: subjectSelection(campusId),
       orderBy: { code: 'asc' },
     });
   }
@@ -469,7 +473,13 @@ export class AcademicCalendarService {
           },
         },
       });
-      return { assigned: true };
+      return {
+        assigned: true,
+        subject: await tx.subject.findUniqueOrThrow({
+          where: { id: subjectId },
+          select: subjectSelection(input.campusId),
+        }),
+      };
     }, SETUP_TRANSACTION_OPTIONS);
   }
 
@@ -499,7 +509,10 @@ export class AcademicCalendarService {
             { ...input, subjectIds: [subject.id] },
             user,
           );
-          return subject;
+          return tx.subject.findUniqueOrThrow({
+            where: { id: subject.id },
+            select: subjectSelection(input.campusId),
+          });
         }, SETUP_TRANSACTION_OPTIONS);
       }
       return await this.prisma.subject.create({

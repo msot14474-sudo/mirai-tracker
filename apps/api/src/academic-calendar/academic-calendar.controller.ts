@@ -97,7 +97,7 @@ export class AcademicCalendarController {
   }
 
   @Post('subjects/:subjectId/teacher')
-  @Roles(UserRole.CAMPUS_MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
   assignTeacher(
     @Param('subjectId') subjectId: string,
     @Body() body: unknown,

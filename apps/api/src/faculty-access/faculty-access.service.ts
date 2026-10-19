@@ -58,7 +58,15 @@ export class FacultyAccessService {
                 status: true,
                 staffProfile: {
                   select: {
-                    subjectTeachers: {where: this.access.isGlobalManager(actor) ? {} : {campusId: {in: campusIds}}, select: {campusId: true, subject: {select: {id: true, name: true}}}},
+                    subjectTeachers: {
+                      where: this.access.isGlobalManager(actor)
+                        ? {}
+                        : { campusId: { in: campusIds } },
+                      select: {
+                        campusId: true,
+                        subject: { select: { id: true, name: true } },
+                      },
+                    },
                     facultyAssignments: {
                       where: {
                         active: true,
@@ -102,7 +110,9 @@ export class FacultyAccessService {
         name: r.user.name,
         role: r.role,
         status: r.user.status,
-        defaultSubjects: (r.user.staffProfile?.subjectTeachers ?? []).filter(t => t.campusId === campus.id).map(t => t.subject),
+        defaultSubjects: (r.user.staffProfile?.subjectTeachers ?? [])
+          .filter((t) => t.campusId === campus.id)
+          .map((t) => t.subject),
         subjects: (r.user.staffProfile?.facultyAssignments ?? [])
           .filter((a) => a.offering.batch.semester.campusId === campus.id)
           .map((a) => ({
@@ -212,9 +222,7 @@ export class FacultyAccessService {
         UserRole.PROGRAM_MANAGER,
         UserRole.CAMPUS_MANAGER,
       ]);
-      const campusAccountRoles = new Set<UserRole>([
-        UserRole.FACULTY,
-      ]);
+      const campusAccountRoles = new Set<UserRole>([UserRole.FACULTY]);
       const elevated = target.roleAssignments.some((assignment) =>
         elevatedRoles.has(assignment.role),
       );
@@ -461,8 +469,17 @@ export class FacultyAccessService {
     await this.requireCampus(campusId);
     this.access.assertCanManageCampus(actor, campusId);
 
-    if (input.offeringIds.length && !actor.roles.some(r => r.role === 'CAMPUS_MANAGER' && r.campusId === campusId)) {
-      throw new ForbiddenException('The campus manager assigns teaching subjects.');
+    if (
+      input.offeringIds.length &&
+      !actor.roles.some(
+        (r) =>
+          r.role === 'ADMIN' ||
+          (r.role === 'CAMPUS_MANAGER' && r.campusId === campusId),
+      )
+    ) {
+      throw new ForbiddenException(
+        "Only administrators and this campus's manager can assign teaching subjects.",
+      );
     }
     const offerings = input.offeringIds.length
       ? await this.prisma.subjectOffering.findMany({

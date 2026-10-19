@@ -3,7 +3,12 @@ import { inheritSubjectTeacher } from './subject-teacher';
 const actor = { id: 'admin' } as any;
 function fixture() {
   const tx: any = {
-    subject: { findFirst: jest.fn().mockResolvedValue({ id: 'subject' }) },
+    subject: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'subject' }),
+      findUniqueOrThrow: jest
+        .fn()
+        .mockResolvedValue({ id: 'subject', offerings: [], teachers: [] }),
+    },
     staffProfile: { findFirst: jest.fn().mockResolvedValue({ id: 'teacher' }) },
     subjectTeacher: { upsert: jest.fn() },
     subjectOffering: {
@@ -140,4 +145,101 @@ it('rejects a default-only assignment when the semester batch is missing', async
     ),
   ).rejects.toThrow('link this subject to a semester batch');
   expect(tx.subjectTeacher.upsert).not.toHaveBeenCalled();
+});
+
+it('returns the linked subject immediately after assigning a teacher to a batch', async () => {
+  const { service, tx } = fixture();
+  const startDate = new Date('2026-08-01');
+  const endDate = new Date('2026-12-31');
+  tx.subjectOffering.findFirst.mockResolvedValue({
+    id: 'offering',
+    batch: { semester: { startDate, endDate } },
+  });
+  const saved = {
+    id: 'subject',
+    offerings: [
+      {
+        id: 'offering',
+        faculty: [{ staffProfile: { id: 'teacher', user: { name: 'Asha' } } }],
+      },
+    ],
+  };
+  tx.subject.findUniqueOrThrow.mockResolvedValue(saved);
+  await expect(
+    service.assignSubjectTeacher(
+      'subject',
+      { campusId: 'campus', staffProfileId: 'teacher', offeringId: 'offering' },
+      actor,
+    ),
+  ).resolves.toEqual({ assigned: true, subject: saved });
+  expect(tx.facultyAssignment.upsert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      create: expect.objectContaining({
+        offeringId: 'offering',
+        staffProfileId: 'teacher',
+        startDate,
+        endDate,
+      }),
+    }),
+  );
+  expect(tx.subject.findUniqueOrThrow).toHaveBeenCalledWith(
+    expect.objectContaining({
+      select: expect.objectContaining({
+        offerings: expect.objectContaining({
+          where: expect.objectContaining({
+            batch: { semester: { campusId: 'campus' } },
+          }),
+        }),
+      }),
+    }),
+  );
+});
+
+it('returns the new subject with its semester and batch after the atomic create', async () => {
+  const { service, tx, access } = fixture();
+  Object.assign(access, { assertGlobalManager: jest.fn() });
+  tx.semester = {
+    findUnique: jest
+      .fn()
+      .mockResolvedValue({ id: 'semester', campusId: 'campus' }),
+  };
+  tx.subject.create = jest
+    .fn()
+    .mockResolvedValue({ id: 'subject', name: 'Math' });
+  const linked = {
+    id: 'subject',
+    name: 'Math',
+    offerings: [
+      {
+        id: 'offering',
+        batch: { name: 'First Year A', semester: { name: 'Semester 1' } },
+        faculty: [],
+      },
+    ],
+    teachers: [],
+  };
+  const link = jest
+    .spyOn(service as any, 'linkSemesterSubjects')
+    .mockImplementation(async () => {
+      tx.subject.findUniqueOrThrow.mockResolvedValue(linked);
+    });
+  await expect(
+    service.createSubject(
+      {
+        campusId: 'campus',
+        semesterId: 'semester',
+        batchId: 'batch',
+        code: 'M',
+        name: 'Math',
+        description: null,
+      },
+      actor,
+    ),
+  ).resolves.toEqual(linked);
+  expect(link).toHaveBeenCalledWith(
+    tx,
+    'semester',
+    expect.objectContaining({ subjectIds: ['subject'], batchId: 'batch' }),
+    actor,
+  );
 });
