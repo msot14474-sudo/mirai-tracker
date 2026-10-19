@@ -2,7 +2,12 @@ import { SemesterSubjects } from './SemesterSubjects';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
-import { academicApi, dateOnly, SaturdayRule, GeneratedCalendar } from './academic';
+import {
+  academicApi,
+  dateOnly,
+  SaturdayRule,
+  GeneratedCalendar,
+} from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
 const saturdayLabels: Record<SaturdayRule, string> = {
@@ -41,7 +46,9 @@ export function SemesterSetup({
     mutationFn: academicApi.deleteSemester,
     onSuccess: async (_, deletedId) => {
       if (semesterId === deletedId) setSemesterId('');
-      queryClient.removeQueries({ queryKey: ['academic', 'calendar', deletedId] });
+      queryClient.removeQueries({
+        queryKey: ['academic', 'calendar', deletedId],
+      });
       await queryClient.invalidateQueries();
     },
   });
@@ -106,8 +113,18 @@ export function SemesterSetup({
         <button
           type="button"
           aria-pressed={setupView === 'subjects'}
-          onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId) })}
-          onFocus={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'subjects', campusId], queryFn: () => academicApi.subjects(campusId) })}
+          onMouseEnter={() =>
+            void queryClient.prefetchQuery({
+              queryKey: ['academic', 'subjects', campusId],
+              queryFn: () => academicApi.subjects(campusId),
+            })
+          }
+          onFocus={() =>
+            void queryClient.prefetchQuery({
+              queryKey: ['academic', 'subjects', campusId],
+              queryFn: () => academicApi.subjects(campusId),
+            })
+          }
           onClick={() => {
             setSetupView('subjects');
             setShowCreate(false);
@@ -145,7 +162,11 @@ export function SemesterSetup({
                 {semesters.error.message}
               </p>
             ) : null}
-            {deletion.error ? <p className="form-error" role="alert">{deletion.error.message}</p> : null}
+            {deletion.error ? (
+              <p className="form-error" role="alert">
+                {deletion.error.message}
+              </p>
+            ) : null}
             <div className="semester-list" aria-label="Semesters">
               {semesters.isLoading ? (
                 <LoadingSkeleton
@@ -156,26 +177,47 @@ export function SemesterSetup({
               ) : (
                 semesters.data?.map((semester) => (
                   <div className="semester-list-item" key={semester.id}>
-                  <button
-                    className={semester.id === semesterId ? 'selected' : ''}
-                    onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'calendar', semester.id], queryFn: () => academicApi.calendar(semester.id) })}
-                    onFocus={() => void queryClient.prefetchQuery({ queryKey: ['academic', 'calendar', semester.id], queryFn: () => academicApi.calendar(semester.id) })}
-                    onClick={() => setSemesterId(semester.id)}
-                  >
-                    <strong>{semester.name}</strong>
-                    <span>
-                      {dateOnly(semester.startDate)} →{' '}
-                      {dateOnly(semester.endDate)}
-                    </span>
-                    <small>
-                      {saturdayLabels[semester.workingSaturdayRule]}
-                    </small>
-                  </button>
-                  <button type="button" className="academic-delete" disabled={deletion.isPending}
-                    aria-label={`Delete semester ${semester.name}`}
-                    onClick={() => {
-                      if (window.confirm(`Delete “${semester.name}”? Its calendar days and exam windows will be permanently removed. Semesters with linked batches cannot be deleted.`)) deletion.mutate(semester.id);
-                    }}>Delete</button>
+                    <button
+                      className={semester.id === semesterId ? 'selected' : ''}
+                      onMouseEnter={() =>
+                        void queryClient.prefetchQuery({
+                          queryKey: ['academic', 'calendar', semester.id],
+                          queryFn: () => academicApi.calendar(semester.id),
+                        })
+                      }
+                      onFocus={() =>
+                        void queryClient.prefetchQuery({
+                          queryKey: ['academic', 'calendar', semester.id],
+                          queryFn: () => academicApi.calendar(semester.id),
+                        })
+                      }
+                      onClick={() => setSemesterId(semester.id)}
+                    >
+                      <strong>{semester.name}</strong>
+                      <span>
+                        {dateOnly(semester.startDate)} →{' '}
+                        {dateOnly(semester.endDate)}
+                      </span>
+                      <small>
+                        {saturdayLabels[semester.workingSaturdayRule]}
+                      </small>
+                    </button>
+                    <button
+                      type="button"
+                      className="academic-delete"
+                      disabled={deletion.isPending}
+                      aria-label={`Delete semester ${semester.name}`}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete “${semester.name}”? Its calendar days and exam windows will be permanently removed. Semesters with linked batches cannot be deleted.`,
+                          )
+                        )
+                          deletion.mutate(semester.id);
+                      }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))
               )}
@@ -206,7 +248,11 @@ export function SemesterSetup({
               </p>
             ) : calendar.data ? (
               <>
-                <SemesterSubjects key={semesterId} semesterId={semesterId} campusId={campusId} />
+                <SemesterSubjects
+                  key={semesterId}
+                  semesterId={semesterId}
+                  campusId={campusId}
+                />
                 <div className="calendar-summary">
                   <div>
                     <span>Total dates</span>
@@ -309,6 +355,28 @@ function SubjectSetup({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [savedSubject, setSavedSubject] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [batchId, setBatchId] = useState('');
+  const [batchName, setBatchName] = useState('');
+  const [batchCode, setBatchCode] = useState('');
+  const [trackName, setTrackName] = useState('');
+  const [trackCode, setTrackCode] = useState('');
+  const [linkSubjectId, setLinkSubjectId] = useState('');
+  const semesters = useQuery({
+    queryKey: ['academic', 'semesters', campusId],
+    queryFn: () => academicApi.semesters(campusId),
+  });
+  const activeSemesters =
+    semesters.data?.filter((s) => s.status !== 'ARCHIVED') ?? [];
+  const semesterId =
+    selectedSemester ||
+    (activeSemesters.length === 1 ? activeSemesters[0]!.id : '');
+  const batches = useQuery({
+    queryKey: ['academic', 'semester-subjects', semesterId],
+    queryFn: () => academicApi.semesterCourses(semesterId),
+    enabled: !!semesterId,
+  });
+
   const deletion = useMutation({
     mutationFn: academicApi.deleteSubject,
     onSuccess: async () => {
@@ -326,6 +394,10 @@ function SubjectSetup({
         campusId,
         code,
         name,
+        semesterId,
+        ...(batchId
+          ? { batchId }
+          : { batchName, batchCode, trackName, trackCode }),
         description: description.trim() || null,
       }),
     onSuccess: async (subject) => {
@@ -334,9 +406,7 @@ function SubjectSetup({
       setDescription('');
       setSavedSubject(subject.name);
       onCreated();
-      await queryClient.invalidateQueries({
-        queryKey: ['academic', 'subjects'],
-      });
+      await queryClient.invalidateQueries();
     },
   });
 
@@ -354,6 +424,89 @@ function SubjectSetup({
           }}
         >
           <h3>Add subject</h3>
+          <p>
+            Create the subject in a semester batch so the campus manager can
+            assign a teacher and schedule classes.
+          </p>
+          <label>
+            Semester
+            <select
+              required
+              value={semesterId}
+              onChange={(e) => {
+                setSelectedSemester(e.target.value);
+                setBatchId('');
+              }}
+            >
+              <option value="">Choose a semester</option>
+              {activeSemesters.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {semesters.isError && <p role="alert">{semesters.error.message}</p>}
+          {semesters.isSuccess && !activeSemesters.length && (
+            <p>Create a semester in the Semesters tab first.</p>
+          )}
+          <label>
+            Batch
+            <select
+              value={batchId}
+              onChange={(e) => setBatchId(e.target.value)}
+              disabled={!semesterId || batches.isPending}
+            >
+              <option value="">Create a new batch</option>
+              {batches.data?.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {batches.isError && <p role="alert">{batches.error.message}</p>}
+          {!batchId && (
+            <div className="form-grid">
+              <label>
+                Batch name
+                <input
+                  required
+                  maxLength={160}
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                />
+              </label>
+              <label>
+                Batch code
+                <input
+                  required
+                  maxLength={64}
+                  value={batchCode}
+                  onChange={(e) => setBatchCode(e.target.value)}
+                />
+              </label>
+              <label>
+                Track name
+                <input
+                  required
+                  maxLength={160}
+                  value={trackName}
+                  onChange={(e) => setTrackName(e.target.value)}
+                />
+              </label>
+              <label>
+                Track code
+                <input
+                  required
+                  maxLength={32}
+                  value={trackCode}
+                  onChange={(e) => setTrackCode(e.target.value)}
+                />
+              </label>
+            </div>
+          )}
+
           <label>
             Subject code
             <input
@@ -386,7 +539,14 @@ function SubjectSetup({
             </p>
           ) : null}
 
-          <button disabled={mutation.isPending}>
+          <button
+            disabled={
+              mutation.isPending ||
+              !semesterId ||
+              batches.isPending ||
+              batches.isError
+            }
+          >
             {mutation.isPending ? 'Adding…' : 'Add subject'}
           </button>
         </form>
@@ -413,7 +573,11 @@ function SubjectSetup({
             {savedSubject} added.
           </p>
         ) : null}
-        {deletion.error ? <p className="form-error" role="alert">{deletion.error.message}</p> : null}
+        {deletion.error ? (
+          <p className="form-error" role="alert">
+            {deletion.error.message}
+          </p>
+        ) : null}
         <div className="subject-list">
           {subjects.data?.map((subject) => (
             <article key={subject.id}>
@@ -421,13 +585,70 @@ function SubjectSetup({
               <div>
                 <strong>{subject.name}</strong>
                 {subject.description ? <p>{subject.description}</p> : null}
-                <SubjectTeacherAssignment readOnly={!canAssignTeachers} subject={subject} campusId={campusId} />
+                <SubjectTeacherAssignment
+                  readOnly={!canAssignTeachers}
+                  subject={subject}
+                  campusId={campusId}
+                />
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() =>
+                    setLinkSubjectId(
+                      linkSubjectId === subject.id ? '' : subject.id,
+                    )
+                  }
+                >
+                  {linkSubjectId === subject.id
+                    ? 'Close semester linking'
+                    : subject.offerings?.length
+                      ? 'Link another batch'
+                      : 'Link to semester and batch'}
+                </button>
+                {linkSubjectId === subject.id && (
+                  <div>
+                    <label>
+                      Semester to link
+                      <select
+                        required
+                        value={semesterId}
+                        onChange={(e) => setSelectedSemester(e.target.value)}
+                      >
+                        <option value="">Choose a semester</option>
+                        {activeSemesters.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {semesterId && (
+                      <SemesterSubjects
+                        key={semesterId + subject.id}
+                        semesterId={semesterId}
+                        campusId={campusId}
+                        onlySubjectId={subject.id}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-              <button type="button" className="academic-delete" disabled={deletion.isPending}
+              <button
+                type="button"
+                className="academic-delete"
+                disabled={deletion.isPending}
                 aria-label={`Delete subject ${subject.name}`}
                 onClick={() => {
-                  if (window.confirm(`Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`)) deletion.mutate(subject.id);
-                }}>Delete</button>
+                  if (
+                    window.confirm(
+                      `Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`,
+                    )
+                  )
+                    deletion.mutate(subject.id);
+                }}
+              >
+                Delete
+              </button>
             </article>
           ))}
         </div>
@@ -564,63 +785,69 @@ function CalendarDayForm({
     >
       <h3>Update calendar date</h3>
       <fieldset className="calendar-date-fields" disabled={mutation.isPending}>
-      <label>
-        Date
-        <input
-          type="date"
-          value={date}
-          min={dateOnly(calendar.semester.startDate)}
-          max={dateOnly(calendar.semester.endDate)}
-          onChange={(event) => {
-            const selected = event.target.value;
-            const existing = calendar.days.find((day) => day.date === selected)?.override;
-            setDate(selected);
-            setTitle(existing?.title ?? '');
-            setType((existing?.type as typeof type) ?? 'HOLIDAY');
-            setTeachingAllowed(existing?.teachingAllowed ?? false);
-            setSaved(false);
-            mutation.reset();
-          }}
-          required
-        />
-      </label>
-      <label>
-        Title
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          required
-        />
-      </label>
-      <label>
-        Type
-        <select
-          value={type}
-          onChange={(event) => setType(event.target.value as typeof type)}
-        >
-          <option value="HOLIDAY">Holiday</option>
-          <option value="EVENT">Event</option>
-          <option value="EXTRA_WORKING_DAY">Extra working day</option>
-          <option value="CAMPUS_CLOSED">Campus closed</option>
-        </select>
-      </label>
-      {type === 'EVENT' ? (
-        <label className="check-field">
+        <label>
+          Date
           <input
-            type="checkbox"
-            checked={teachingAllowed}
-            onChange={(event) => setTeachingAllowed(event.target.checked)}
+            type="date"
+            value={date}
+            min={dateOnly(calendar.semester.startDate)}
+            max={dateOnly(calendar.semester.endDate)}
+            onChange={(event) => {
+              const selected = event.target.value;
+              const existing = calendar.days.find(
+                (day) => day.date === selected,
+              )?.override;
+              setDate(selected);
+              setTitle(existing?.title ?? '');
+              setType((existing?.type as typeof type) ?? 'HOLIDAY');
+              setTeachingAllowed(existing?.teachingAllowed ?? false);
+              setSaved(false);
+              mutation.reset();
+            }}
+            required
           />
-          Teaching continues
         </label>
-      ) : null}
-      {mutation.error ? (
-        <p className="form-error">{mutation.error.message}</p>
-      ) : null}
-      {saved ? <p className="form-success" role="status">Calendar date updated.</p> : null}
-      <button disabled={!date || mutation.isPending}>
-        {mutation.isPending ? 'Updating…' : 'Update date'}
-      </button>
+        <label>
+          Title
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Type
+          <select
+            value={type}
+            onChange={(event) => setType(event.target.value as typeof type)}
+          >
+            <option value="HOLIDAY">Holiday</option>
+            <option value="EVENT">Event</option>
+            <option value="EXTRA_WORKING_DAY">Extra working day</option>
+            <option value="CAMPUS_CLOSED">Campus closed</option>
+          </select>
+        </label>
+        {type === 'EVENT' ? (
+          <label className="check-field">
+            <input
+              type="checkbox"
+              checked={teachingAllowed}
+              onChange={(event) => setTeachingAllowed(event.target.checked)}
+            />
+            Teaching continues
+          </label>
+        ) : null}
+        {mutation.error ? (
+          <p className="form-error">{mutation.error.message}</p>
+        ) : null}
+        {saved ? (
+          <p className="form-success" role="status">
+            Calendar date updated.
+          </p>
+        ) : null}
+        <button disabled={!date || mutation.isPending}>
+          {mutation.isPending ? 'Updating…' : 'Update date'}
+        </button>
       </fieldset>
     </form>
   );

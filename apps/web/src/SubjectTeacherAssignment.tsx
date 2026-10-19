@@ -13,7 +13,9 @@ export function SubjectTeacherAssignment({
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
   const [staffProfileId, setStaff] = useState('');
-  const [offeringId, setOffering] = useState('');
+  const [offeringId, setOffering] = useState(
+    subject.offerings?.length === 1 ? subject.offerings[0]!.id : '',
+  );
   const faculty = useQuery({
     queryKey: ['academic', 'subject-faculty', campusId],
     queryFn: () => academicApi.subjectFaculty(campusId),
@@ -53,20 +55,29 @@ export function SubjectTeacherAssignment({
             : 'No teacher assigned'}
         </p>
       ))}
-      {!readOnly && <button
-        type="button"
-        className="secondary"
-        onClick={() => {
-          assignment.reset();
-          setOpen((v) => !v);
-        }}
-      >
-        {open ? 'Cancel' : 'Assign teacher'}
-      </button>}
+      {!subject.offerings?.length && (
+        <p role="status">
+          Pending semester link. The admin/program manager must link this
+          subject to a semester batch in Semester setup before teaching can
+          start.
+        </p>
+      )}
+      {!readOnly && !!subject.offerings?.length && (
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            assignment.reset();
+            setOpen((v) => !v);
+          }}
+        >
+          {open ? 'Cancel' : 'Assign teacher'}
+        </button>
+      )}
       {assignment.isSuccess && !open && (
         <p role="status">Teacher assignment saved.</p>
       )}
-      {open && (
+      {open && !!subject.offerings?.length && (
         <form
           onSubmit={(e) => {
             e.preventDefault();

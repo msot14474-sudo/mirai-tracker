@@ -84,6 +84,12 @@ export const createExamWindowSchema = z.object({
 export const updateExamWindowSchema = createExamWindowSchema.partial();
 
 export const createSubjectSchema = z.object({
+  semesterId: uuidSchema.optional(),
+  batchId: uuidSchema.optional(),
+  batchName: z.string().trim().min(1).max(160).optional(),
+  batchCode: z.string().trim().min(1).max(64).optional(),
+  trackName: z.string().trim().min(1).max(160).optional(),
+  trackCode: z.string().trim().min(1).max(32).optional(),
   campusId: uuidSchema.optional(),
   code: z
     .string()

@@ -199,7 +199,7 @@ export function TimetableSetup({
               <h3>{semesterId ? 'No subjects' : 'Select a semester'}</h3>
               <p>
                 {semesterId
-                  ? 'Add subjects and batches through Semester import first.'
+                  ? 'Ask the admin/program manager to link subjects to a batch under Semester setup → select semester → Subjects and batches. Then return here to schedule classes.'
                   : 'Choose a semester to view its timetable.'}
               </p>
             </div>

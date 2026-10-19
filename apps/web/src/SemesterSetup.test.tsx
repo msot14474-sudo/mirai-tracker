@@ -32,7 +32,7 @@ function renderSetup() {
 }
 
 describe('SemesterSetup subjects', () => {
-  it('adds a subject to the shared catalog', async () => {
+  it('creates a subject together with its semester batch link', async () => {
     let submitted: unknown;
     let subjects: unknown[] = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -48,8 +48,18 @@ describe('SemesterSetup subjects', () => {
         ]);
       }
       if (url.endsWith('/academic/campuses/campus-a/semesters')) {
-        return json([]);
+        return json([{ id: 'term', name: 'Semester 1', status: 'ACTIVE' }]);
       }
+      if (url.endsWith('/academic/semesters/term/subjects'))
+        return json([
+          {
+            id: 'batch',
+            name: 'First Year A',
+            code: 'A',
+            track: { name: 'CS' },
+            subjectOfferings: [],
+          },
+        ]);
       if (
         url.endsWith('/academic/subjects?campusId=campus-a') &&
         (init?.method ?? 'GET') === 'GET'
@@ -77,6 +87,10 @@ describe('SemesterSetup subjects', () => {
     expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Subject code')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
+    await screen.findByRole('option', { name: 'First Year A' });
+    fireEvent.change(screen.getByLabelText('Batch'), {
+      target: { value: 'batch' },
+    });
     fireEvent.change(screen.getByLabelText('Subject code'), {
       target: { value: 'cs-dsa' },
     });
@@ -91,6 +105,8 @@ describe('SemesterSetup subjects', () => {
     await waitFor(() =>
       expect(submitted).toEqual({
         campusId: 'campus-a',
+        semesterId: 'term',
+        batchId: 'batch',
         code: 'cs-dsa',
         name: 'Data Structures and Algorithms',
         description: 'Core subject',
@@ -99,9 +115,9 @@ describe('SemesterSetup subjects', () => {
     expect(
       await screen.findByText('Data Structures and Algorithms'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Data Structures and Algorithms added.',
-    );
+    expect(
+      screen.getByText('Data Structures and Algorithms added.'),
+    ).toHaveTextContent('Data Structures and Algorithms added.');
   });
 });
 
@@ -162,35 +178,79 @@ it('only deletes a semester after confirmation and refreshes the list', async ()
   const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
-    if (url.endsWith('/academic/semesters/semester-a') && init?.method === 'DELETE') {
+    if (
+      url.endsWith('/academic/semesters/semester-a') &&
+      init?.method === 'DELETE'
+    ) {
       deleted = true;
       return new Response(null, { status: 204 });
     }
-    if (url.endsWith('/academic/campuses/campus-a/semesters')) return json(deleted ? [] : [{
-      id: 'semester-a', name: 'Autumn', startDate: '2026-08-01', endDate: '2026-12-01', workingSaturdayRule: 'NONE',
-    }]);
+    if (url.endsWith('/academic/campuses/campus-a/semesters'))
+      return json(
+        deleted
+          ? []
+          : [
+              {
+                id: 'semester-a',
+                name: 'Autumn',
+                startDate: '2026-08-01',
+                endDate: '2026-12-01',
+                workingSaturdayRule: 'NONE',
+              },
+            ],
+      );
     throw new Error(`Unexpected request ${url}`);
   });
   renderSetup();
-  fireEvent.click(await screen.findByRole('button', { name: 'Delete semester Autumn' }));
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Delete semester Autumn' }),
+  );
   expect(deleted).toBe(false);
   confirmation.mockReturnValue(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Delete semester Autumn' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Delete semester Autumn' }),
+  );
   await screen.findByText('0 semesters in this campus');
   expect(deleted).toBe(true);
 });
 
 it('loads an existing date and updates it instead of creating a duplicate', async () => {
-  const semester = { id: 'semester-a', name: 'Autumn', startDate: '2026-08-01', endDate: '2026-12-01', workingSaturdayRule: 'NONE' };
+  const semester = {
+    id: 'semester-a',
+    name: 'Autumn',
+    startDate: '2026-08-01',
+    endDate: '2026-12-01',
+    workingSaturdayRule: 'NONE',
+  };
   let update: unknown;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
-    if (url.endsWith('/academic/campuses/campus-a/semesters')) return json([semester]);
-    if (url.endsWith('/academic/semesters/semester-a/calendar')) return json({
-      semester, summary: { totalDays: 1, workingDays: 0, nonWorkingDays: 1 }, exams: [],
-      days: [{ date: '2026-09-01', weekday: 'TUESDAY', working: false, reason: 'HOLIDAY', override: { id: 'day-a', title: 'Holiday', type: 'HOLIDAY', teachingAllowed: false } }],
-    });
-    if (url.endsWith('/academic/calendar-days/day-a') && init?.method === 'PATCH') {
+    if (url.endsWith('/academic/campuses/campus-a/semesters'))
+      return json([semester]);
+    if (url.endsWith('/academic/semesters/semester-a/calendar'))
+      return json({
+        semester,
+        summary: { totalDays: 1, workingDays: 0, nonWorkingDays: 1 },
+        exams: [],
+        days: [
+          {
+            date: '2026-09-01',
+            weekday: 'TUESDAY',
+            working: false,
+            reason: 'HOLIDAY',
+            override: {
+              id: 'day-a',
+              title: 'Holiday',
+              type: 'HOLIDAY',
+              teachingAllowed: false,
+            },
+          },
+        ],
+      });
+    if (
+      url.endsWith('/academic/calendar-days/day-a') &&
+      init?.method === 'PATCH'
+    ) {
       update = JSON.parse(String(init.body));
       return json({ id: 'day-a' });
     }
@@ -199,10 +259,18 @@ it('loads an existing date and updates it instead of creating a duplicate', asyn
   renderSetup();
   fireEvent.click(await screen.findByRole('button', { name: /^Autumn/ }));
   await screen.findByRole('heading', { name: 'Update calendar date' });
-  fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-01' } });
+  fireEvent.change(screen.getByLabelText('Date'), {
+    target: { value: '2026-09-01' },
+  });
   expect(screen.getByLabelText('Title')).toHaveValue('Holiday');
-  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Campus event' } });
+  fireEvent.change(screen.getByLabelText('Title'), {
+    target: { value: 'Campus event' },
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Update date' }));
   await screen.findByText('Calendar date updated.');
-  expect(update).toEqual({ title: 'Campus event', type: 'HOLIDAY', teachingAllowed: false });
+  expect(update).toEqual({
+    title: 'Campus event',
+    type: 'HOLIDAY',
+    teachingAllowed: false,
+  });
 });

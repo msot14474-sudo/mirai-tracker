@@ -84,7 +84,7 @@ export function FacultyOverview({
                 </>
               ) : (
                 <p>
-                  Assigned to you. Your campus manager still needs to link this
+                  Assigned to you. Your admin/program manager still needs to link this
                   subject to your batch and semester before you can upload its
                   lesson plan or log classes.
                 </p>

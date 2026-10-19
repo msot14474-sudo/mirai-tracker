@@ -125,6 +125,7 @@ export const academicApi = {
       `/academic/subjects${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
     ),
   createSubject: (input: {
+    semesterId?: string; batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string;
     campusId?: string;
     code: string;
     name: string;

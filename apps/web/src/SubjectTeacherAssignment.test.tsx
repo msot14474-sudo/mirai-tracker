@@ -34,6 +34,13 @@ it('shows the teacher and allows assignment after subject creation', async () =>
           code: 'M',
           active: true,
           description: null,
+          offerings: [
+            {
+              id: 'offering',
+              batch: { name: 'First Year A', semester: { name: 'Semester 1' } },
+              faculty: [],
+            },
+          ],
         }}
       />
     </QueryClientProvider>,
@@ -49,7 +56,30 @@ it('shows the teacher and allows assignment after subject creation', async () =>
     expect(save).toHaveBeenCalledWith('subject', {
       campusId: 'campus',
       staffProfileId: 'teacher',
+      offeringId: 'offering',
     }),
   );
   await screen.findByText('Teacher assignment saved.');
+});
+
+it('explains an unlinked subject instead of allowing a disconnected assignment', () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SubjectTeacherAssignment
+        campusId="campus"
+        subject={{
+          id: 's',
+          name: 'DSA',
+          code: 'DSA',
+          active: true,
+          description: null,
+          offerings: [],
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText(/Pending semester link/)).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Assign teacher' }),
+  ).not.toBeInTheDocument();
 });

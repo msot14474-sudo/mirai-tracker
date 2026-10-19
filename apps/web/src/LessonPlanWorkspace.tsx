@@ -84,7 +84,7 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
           )}
           {!selectionIsLoading && offerings.data?.length === 0 ? (
             <p className="empty-copy">
-              No editable subject offering is assigned to you.
+              No semester batch is assigned for teaching yet. Ask the admin/program manager to link your subject to its semester batch, then ask the campus manager to confirm your teaching assignment.
             </p>
           ) : null}
         </div>
@@ -97,7 +97,7 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
             <div className="empty-state">
               <span>01</span>
               <h3>No subject offerings</h3>
-              <p>No editable subject offering is assigned to you.</p>
+              <p>No semester batch is assigned for teaching yet. Ask the admin/program manager to link your subject to its semester batch, then ask the campus manager to confirm your teaching assignment.</p>
             </div>
           ) : detail.isLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />

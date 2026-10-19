@@ -1,4 +1,7 @@
-import { inheritSubjectTeacher } from './subject-teacher';
+import {
+  inheritSubjectTeacher,
+  inheritSubjectTeachers,
+} from './subject-teacher';
 import { TimetableService } from '../timetable/timetable.service';
 import { CalendarDayType, Prisma } from '@prisma/client';
 import {
@@ -31,6 +34,9 @@ function isUniqueConstraintError(error: unknown) {
     error.code === 'P2002'
   );
 }
+
+// These atomic setup operations include several remote database round trips.
+const SETUP_TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 };
 
 @Injectable()
 export class AcademicCalendarService {
@@ -133,54 +139,172 @@ export class AcademicCalendarService {
   }
 
   async semesterCourses(semesterId: string, user: AuthenticatedUser) {
-    const semester = await this.prisma.semester.findUnique({ where: { id: semesterId } });
+    const semester = await this.prisma.semester.findUnique({
+      where: { id: semesterId },
+    });
     if (!semester) throw new NotFoundException('Semester not found.');
     this.access.assertCanManageCampus(user, semester.campusId);
     return this.prisma.batch.findMany({
       where: { semesterId, active: true },
-      include: { track: true, subjectOfferings: { where: { status: { not: 'ARCHIVED' } }, include: { subject: true, faculty: { where: { active: true }, include: { staffProfile: { include: { user: { select: { name: true } } } } } } } } },
+      include: {
+        track: true,
+        subjectOfferings: {
+          where: { status: { not: 'ARCHIVED' } },
+          include: {
+            subject: true,
+            faculty: {
+              where: { active: true },
+              include: {
+                staffProfile: { include: { user: { select: { name: true } } } },
+              },
+            },
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  async connectSemesterSubjects(semesterId: string, input: {
-    batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string; subjectIds: string[];
-  }, user: AuthenticatedUser) {
+  async connectSemesterSubjects(
+    semesterId: string,
+    input: {
+      batchId?: string;
+      batchName?: string;
+      batchCode?: string;
+      trackName?: string;
+      trackCode?: string;
+      subjectIds: string[];
+    },
+    user: AuthenticatedUser,
+  ) {
     this.access.assertGlobalManager(user);
-    return this.prisma.$transaction(async tx => {
-      const semester = await tx.semester.findUnique({ where: { id: semesterId } });
-      if (!semester) throw new NotFoundException('Semester not found.');
-      if (semester.status === 'ARCHIVED') throw new BadRequestException('This semester is archived.');
-      const subjectIds = [...new Set(input.subjectIds)];
-      const subjects = await tx.subject.findMany({ where: { id: { in: subjectIds }, active: true, OR: [{ campusId: semester.campusId }, { offerings: { some: { batch: { semester: { campusId: semester.campusId } } } } }] } });
-      if (subjects.length !== subjectIds.length) throw new BadRequestException('Choose subjects belonging to this campus.');
-      let batch;
-      if (input.batchId) {
-        batch = await tx.batch.findFirst({ where: { id: input.batchId, semesterId, active: true } });
-        if (!batch) throw new BadRequestException('Choose a batch from this semester.');
-      } else {
-        if (!input.batchName || !input.batchCode || !input.trackName || !input.trackCode) throw new BadRequestException('Enter the batch and track details.');
-        const existing = await tx.batch.findUnique({ where: { semesterId_code: { semesterId, code: input.batchCode } } });
-        if (existing) throw new ConflictException('This batch code already exists. Select the existing batch.');
-        const track = await tx.track.upsert({ where: { code: input.trackCode }, create: { code: input.trackCode, name: input.trackName }, update: {} });
-        if (!track.active) throw new BadRequestException('This track is inactive.');
-        batch = await tx.batch.create({ data: { semesterId, trackId: track.id, name: input.batchName, code: input.batchCode } });
-      }
-      for (const subjectId of subjectIds) {
-        const offering = await tx.subjectOffering.upsert({ where: { batchId_subjectId: { batchId: batch.id, subjectId } }, create: { batchId: batch.id, subjectId, targetFinishDate: semester.endDate }, update: {} });
-        if (offering.status === 'ARCHIVED') throw new BadRequestException('This batch has an archived subject. Choose an active batch or subject.');
-        await inheritSubjectTeacher(tx, offering.id);
-      }
-      await tx.auditEvent.create({ data: { actorId: user.id, campusId: semester.campusId, action: 'CREATE', entityType: 'SemesterSubjects', entityId: semesterId, metadata: { batchId: batch.id, subjectIds } } });
-      return { batchId: batch.id, subjectsLinked: subjectIds.length };
-    }).catch(error => {
-      if (isUniqueConstraintError(error)) throw new ConflictException('This batch or track already exists. Select the existing batch or use the existing track code.');
-      throw error;
+    return this.prisma
+      .$transaction(async (tx) => {
+        return this.linkSemesterSubjects(tx, semesterId, input, user);
+      }, SETUP_TRANSACTION_OPTIONS)
+      .catch((error) => {
+        if (isUniqueConstraintError(error))
+          throw new ConflictException(
+            'This batch or track already exists. Select the existing batch or use the existing track code.',
+          );
+        throw error;
+      });
+  }
+
+  private async linkSemesterSubjects(
+    tx: Prisma.TransactionClient,
+    semesterId: string,
+    input: {
+      batchId?: string;
+      batchName?: string;
+      batchCode?: string;
+      trackName?: string;
+      trackCode?: string;
+      subjectIds: string[];
+    },
+    user: AuthenticatedUser,
+  ) {
+    const semester = await tx.semester.findUnique({
+      where: { id: semesterId },
     });
+    if (!semester) throw new NotFoundException('Semester not found.');
+    if (semester.status === 'ARCHIVED')
+      throw new BadRequestException('This semester is archived.');
+    const subjectIds = [...new Set(input.subjectIds)];
+    const subjects = await tx.subject.findMany({
+      where: {
+        id: { in: subjectIds },
+        active: true,
+        OR: [
+          { campusId: semester.campusId },
+          {
+            offerings: {
+              some: { batch: { semester: { campusId: semester.campusId } } },
+            },
+          },
+        ],
+      },
+    });
+    if (subjects.length !== subjectIds.length)
+      throw new BadRequestException(
+        'Choose subjects belonging to this campus.',
+      );
+    let batch;
+    if (input.batchId) {
+      batch = await tx.batch.findFirst({
+        where: { id: input.batchId, semesterId, active: true },
+      });
+      if (!batch)
+        throw new BadRequestException('Choose a batch from this semester.');
+    } else {
+      if (
+        !input.batchName ||
+        !input.batchCode ||
+        !input.trackName ||
+        !input.trackCode
+      )
+        throw new BadRequestException('Enter the batch and track details.');
+      const existing = await tx.batch.findUnique({
+        where: { semesterId_code: { semesterId, code: input.batchCode } },
+      });
+      if (existing)
+        throw new ConflictException(
+          'This batch code already exists. Select the existing batch.',
+        );
+      const track = await tx.track.upsert({
+        where: { code: input.trackCode },
+        create: { code: input.trackCode, name: input.trackName },
+        update: {},
+      });
+      if (!track.active)
+        throw new BadRequestException('This track is inactive.');
+      batch = await tx.batch.create({
+        data: {
+          semesterId,
+          trackId: track.id,
+          name: input.batchName,
+          code: input.batchCode,
+        },
+      });
+    }
+    // Bulk writes keep linking a whole catalog within a bounded transaction.
+    await tx.subjectOffering.createMany({
+      data: subjectIds.map((subjectId) => ({
+        batchId: batch.id,
+        subjectId,
+        targetFinishDate: semester.endDate,
+      })),
+      skipDuplicates: true,
+    });
+    const offerings = await tx.subjectOffering.findMany({
+      where: { batchId: batch.id, subjectId: { in: subjectIds } },
+      select: { id: true, status: true },
+    });
+    if (offerings.some((offering) => offering.status === 'ARCHIVED'))
+      throw new BadRequestException(
+        'This batch has an archived subject. Choose an active batch or subject.',
+      );
+    await inheritSubjectTeachers(
+      tx,
+      offerings.map((offering) => offering.id),
+    );
+    await tx.auditEvent.create({
+      data: {
+        actorId: user.id,
+        campusId: semester.campusId,
+        action: 'CREATE',
+        entityType: 'SemesterSubjects',
+        entityId: semesterId,
+        metadata: { batchId: batch.id, subjectIds },
+      },
+    });
+    return { batchId: batch.id, subjectsLinked: subjectIds.length };
   }
 
   async listFacultySubjects(user: AuthenticatedUser) {
-    const campusIds = user.roles.filter(r => r.role === 'FACULTY' && r.campusId).map(r => r.campusId!);
+    const campusIds = user.roles
+      .filter((r) => r.role === 'FACULTY' && r.campusId)
+      .map((r) => r.campusId!);
     if (!user.staffProfileId || !campusIds.length) return [];
     const offeringScope = {
       status: { not: 'ARCHIVED' as const },
@@ -191,15 +315,29 @@ export class AcademicCalendarService {
       where: {
         active: true,
         OR: [
-          { teachers: { some: { staffProfileId: user.staffProfileId, campusId: { in: campusIds } } } },
+          {
+            teachers: {
+              some: {
+                staffProfileId: user.staffProfileId,
+                campusId: { in: campusIds },
+              },
+            },
+          },
           { offerings: { some: offeringScope } },
         ],
       },
       select: {
-        id: true, name: true, code: true,
+        id: true,
+        name: true,
+        code: true,
         offerings: {
           where: offeringScope,
-          select: { id: true, batch: { select: { name: true, semester: { select: { name: true } } } } },
+          select: {
+            id: true,
+            batch: {
+              select: { name: true, semester: { select: { name: true } } },
+            },
+          },
         },
       },
       orderBy: { name: 'asc' },
@@ -278,6 +416,23 @@ export class AcademicCalendarService {
           update: { active: true },
         });
       } else {
+        const linked = await tx.subjectOffering.findFirst({
+          where: {
+            subjectId,
+            status: { not: 'ARCHIVED' },
+            batch: {
+              active: true,
+              semester: {
+                campusId: input.campusId,
+                status: { not: 'ARCHIVED' },
+              },
+            },
+          },
+        });
+        if (!linked)
+          throw new BadRequestException(
+            'Ask the admin/program manager to link this subject to a semester batch in Semester setup before assigning its teacher.',
+          );
         await tx.subjectTeacher.upsert({
           where: {
             subjectId_campusId: { subjectId, campusId: input.campusId },
@@ -315,12 +470,38 @@ export class AcademicCalendarService {
         },
       });
       return { assigned: true };
-    });
+    }, SETUP_TRANSACTION_OPTIONS);
   }
 
   async createSubject(input: CreateSubjectInput, user: AuthenticatedUser) {
     this.access.assertGlobalManager(user);
     try {
+      if (input.semesterId) {
+        return await this.prisma.$transaction(async (tx) => {
+          const semester = await tx.semester.findUnique({
+            where: { id: input.semesterId! },
+          });
+          if (!semester || semester.campusId !== input.campusId)
+            throw new BadRequestException(
+              'Choose a semester from this campus.',
+            );
+          const subject = await tx.subject.create({
+            data: {
+              campusId: input.campusId,
+              code: input.code,
+              name: input.name,
+              description: input.description,
+            },
+          });
+          await this.linkSemesterSubjects(
+            tx,
+            semester.id,
+            { ...input, subjectIds: [subject.id] },
+            user,
+          );
+          return subject;
+        }, SETUP_TRANSACTION_OPTIONS);
+      }
       return await this.prisma.subject.create({
         data: {
           ...(input.campusId ? { campusId: input.campusId } : {}),
