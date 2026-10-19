@@ -13,19 +13,27 @@ const countLabels: Array<[keyof ImportCounts, string]> = [
   ['calendarDays', 'Calendar days'],
 ];
 
-export function SemesterImport({ campusId }: { campusId?: string }) {
-  const [mode, setMode] = useState('progress');
+export function SemesterImport({
+  campusId,
+  canImportProgress = false,
+}: {
+  campusId?: string;
+  canImportProgress?: boolean;
+}) {
+  const [mode, setMode] = useState(canImportProgress ? 'progress' : 'setup');
   return (
     <>
       <div className="import-mode-picker" role="group" aria-label="Import type">
-        <button
-          className={mode === 'progress' ? 'selected' : ''}
-          aria-pressed={mode === 'progress'}
-          type="button"
-          onClick={() => setMode('progress')}
-        >
-          Import course data
-        </button>
+        {canImportProgress && (
+          <button
+            className={mode === 'progress' ? 'selected' : ''}
+            aria-pressed={mode === 'progress'}
+            type="button"
+            onClick={() => setMode('progress')}
+          >
+            Import course data
+          </button>
+        )}
         <button
           className={mode === 'setup' ? 'selected' : ''}
           aria-pressed={mode === 'setup'}
@@ -45,7 +53,7 @@ export function SemesterImport({ campusId }: { campusId?: string }) {
       </div>
       {mode === 'calendar' ? (
         <CalendarFileImport key={campusId} campusId={campusId} />
-      ) : mode === 'setup' ? (
+      ) : mode === 'setup' || !canImportProgress ? (
         <SemesterSetupImport campusId={campusId} />
       ) : (
         <CourseProgressImport campusId={campusId} />
@@ -107,7 +115,8 @@ function SemesterSetupImport({ campusId }: { campusId?: string }) {
           <h3>Choose semester data</h3>
           <p>
             For semester dates, batches and subjects, use the supplied template.
-            Already tracking completed lessons? Choose Import course data above.
+            Upload the completed template to create semester dates, batches and
+            subjects.
           </p>
           <label className="file-picker">
             <span className="file-picker-label">CSV or Excel file</span>

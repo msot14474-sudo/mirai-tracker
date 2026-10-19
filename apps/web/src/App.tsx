@@ -1079,6 +1079,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const canManageTimetable = roles.some(role => role === 'ADMIN' || role === 'CAMPUS_MANAGER');
   const canManageFaculty = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role));
   const canManageLessonPlans = roles.some(role => role === 'ADMIN' || role === 'FACULTY');
+  const canManageSessions = roles.some(role => role === 'ADMIN' || role === 'CAMPUS_MANAGER');
+  const canViewAi = roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role));
   const canLogSessions = roles.includes('FACULTY');
   const canViewStudentOverview = roles.includes('STUDENT');
   const canViewAlerts = roles.some(
@@ -1196,6 +1198,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             label: 'Lesson plans',
             icon: 'lessons' as const,
           },
+        ]
+      : []),
+    ...(canManageLessonPlans || canManageSessions
+      ? [
           {
             id: 'planned-dates' as const,
             label: 'Planned dates',
@@ -1212,13 +1218,17 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           },
         ]
       : []),
-    ...(canViewProgressDashboard
+    ...(canViewAi
       ? [
           {
             id: 'ai-insights' as const,
             label: 'AI insights',
             icon: 'progress' as const,
           },
+        ]
+      : []),
+    ...(canViewProgressDashboard
+      ? [
           {
             id: 'progress' as const,
             label: 'Progress',
@@ -1327,6 +1337,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'semester-import':
         return (
           <SemesterImport
+            canImportProgress={roles.includes('ADMIN')}
             key={selectedCampusId}
             campusId={selectedCampusId || undefined}
           />
@@ -1362,6 +1373,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'planned-dates':
         return (
           <TopicScheduleWorkspace
+            canManageSessions={canManageSessions}
             key={selectedCampusId}
             campusId={selectedCampusId || undefined}
           />
@@ -1383,7 +1395,19 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           />
         );
       case 'help':
-        return <HelpWorkspace onOpenAccount={() => openView('account')} />;
+        return <HelpWorkspace
+          onOpenAccount={() => openView('account')}
+          workflow={canManageAcademicCalendar ? {
+            title: 'Set up and monitor your campuses',
+            steps: ['Choose a campus and create its semester.', 'Set working days, holidays and exam windows, or import the calendar.', 'Review campus progress and exam readiness, then export reports.'],
+          } : canManageTimetable ? {
+            title: 'Manage your campus teaching',
+            steps: ['Open User access to add faculty and assign subjects.', 'Build the weekly timetable; use Planned dates for individual class changes.', 'Review campus progress and follow up on missed-log alerts.'],
+          } : canLogSessions ? {
+            title: 'Plan, teach and log your subjects',
+            steps: ['Upload your lesson plan and select each exam’s topics.', 'Check Planned dates for your upcoming classes.', 'After each lecture, open Daily logging and record coverage and leftovers.', 'Review your subject progress and exam readiness. Ask your campus manager to change class times.'],
+          } : undefined}
+        />;
       case 'overview':
       default:
         return (

@@ -4,7 +4,13 @@ import { formatTeachingTime } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
 
-export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
+export function TopicScheduleWorkspace({
+  campusId,
+  canManageSessions = false,
+}: {
+  campusId?: string;
+  canManageSessions?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [offeringId, setOfferingId] = useState('');
   const offerings = useQuery({
@@ -102,13 +108,22 @@ export function TopicScheduleWorkspace({ campusId }: { campusId?: string }) {
           {detail.error.message}
         </p>
       ) : detail.data ? (
-        <ScheduleDetail detail={detail.data} />
+        <ScheduleDetail
+          detail={detail.data}
+          canManageSessions={canManageSessions}
+        />
       ) : null}
     </section>
   );
 }
 
-function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
+function ScheduleDetail({
+  detail,
+  canManageSessions,
+}: {
+  detail: TopicScheduleDetail;
+  canManageSessions: boolean;
+}) {
   const queryClient = useQueryClient();
   const refresh = async () => {
     await Promise.all(
@@ -146,6 +161,7 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
         {detail.sessions.map((session) => (
           <SessionCapacityRow
             key={session.id}
+            canManageSessions={canManageSessions}
             session={session}
             onChanged={refresh}
           />
@@ -359,12 +375,15 @@ function ScheduleDetail({ detail }: { detail: TopicScheduleDetail }) {
             <span>{detail.sessions.length}</span>
           </div>
           <p className="session-help">
-            Cancel an unlogged class to create a new shifted schedule version.
+            {canManageSessions
+              ? 'Move or cancel an upcoming class here. Later topic dates adjust automatically.'
+              : 'View your upcoming classes here. Record completed or cancelled lectures in Daily logging; ask your campus manager to change class times.'}
           </p>
           <div className="capacity-list">
             {detail.sessions.map((session) => (
               <SessionCapacityRow
                 key={session.id}
+                canManageSessions={canManageSessions}
                 session={session}
                 onChanged={refresh}
               />
@@ -396,7 +415,9 @@ function Metric({
 function SessionCapacityRow({
   session,
   onChanged,
+  canManageSessions,
 }: {
+  canManageSessions: boolean;
   session: TopicScheduleDetail['sessions'][number];
   onChanged: () => Promise<void>;
 }) {
@@ -423,6 +444,25 @@ function SessionCapacityRow({
       ),
     onSuccess: onChanged,
   });
+
+  if (!canManageSessions)
+    return (
+      <div className="capacity-row">
+        <div>
+          <strong>{displayDate(session.sessionDate)}</strong>
+          <span>
+            {formatClock(session.startsAt)}–{formatClock(session.endsAt)} ·{' '}
+            {formatTeachingTime(session.plannedMinutes)}
+          </span>
+        </div>
+        <span className={`session-state ${session.status.toLowerCase()}`}>
+          {session.status}
+        </span>
+        {session.cancellationReason && (
+          <small>{session.cancellationReason}</small>
+        )}
+      </div>
+    );
 
   function submit(event: FormEvent) {
     event.preventDefault();

@@ -124,13 +124,13 @@ function json(value: unknown) {
   });
 }
 
-function renderWorkspace() {
+function renderWorkspace(canManageSessions = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <TopicScheduleWorkspace />
+      <TopicScheduleWorkspace canManageSessions={canManageSessions} />
     </QueryClientProvider>,
   );
 }
@@ -224,4 +224,14 @@ describe('TopicScheduleWorkspace', () => {
       }),
     );
   });
+});
+
+it('lets faculty view classes without timetable editing controls', async () => {
+  installFetchMock();
+  renderWorkspace(false);
+  expect(await screen.findByText('Arrays')).toBeInTheDocument();
+  expect(screen.getByText(/ask your campus manager to change class times/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Move class' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Cancel class' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
 });

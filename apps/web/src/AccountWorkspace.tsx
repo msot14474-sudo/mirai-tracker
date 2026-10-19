@@ -5,7 +5,7 @@ import { AuthenticatedUser, updateOwnAccount, UserRole } from './auth';
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Administrator',
-  PROGRAM_MANAGER: 'Administrator',
+  PROGRAM_MANAGER: 'Program Manager',
   CAMPUS_MANAGER: 'Campus Manager',
   FACULTY: 'Faculty',
   STUDENT: 'Student',

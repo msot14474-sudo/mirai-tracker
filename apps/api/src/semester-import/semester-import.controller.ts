@@ -75,6 +75,7 @@ export class SemesterImportController {
   }
 
   @Post('progress/inspect')
+  @Roles(UserRole.ADMIN)
   @UseInterceptors(upload)
   inspectProgress(
     @UploadedFile() file: UploadedImportFile | undefined,
@@ -85,6 +86,7 @@ export class SemesterImportController {
   }
 
   @Post('progress/preview')
+  @Roles(UserRole.ADMIN)
   @UseInterceptors(upload)
   previewProgress(
     @UploadedFile() file: UploadedImportFile | undefined,
@@ -107,6 +109,7 @@ export class SemesterImportController {
   }
 
   @Post('progress')
+  @Roles(UserRole.ADMIN)
   @UseInterceptors(upload)
   importProgress(
     @UploadedFile() file: UploadedImportFile | undefined,

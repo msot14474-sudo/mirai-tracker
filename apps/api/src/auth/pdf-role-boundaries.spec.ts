@@ -39,6 +39,46 @@ it('lets campus managers manage timetables and faculty, but not faculty lesson p
 });
 it('keeps faculty logging workflow editing available to faculty', () => {
   expect(roles(LessonPlanController.prototype.execute)).toContain('FACULTY');
-  expect(roles(TopicScheduleController.prototype.move)).toContain('FACULTY');
+  expect(roles(TopicScheduleController.prototype.move)).not.toContain(
+    'FACULTY',
+  );
+  expect(
+    roles(TopicScheduleController.prototype.setCancellation),
+  ).not.toContain('FACULTY');
   expect(roles(TimetableController.prototype.create)).not.toContain('FACULTY');
 });
+
+// Exercise the same effective controller/method permissions used for HTTP requests.
+import { Reflector } from '@nestjs/core';
+import { ExecutionContext } from '@nestjs/common';
+import { RolesGuard } from './roles.guard';
+import { SemesterImportController } from '../semester-import/semester-import.controller';
+import { AiInsightsController } from '../ai-insights/ai-insights.controller';
+import { MissedLogAlertController } from '../missed-log-alert/missed-log-alert.controller';
+const guard = new RolesGuard(new Reflector());
+it.each([
+  [SemesterImportController, 'importProgress', [false, false, false]],
+  [SemesterImportController, 'previewProgress', [false, false, false]],
+  [SemesterImportController, 'inspectProgress', [false, false, false]],
+  [SemesterImportController, 'calendarCommit', [true, false, false]],
+  [TopicScheduleController, 'move', [false, true, false]],
+  [TopicScheduleController, 'setCancellation', [false, true, false]],
+  [TimetableController, 'create', [false, true, false]],
+  [LessonPlanController, 'execute', [false, false, true]],
+  [AiInsightsController, 'report', [true, true, false]],
+  [MissedLogAlertController, 'testEmail', [false, false, false]],
+] as const)(
+  'enforces PDF boundaries on %p.%s',
+  (controller, method, expected) => {
+    ['PROGRAM_MANAGER', 'CAMPUS_MANAGER', 'FACULTY'].forEach((role, index) => {
+      const context = {
+        getClass: () => controller,
+        getHandler: () => (controller.prototype as any)[method],
+        switchToHttp: () => ({
+          getRequest: () => ({ user: { roles: [{ role }] } }),
+        }),
+      } as unknown as ExecutionContext;
+      expect(guard.canActivate(context)).toBe(expected[index]);
+    });
+  },
+);

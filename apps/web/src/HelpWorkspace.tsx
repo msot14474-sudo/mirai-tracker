@@ -1,7 +1,9 @@
 export function HelpWorkspace({
   onOpenAccount,
+  workflow,
 }: {
   onOpenAccount: () => void;
+  workflow?: { title: string; steps: string[] };
 }) {
   return (
     <div className="help-workspace">
@@ -15,6 +17,17 @@ export function HelpWorkspace({
           <img src="/mirai-symbol-light.png" alt="" />
         </div>
       </section>
+
+      {workflow && (
+        <section className="help-faq-card" aria-label="Your workflow">
+          <h2>{workflow.title}</h2>
+          <ol>
+            {workflow.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section className="help-topic-grid" aria-label="Help topics">
         <article>

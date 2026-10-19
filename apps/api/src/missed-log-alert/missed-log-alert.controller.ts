@@ -39,7 +39,7 @@ export class MissedLogAlertController {
   }
 
   @Post('test-email')
-  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
+  @Roles(UserRole.ADMIN)
   @HttpCode(200)
   async testEmail(@Body() body: unknown) {
     const parsed = testEmailSchema.safeParse(body);
