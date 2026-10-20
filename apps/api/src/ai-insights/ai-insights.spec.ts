@@ -156,6 +156,41 @@ it('handles missing lesson plans without breaking the dashboard', async () => {
   expect(result.subjects[0]!.completion).toBeNull();
   expect(result.subjects[0]!.issues).toContain('Add a lesson plan.');
 });
+it('counts saved logs separately from ended unlogged and upcoming timetable classes', async () => {
+  const { db, context } = setup();
+  db.scheduledSession.count.mockImplementation(async ({ where }) =>
+    where.logs ? 3 : where.startsAt ? 26 : 44,
+  );
+  const result = await context.snapshot(user('ADMIN'), { campusId: 'campus-a' });
+  expect(result.coverage).toMatchObject({
+    loggedLectures: 3,
+    pastLectures: 44,
+    upcomingLectures: 26,
+  });
+  expect(db.scheduledSession.count).toHaveBeenCalledWith({
+    where: { offeringId: { in: ['offering-a'] }, logs: { some: {} } },
+  });
+  expect(db.scheduledSession.groupBy).toHaveBeenCalledWith({
+    by: ['offeringId'],
+    where: {
+      offeringId: { in: ['offering-a'] },
+      endsAt: { lte: expect.any(Date) },
+      status: { in: ['SCHEDULED', 'COMPLETED', 'IN_PROGRESS'] },
+      logs: { none: {} },
+    },
+    _count: { _all: true },
+  });
+});
+it('does not flag a completed topic as overdue or still to teach when its stored percentage is stale', async () => {
+  const { db, context } = setup();
+  const [offering] = await db.subjectOffering.findMany();
+  offering.lessonPlans[0]!.units[0]!.topics[0]!.status = 'COMPLETED';
+  offering.lessonPlans[0]!.units[0]!.topics[0]!.currentCompletionPercentage = 0;
+  const result = await context.snapshot(user('ADMIN'));
+  expect(result.subjects[0]).toMatchObject({
+    completion: 50, overdueTopics: 0, nextTopics: ['Lists'],
+  });
+});
 it('generates a real data report without provider credentials or Redis', async () => {
   const { context } = setup();
   const redis = {

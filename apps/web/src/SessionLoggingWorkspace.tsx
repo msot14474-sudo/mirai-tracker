@@ -129,6 +129,7 @@ function SessionLogCard({
           'progress-dashboard',
           'exam-readiness',
           'student-overview',
+          'ai-insights',
         ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
       );
       await queryClient.invalidateQueries({ queryKey: ['session-logs'] });

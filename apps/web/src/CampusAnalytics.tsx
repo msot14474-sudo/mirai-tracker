@@ -12,7 +12,7 @@ export type CampusSnapshot = {
     needsHelp: number;
     reviews: number;
   };
-  coverage: { pastLectures: number; upcomingLectures: number };
+  coverage: { pastLectures: number; upcomingLectures: number; loggedLectures?: number };
   subjects: {
     id: string;
     code: string;
@@ -29,9 +29,12 @@ export type CampusSnapshot = {
 const colors = ['#3165da', '#53b7c3', '#eab464', '#b4c3db'];
 export function campusMetrics(data: CampusSnapshot) {
   const topics = data.subjects.flatMap((s) => s.topics);
-  const minutes = topics.reduce((total, t) => total + t.minutes, 0);
-  const covered = topics.reduce(
-    (total, t) => total + (t.minutes * t.completion) / 100,
+  const includedTopics = topics.filter((t) => t.status !== 'SKIPPED');
+  const completion = (t: CampusSnapshot['subjects'][number]['topics'][number]) =>
+    t.status === 'COMPLETED' ? 100 : t.completion;
+  const minutes = includedTopics.reduce((total, t) => total + t.minutes, 0);
+  const covered = includedTopics.reduce(
+    (total, t) => total + (t.minutes * completion(t)) / 100,
     0,
   );
   const sessions = data.subjects.flatMap((s) => s.sessions);
@@ -41,23 +44,26 @@ export function campusMetrics(data: CampusSnapshot) {
       .reduce((n, s) => n + s.count, 0);
   return {
     progress: minutes ? Math.round((covered / minutes) * 100) : null,
+    measuredSubjects: data.subjects.filter((s) =>
+      s.topics.some((t) => t.status !== 'SKIPPED' && t.minutes > 0),
+    ).length,
     topics: [
       {
         label: 'Completed',
         value: topics.filter(
-          (t) => t.completion >= 100 && t.status !== 'SKIPPED',
+          (t) => completion(t) >= 100 && t.status !== 'SKIPPED',
         ).length,
       },
       {
         label: 'In progress',
         value: topics.filter(
           (t) =>
-            t.completion > 0 && t.completion < 100 && t.status !== 'SKIPPED',
+            completion(t) > 0 && completion(t) < 100 && t.status !== 'SKIPPED',
         ).length,
       },
       {
         label: 'Not started',
-        value: topics.filter((t) => t.completion <= 0 && t.status !== 'SKIPPED')
+        value: topics.filter((t) => completion(t) <= 0 && t.status !== 'SKIPPED')
           .length,
       },
       {
@@ -212,6 +218,8 @@ export function CampusAnalytics({
 }) {
   const query = useQuery({
     queryKey: ['ai-insights', campusId ?? '', ''],
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
     queryFn: async (): Promise<CampusSnapshot> => {
       const response = await apiFetch(
         apiUrl +
@@ -254,22 +262,36 @@ export function CampusAnalytics({
         <>
           <div className="ca-kpis">
             {[
-              ['Subject offerings', data.summary.subjects],
+              ['Subject offerings', data.summary.subjects, 'Subject and batch combinations'],
               [
-                'Syllabus coverage',
+                'Recorded coverage',
                 metrics.progress === null ? '—' : metrics.progress + '%',
+                `Plan hours available for ${metrics.measuredSubjects} of ${data.summary.subjects} subjects`,
               ],
-              ['Need attention', data.summary.attention],
-              ['Overdue topics', data.summary.overdueTopics],
-              ['Missing lecture logs', data.summary.missingLogs],
-              ['Upcoming lectures', data.coverage.upcomingLectures],
-            ].map(([label, value]) => (
+              ['Subjects to review', data.summary.attention, 'Includes missing plans, logs and exam scope'],
+              ['Overdue topics', data.summary.overdueTopics, 'Past planned dates; completion not recorded'],
+              ['Unlogged past classes', data.summary.missingLogs, 'Ended timetable classes without a saved log'],
+              ['Upcoming classes', data.coverage.upcomingLectures, 'Future classes scheduled in the timetable'],
+            ].map(([label, value, note]) => (
               <div key={label}>
                 <span>{label}</span>
                 <strong>{value}</strong>
+                <small>{note}</small>
               </div>
             ))}
           </div>
+          <aside className="ca-record-evidence" aria-label="Lecture log evidence">
+            <strong>
+              {data.coverage.loggedLectures === undefined
+                ? 'Lecture logs'
+                : `${data.coverage.loggedLectures} ${data.coverage.loggedLectures === 1 ? 'class has' : 'classes have'} saved lecture logs`}
+            </strong>
+            <p>
+              Timetable classes exist before a teacher logs them. Coverage reflects saved topic
+              progress, including imported progress; missing logs do not confirm missed teaching.
+              Subjects without lesson-plan hours are excluded from coverage.
+            </p>
+          </aside>
           {!data.subjects.length ? (
             <p className="ca-empty">
               No academic records yet. Charts will populate as subjects, plans
@@ -295,7 +317,7 @@ export function CampusAnalytics({
                         </span>
                         <strong>
                           {s.completion === null
-                            ? 'No plan time'
+                            ? 'Coverage unknown'
                             : s.completion + '%'}
                         </strong>
                       </div>
@@ -313,9 +335,9 @@ export function CampusAnalytics({
               </p>
             </section>
             <Donut
-              title="Lecture status"
+              title="Timetable class status"
               items={metrics.lectures}
-              note="All recorded sessions, including future scheduled classes."
+              note="Timetable entries, including past unlogged and future classes. These are not counts of saved lecture logs."
             />
             <Donut
               title="Student understanding"
@@ -341,8 +363,7 @@ export function CampusAnalytics({
           </div>
           <footer className="ca-footer">
             <span>
-              Active and completed offerings · Current plans · All recorded
-              lecture and feedback totals
+              Permitted subject offerings · Current plans · Timetable and saved feedback totals
             </span>
             <span>Missing logs do not mean a lecture was missed.</span>
           </footer>

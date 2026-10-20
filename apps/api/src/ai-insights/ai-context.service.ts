@@ -224,6 +224,7 @@ export class AiContextService {
       recentGaps,
       totalPast,
       totalUpcoming,
+      totalLogged,
     ] = await Promise.all([
       this.prisma.scheduledSession.groupBy({
         by: ['offeringId', 'status'],
@@ -284,6 +285,10 @@ export class AiContextService {
       this.prisma.scheduledSession.count({
         where: { ...sessionScope, startsAt: { gt: now }, status: 'SCHEDULED' },
       }),
+      // Count sessions with evidence, not log revisions or timetable entries.
+      this.prisma.scheduledSession.count({
+        where: { ...sessionScope, logs: { some: {} } },
+      }),
     ]);
     const subjects = offerings.map((o) => {
       const plan =
@@ -308,7 +313,7 @@ export class AiContextService {
             title: t.title,
             description: t.description,
             minutes: t.plannedMinutes,
-            completion: Number(t.currentCompletionPercentage),
+            completion: t.status === 'COMPLETED' ? 100 : Number(t.currentCompletionPercentage),
             status: t.status,
             finishDate: dates.get(t.id) ?? null,
             examIds: t.examScopes.map((e) => e.examWindowId),
@@ -447,12 +452,13 @@ export class AiContextService {
       coverage: {
         subjects: subjects.length,
         pastLectures: totalPast,
+        loggedLectures: totalLogged,
         recentLecturesIncluded: recentLectures.length,
         upcomingLectures: totalUpcoming,
         upcomingIncluded: upcomingLectures.length,
         feedbackGaps: needsHelp,
         feedbackGapsIncluded: recentGaps.length,
-        note: 'All permitted draft/active/completed subjects, current plans and aggregate lecture/feedback totals. Detailed context includes the latest 80 past lectures, next 20 lectures and 50 recent understanding gaps. Select a subject for deeper focus. Missing logs are not proof that a class was missed.',
+        note: 'All permitted draft/active/completed subjects, current plans and aggregate lecture/feedback totals. loggedLectures counts distinct classes with saved logs, not revisions. missingLogs counts ended timetable classes requiring a log that have none; upcomingLectures counts future scheduled classes. Detailed context includes the latest 80 past lectures, next 20 lectures and 50 recent understanding gaps. Select a subject for deeper focus. Coverage is recorded topic progress, which can also come from imports. Missing logs or zero recorded coverage do not prove that no teaching took place. Subjects without plan hours have unknown coverage.',
       },
       summary: {
         subjects: subjects.length,

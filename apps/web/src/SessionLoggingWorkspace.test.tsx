@@ -81,10 +81,9 @@ function json(value: unknown) {
   });
 }
 
-function renderWorkspace() {
-  const client = new QueryClient({
+function renderWorkspace(client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  })) {
   return render(
     <QueryClientProvider client={client}>
       <SessionLoggingWorkspace />
@@ -131,7 +130,10 @@ describe('SessionLoggingWorkspace', () => {
         writes.push({ url, body: JSON.parse(String(init.body)) });
       }
     });
-    renderWorkspace();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const overviewKey = ['ai-insights', 'campus-a', ''];
+    client.setQueryData(overviewKey, { coverage: { loggedLectures: 0 } });
+    renderWorkspace(client);
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Confirm session in one tap' }),
@@ -159,6 +161,7 @@ describe('SessionLoggingWorkspace', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Saved revision',
     );
+    await waitFor(() => expect(client.getQueryState(overviewKey)?.isInvalidated).toBe(true));
   });
 
   it('captures a cancellation reason without advancing a topic', async () => {
