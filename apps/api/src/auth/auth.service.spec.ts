@@ -40,7 +40,9 @@ describe('AuthService', () => {
       store.set(key, value);
       return Promise.resolve();
     }),
-    getPersistent: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
+    getPersistent: jest.fn((key: string) =>
+      Promise.resolve(store.get(key) ?? null),
+    ),
     get: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     setWithExpiry: jest.fn((key: string, value: string) => {
       store.set(key, value);
@@ -87,6 +89,7 @@ describe('AuthService', () => {
       name: 'Faculty A',
       email: 'faculty@mirai.local',
       notificationEmail: 'faculty@example.edu',
+      loginOtpRequired: true,
       status,
       passwordCredential: credential,
       roleAssignments: [{ role: UserRole.FACULTY, campusId: 'campus-a' }],
@@ -98,6 +101,92 @@ describe('AuthService', () => {
   function service() {
     return new AuthService(prisma as never, redis as never, email as never);
   }
+
+  async function loginWithOtp(
+    auth: AuthService,
+    email: string,
+    password: string,
+  ) {
+    const result = await auth.login(email, password);
+    if (!('challengeId' in result))
+      throw new Error('Expected an OTP challenge');
+    return result;
+  }
+
+  it('creates an audited session after a valid password for an explicitly exempt account', async () => {
+    findUnique.mockResolvedValueOnce({
+      ...(await activeUser()),
+      loginOtpRequired: false,
+    });
+    const result = await service().login(
+      'faculty@mirai.local',
+      'correct-password',
+    );
+    expect(result).toMatchObject({
+      token: expect.any(String),
+      user: { id: 'user-a' },
+    });
+    expect(sendLoginOtp).not.toHaveBeenCalled();
+    expect(redis.incrementWithExpiry).not.toHaveBeenCalled();
+    expect(redis.setPersistent).toHaveBeenCalledWith(
+      expect.stringMatching(/^auth:session:/),
+      'user-a',
+    );
+    expect(createAuditEvent).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: { authenticationMethod: 'password' },
+      }),
+    });
+  });
+
+  it('still requires OTP for an ordinary account sharing the demo notification inbox', async () => {
+    findUnique.mockResolvedValueOnce({
+      ...(await activeUser()),
+      notificationEmail: 'msot14474@gmail.com',
+    });
+    await loginWithOtp(service(), 'faculty@mirai.local', 'correct-password');
+    expect(sendLoginOtp).toHaveBeenCalled();
+    expect(redis.setPersistent).not.toHaveBeenCalled();
+  });
+
+  it('retains password and active-account checks for OTP-exempt users', async () => {
+    const record = { ...(await activeUser()), loginOtpRequired: false };
+    findUnique.mockResolvedValueOnce(record);
+    await expect(
+      service().login(record.email, 'wrong-password'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    findUnique.mockResolvedValueOnce({
+      ...record,
+      status: UserStatus.SUSPENDED,
+    });
+    await expect(
+      service().login(record.email, 'correct-password'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(redis.setPersistent).not.toHaveBeenCalled();
+    expect(sendLoginOtp).not.toHaveBeenCalled();
+  });
+
+  it('keeps password rate limits for OTP-exempt users', async () => {
+    findUnique.mockResolvedValue({
+      ...(await activeUser()),
+      loginOtpRequired: false,
+    });
+    redis.get.mockResolvedValueOnce('5');
+    await expect(
+      service().login('faculty@mirai.local', 'correct-password'),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(redis.setPersistent).not.toHaveBeenCalled();
+  });
+
+  it('continues to verify password resets by email for OTP-exempt users', async () => {
+    findUnique.mockResolvedValueOnce({
+      ...(await activeUser()),
+      loginOtpRequired: false,
+    });
+    await service().requestPasswordReset('faculty@mirai.local');
+    expect(sendPasswordResetOtp).toHaveBeenCalled();
+    expect(redis.setPersistent).not.toHaveBeenCalled();
+  });
 
   it('uses existing account roles for Google and records the authentication method', async () => {
     findUnique.mockResolvedValueOnce(await activeUser());
@@ -134,7 +223,8 @@ describe('AuthService', () => {
   it('emails a short-lived code after valid credentials without creating a session', async () => {
     findUnique.mockResolvedValueOnce(await activeUser());
 
-    const result = await service().login(
+    const result = await loginWithOtp(
+      service(),
       '  FACULTY@MIRAI.LOCAL ',
       'correct-password',
     );
@@ -171,7 +261,8 @@ describe('AuthService', () => {
     const record = await activeUser();
     findUnique.mockResolvedValueOnce(record);
     const auth = service();
-    const challenge = await auth.login(
+    const challenge = await loginWithOtp(
+      auth,
       'faculty@mirai.local',
       'correct-password',
     );
@@ -210,7 +301,8 @@ describe('AuthService', () => {
   it('rejects an incorrect or expired code without creating a session', async () => {
     findUnique.mockResolvedValueOnce(await activeUser());
     const auth = service();
-    const challenge = await auth.login(
+    const challenge = await loginWithOtp(
+      auth,
       'faculty@mirai.local',
       'correct-password',
     );
@@ -271,7 +363,8 @@ describe('AuthService', () => {
   it('invalidates a challenge after five incorrect codes', async () => {
     findUnique.mockResolvedValueOnce(await activeUser());
     const auth = service();
-    const challenge = await auth.login(
+    const challenge = await loginWithOtp(
+      auth,
       'faculty@mirai.local',
       'correct-password',
     );

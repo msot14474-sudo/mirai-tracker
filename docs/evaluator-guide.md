@@ -2,6 +2,8 @@
 
 In any campus choose **Evaluator Demo · Odd Semester 2026**, 20 July–18 December. Subject names end in “(Demo)” and the batch is “Evaluator First Year A”. All history and financial examples are fictional.
 
+The existing live demo accounts sign in with their email and password without a login OTP. This exception is configured for those individual accounts; sharing their notification inbox does not grant the exception. Other accounts and local setup retain email verification.
+
 ## Administrator
 
 1. Open each of the three campuses and inspect Overview and Subjects.

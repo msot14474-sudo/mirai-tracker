@@ -14,6 +14,8 @@ Start with Subjects → a demo subject, then inspect Reports, Progress, Exam rea
 
 Existing institutional records remain separate. Passwords and OTP destinations are in the owner's private handoff file, not this repository. Local setup generates independent credentials.
 
+The 52 existing live demo accounts use password-only sign-in by owner request. Other accounts and newly created accounts require email OTP by default. Password recovery still requires email verification.
+
 ## One-command local setup
 
 Prerequisites: Git, Docker Desktop with Compose, and OpenSSL.

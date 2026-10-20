@@ -18,6 +18,16 @@ const migrationSql = readdirSync(migrationDirectory, { withFileTypes: true })
   .join('\n');
 
 describe('Problem 1 database contract', () => {
+  it('requires login OTP by default for every new account', () => {
+    expect(
+      model('User')?.fields.find((field) => field.name === 'loginOtpRequired'),
+    ).toMatchObject({
+      type: 'Boolean',
+      isRequired: true,
+      default: true,
+    });
+  });
+
   it('contains the complete required domain model', () => {
     const expectedModels = [
       'Campus',

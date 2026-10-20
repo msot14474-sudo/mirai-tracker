@@ -435,7 +435,13 @@ function LoginScreen() {
   const [resetComplete, setResetComplete] = useState(false);
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
-    onSuccess: setChallenge,
+    onSuccess: (result) => {
+      if ('user' in result) {
+        queryClient.setQueryData(currentUserKey, result.user);
+      } else {
+        setChallenge(result);
+      }
+    },
   });
   const otpMutation = useMutation({
     mutationFn: () => verifyOtp(challenge!.challengeId, code),

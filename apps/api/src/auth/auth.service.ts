@@ -28,6 +28,10 @@ type OtpChallenge = {
   codeDigest: string;
 };
 
+type LoginResult =
+  | { token: string; user: AuthenticatedUser }
+  | { challengeId: string; expiresInSeconds: number; destination: string };
+
 type PasswordResetInput = {
   resetToken: string;
   password: string;
@@ -78,7 +82,7 @@ export class AuthService {
     this.sessionSecret = configuredSecret;
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string): Promise<LoginResult> {
     const normalizedEmail = email.trim().toLowerCase();
     const failureKey = this.loginFailureKey(normalizedEmail);
     const failedAttempts = Number((await this.redis.get(failureKey)) ?? 0);
@@ -118,6 +122,14 @@ export class AuthService {
         );
       }
       throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    // This policy is server-managed per account, never inferred from its email
+    // address or the notification inbox shared by demonstration accounts.
+    if (user.loginOtpRequired === false) {
+      const session = await this.createSession(user, 'password');
+      await this.redis.delete(failureKey);
+      return session;
     }
 
     const requestCount = await this.redis.incrementWithExpiry(

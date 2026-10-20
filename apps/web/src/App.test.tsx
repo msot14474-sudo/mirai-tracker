@@ -57,6 +57,44 @@ const userResponse = (
   );
 
 describe('App authentication', () => {
+  it('opens the faculty workspace directly when the server approves password-only sign-in', async () => {
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith('/auth/login')) return userResponse('FACULTY');
+        if (url.endsWith('/auth/me'))
+          return new Response(null, { status: 401 });
+        if (url.includes('/reports?'))
+          return new Response(JSON.stringify(reportFixture()), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        return new Response('[]', {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+    renderApp();
+    fireEvent.change(await screen.findByLabelText('Email'), {
+      target: { value: 'faculty@mirai.local' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'correct-password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Your teaching overview' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Verification code'),
+    ).not.toBeInTheDocument();
+    expect(
+      fetch.mock.calls.some(([url]) =>
+        String(url).includes('/auth/verify-otp'),
+      ),
+    ).toBe(false);
+    expect(screen.getByRole('button', { name: 'Reports' })).toBeInTheDocument();
+  });
+
   it('shows the login form when there is no session', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 401 }),
@@ -403,15 +441,39 @@ describe('App authentication', () => {
   });
 
   it('opens a single read-only subject home for students without feedback or management workspaces', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => String(input).includes('/student/overview') ? new Response(JSON.stringify({ batch: null }), { headers: { 'Content-Type': 'application/json' } }) : userResponse('STUDENT'));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) =>
+      String(input).includes('/student/overview')
+        ? new Response(JSON.stringify({ batch: null }), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        : userResponse('STUDENT'),
+    );
     renderApp();
-    expect(await screen.findByRole('heading', { name: 'My subjects' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'My subjects' })).toBeInTheDocument();
-    for (const name of ['Overview', 'Daily logging', 'AI insights', 'Reports', 'Semester setup', 'User access', 'My course progress']) {
+    expect(
+      await screen.findByRole('heading', { name: 'My subjects' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My subjects' }),
+    ).toBeInTheDocument();
+    for (const name of [
+      'Overview',
+      'Daily logging',
+      'AI insights',
+      'Reports',
+      'Semester setup',
+      'User access',
+      'My course progress',
+    ]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole('heading', { name: 'Lecture feedback' })).not.toBeInTheDocument();
-    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/student/lectures'))).toBe(false);
+    expect(
+      screen.queryByRole('heading', { name: 'Lecture feedback' }),
+    ).not.toBeInTheDocument();
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes('/student/lectures')),
+    ).toBe(false);
   });
 
   it('shows the M04 semester workspace only to global managers', async () => {

@@ -25,6 +25,8 @@ export type LoginChallenge = {
   destination: string;
 };
 
+export type LoginResult = LoginChallenge | { user: AuthenticatedUser };
+
 export type PasswordResetChallenge = {
   challengeId: string;
   expiresInSeconds: number;
@@ -73,7 +75,9 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) throw new Error(await messageFrom(response));
-  return response.json() as Promise<LoginChallenge>;
+  const result = (await response.json()) as LoginResult;
+  if ('user' in result) advanceSessionGeneration();
+  return result;
 }
 
 export async function verifyOtp(challengeId: string, code: string) {

@@ -150,13 +150,28 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
-  async login(@Body() body: unknown) {
+  async login(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: HeaderResponse,
+  ) {
     const parsed = loginInputSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException('Enter a valid email and password.');
     }
 
-    return this.auth.login(parsed.data.email, parsed.data.password);
+    response.setHeader('Cache-Control', 'no-store');
+    const result = await this.auth.login(
+      parsed.data.email,
+      parsed.data.password,
+    );
+    if ('token' in result) {
+      response.setHeader(
+        'Set-Cookie',
+        createSessionCookie(result.token, this.auth.sessionCookieMaxAgeSeconds),
+      );
+      return { user: result.user };
+    }
+    return result;
   }
 
   @Public()
