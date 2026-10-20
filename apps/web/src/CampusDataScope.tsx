@@ -65,7 +65,7 @@ export function CampusDataScope({
             <option value="">Choose semester</option>
             {semesters.data?.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} · {s.startDate} – {s.endDate}
+                {s.name} · {s.startDate.slice(0, 10)} – {s.endDate.slice(0, 10)}
               </option>
             ))}
           </select>
