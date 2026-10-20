@@ -334,6 +334,8 @@ describe('FacultyAccessWorkspace', () => {
           },
         ]);
       }
+      if (url.endsWith('/academic/campuses/campus-a/semesters')) return response([{ id: 'semester-a', name: 'Semester 1', status: 'ACTIVE' }]);
+      if (url.includes('/academic/semesters/semester-a/')) return response([{ id: 'batch-a', name: 'First Year A', code: 'YEAR1-A' }]);
       if (url.endsWith('/faculty-access/campuses/campus-a/accounts')) {
         return response({
           accounts: [
@@ -383,6 +385,10 @@ describe('FacultyAccessWorkspace', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /^Student One/ }),
     );
+    await screen.findByRole('option', { name: 'Semester 1' });
+    fireEvent.change(await screen.findByLabelText('Student semester'), { target: { value: 'semester-a' } });
+    await screen.findByRole('option', { name: 'First Year A · YEAR1-A' });
+    fireEvent.change(screen.getByLabelText('Student batch'), { target: { value: 'batch-a' } });
     fireEvent.change(screen.getByLabelText(/New password/), {
       target: { value: 'a-new-student-password' },
     });
@@ -398,6 +404,7 @@ describe('FacultyAccessWorkspace', () => {
     expect(JSON.parse(update!.body!)).toMatchObject({
       name: 'Student One',
       email: 'student@example.edu',
+      studentBatchId: 'batch-a',
       password: 'a-new-student-password',
     });
     fireEvent.click(

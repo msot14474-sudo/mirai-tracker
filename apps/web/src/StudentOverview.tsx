@@ -1,4 +1,3 @@
-import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { useQuery } from '@tanstack/react-query';
 import {
   StudentExam,
@@ -34,10 +33,10 @@ export function StudentOverview() {
       <div className="student-overview-heading">
         <div>
           <p className="step-label">Student view</p>
-          <h2 id="student-overview-title">My course progress</h2>
+          <h2 id="student-overview-title">My subjects</h2>
           <p>
-            Review what your class has covered, see what comes next and prepare
-            from the exact syllabus mapped to each exam.
+            Your teachers, class dates, syllabus and exams, together in one
+            place. Subjects are linked to your enrolled batch and campus.
           </p>
         </div>
       </div>
@@ -45,9 +44,16 @@ export function StudentOverview() {
       {overview.isLoading ? (
         <LoadingSkeleton variant="panel" label="Loading your batch" />
       ) : overview.isError ? (
-        <p className="form-error" role="alert">
-          {overview.error.message}
-        </p>
+        <div className="form-error" role="alert">
+          <p>{overview.error.message}</p>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void overview.refetch()}
+          >
+            Try again
+          </button>
+        </div>
       ) : !overview.data?.batch ? (
         <div className="empty-state compact-empty">
           <span>13</span>
@@ -66,7 +72,7 @@ export function StudentOverview() {
                 <dt>Tracks in your batch</dt>
                 <dd>
                   {overview.data.batch.tracks?.map((t) => t.name).join(', ') ||
-                    'Mirai · University'}
+                    'Not assigned yet'}
                 </dd>
               </div>
               <div>
@@ -80,8 +86,6 @@ export function StudentOverview() {
             </dl>
           </div>
 
-          <StudentLectureFeedback />
-
           <section
             className="student-subjects"
             aria-labelledby="my-subjects-title"
@@ -89,15 +93,29 @@ export function StudentOverview() {
             <div className="student-section-heading">
               <div>
                 <p className="step-label">Covered and coming next</p>
-                <h3 id="my-subjects-title">My subjects</h3>
+                <h3 id="my-subjects-title">Subjects in your batch</h3>
               </div>
               <span>{overview.data.subjects.length} subjects</span>
             </div>
-            <div className="student-subject-grid">
-              {overview.data.subjects.map((subject) => (
-                <StudentSubjectCard subject={subject} key={subject.id} />
-              ))}
-            </div>
+            {!overview.data.subjects.length ? (
+              <p className="empty-copy">
+                No subjects have been linked to your batch yet. Your campus
+                manager can add them.
+              </p>
+            ) : (
+              <div className="student-subject-grid">
+                {overview.data.subjects.map((subject) => (
+                  <StudentSubjectCard
+                    subject={subject}
+                    timezone={
+                      overview.data!.batch.semester.campus.timezone ||
+                      'Asia/Kolkata'
+                    }
+                    key={subject.id}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           <section
@@ -106,10 +124,10 @@ export function StudentOverview() {
           >
             <div className="student-section-heading">
               <div>
-                <p className="step-label">Dates and exact scope</p>
-                <h3 id="student-exams-title">Upcoming exams</h3>
+                <p className="step-label">Dates and published syllabus</p>
+                <h3 id="student-exams-title">Exams</h3>
               </div>
-              <span>{overview.data.exams.length} upcoming</span>
+              <span>{overview.data.exams.length} upcoming or in progress</span>
             </div>
             {overview.data.exams.length ? (
               <div className="student-exam-list">
@@ -127,7 +145,13 @@ export function StudentOverview() {
   );
 }
 
-function StudentSubjectCard({ subject }: { subject: StudentSubject }) {
+function StudentSubjectCard({
+  subject,
+  timezone,
+}: {
+  subject: StudentSubject;
+  timezone: string;
+}) {
   const coverage = subject.coveragePercentage ?? 0;
   return (
     <article className="student-subject-card">
@@ -143,29 +167,44 @@ function StudentSubjectCard({ subject }: { subject: StudentSubject }) {
           {subject.coveragePercentage === null ? '—' : `${number(coverage)}%`}
         </strong>
       </header>
-      <div
-        className="student-coverage-bar"
-        aria-label={`${number(coverage)}% covered`}
-      >
-        <span style={{ width: `${coverage}%` }} />
-      </div>
+      <p className="student-teacher">
+        <span>Teacher</span>
+        <strong>
+          {subject.teachers?.map((teacher) => teacher.name).join(', ') ||
+            'Teacher to be assigned'}
+        </strong>
+      </p>
+      {subject.coveragePercentage !== null && (
+        <div
+          className="student-coverage-bar"
+          aria-label={`${number(coverage)}% covered`}
+        >
+          <span style={{ width: `${Math.min(100, Math.max(0, coverage))}%` }} />
+        </div>
+      )}
       <div className="student-subject-summary">
         <span>
-          <small>Covered</small>
-          {hours(subject.coveredHours)} / {hours(subject.plannedHours)}
+          <small>Recorded coverage</small>
+          {subject.totalTopics
+            ? `${hours(subject.coveredHours)} / ${hours(subject.plannedHours)}`
+            : 'Plan not published'}
         </span>
         <span>
-          <small>Topics complete</small>
-          {subject.completedTopics} / {subject.totalTopics}
+          <small>Weekly teaching</small>
+          {subject.weeklyClasses?.length
+            ? `${hours(subject.weeklyHours)} per week`
+            : 'Timetable pending'}
         </span>
       </div>
 
       <div className="student-topic-section covered-work">
         <h5>What we covered</h5>
         {subject.coveredTopics.length ? (
-          subject.coveredTopics.map((topic) => (
-            <StudentTopicRow topic={topic} key={topic.id} mode="covered" />
-          ))
+          subject.coveredTopics
+            .slice(-3)
+            .map((topic) => (
+              <StudentTopicRow topic={topic} key={topic.id} mode="covered" />
+            ))
         ) : (
           <p>No topics have been marked covered yet.</p>
         )}
@@ -183,9 +222,80 @@ function StudentSubjectCard({ subject }: { subject: StudentSubject }) {
             />
           ))
         ) : (
-          <p>All planned topics are complete.</p>
+          <p>
+            {!subject.totalTopics
+              ? 'Your teacher has not published a lesson plan yet.'
+              : subject.completedTopics === subject.totalTopics
+                ? 'All published topics are complete.'
+                : 'The next topics are being planned.'}
+          </p>
         )}
       </div>
+      <div className="student-topic-section student-class-dates">
+        <h5>Next classes</h5>
+        <p className="student-timezone">
+          Times in {timezone.replaceAll('_', ' ')}
+        </p>
+        {subject.upcomingClasses?.length ? (
+          <ul>
+            {subject.upcomingClasses.map((session) => (
+              <li key={session.id}>
+                <strong>{displayDate(session.date)}</strong>
+                <span>
+                  {displayTime(session.startsAt, timezone)}–
+                  {displayTime(session.endsAt, timezone)}
+                  {session.isExtraClass ? ' · Extra class' : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No upcoming class dates have been scheduled.</p>
+        )}
+      </div>
+      {!!subject.syllabusTopics?.length && (
+        <details className="student-plan-details">
+          <summary>
+            View teaching plan · {subject.completedTopics} of{' '}
+            {subject.totalTopics} topics complete
+          </summary>
+          {subject.syllabusTopics.map((topic, index) => (
+            <StudentTopicRow
+              topic={topic}
+              key={topic.id}
+              mode={topic.status === 'COMPLETED' ? 'covered' : 'next'}
+              index={index}
+            />
+          ))}
+        </details>
+      )}
+      {!!subject.weeklyClasses?.length && (
+        <details className="student-plan-details">
+          <summary>View weekly timetable</summary>
+          <ul className="student-weekly-list">
+            {subject.weeklyClasses.map((entry) => (
+              <li key={entry.id}>
+                <strong>
+                  {
+                    [
+                      'Sunday',
+                      'Monday',
+                      'Tuesday',
+                      'Wednesday',
+                      'Thursday',
+                      'Friday',
+                      'Saturday',
+                    ][entry.weekday]
+                  }
+                </strong>
+                <span>
+                  {entry.startTime}–{entry.endTime}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </article>
   );
 }
@@ -232,7 +342,11 @@ function StudentExamCard({ exam }: { exam: StudentExam }) {
           <h4>{exam.name}</h4>
         </div>
         <strong>
-          {exam.daysUntilExam === 0 ? 'TODAY' : `${exam.daysUntilExam} DAYS`}
+          {exam.isOngoing
+            ? 'IN PROGRESS'
+            : exam.daysUntilExam === 0
+              ? 'TODAY'
+              : `${exam.daysUntilExam} DAYS`}
         </strong>
       </header>
       <div className="student-exam-dates">
@@ -284,6 +398,14 @@ function displayDate(value: string) {
     month: 'short',
     timeZone: 'UTC',
   }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+function displayTime(value: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: timezone,
+  }).format(new Date(value));
 }
 
 function today() {

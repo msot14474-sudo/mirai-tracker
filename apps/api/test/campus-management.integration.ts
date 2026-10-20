@@ -1,3 +1,5 @@
+import { StudentViewService } from '../src/student-view/student-view.service';
+import { FacultyAccessService } from '../src/faculty-access/faculty-access.service';
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../src/database/prisma.service';
@@ -273,6 +275,82 @@ it('keeps campus management, bulk access, calendar edits and complete exports li
           campusId: campus.id,
         });
         expect(imported.studentProfile?.batchId).toBe(batch.id);
+        const studentView = new StudentViewService(db);
+        const student: any = {
+          ...imported,
+          roles: imported.roleAssignments,
+          staffProfileId: null,
+        };
+        const home = await studentView.overview('2026-10-20', student);
+        expect(home.batch.semester.campus.id).toBe(campus.id);
+        expect(home.subjects.map((s) => s.subject.name).sort()).toEqual([
+          'Math',
+          'Web',
+        ]);
+        await expect(
+          studentView.overview('2026-10-20', {
+            ...student,
+            roles: [{ role: 'STUDENT', campusId: foreign.id }],
+          }),
+        ).rejects.toThrow();
+        await tx.studentProfile.update({
+          where: { userId: imported.id },
+          data: { enrollmentStatus: 'WITHDRAWN' },
+        });
+        await expect(
+          studentView.overview('2026-10-20', student),
+        ).rejects.toThrow();
+        await tx.studentProfile.update({
+          where: { userId: imported.id },
+          data: { enrollmentStatus: 'ACTIVE' },
+        });
+        const unlinked = await tx.user.create({
+          data: {
+            name: 'Unlinked sample student',
+            email: `unlinked-${tag}@example.test`,
+            status: 'ACTIVE',
+            roleAssignments: {
+              create: {
+                role: 'STUDENT',
+                campusId: campus.id,
+                scopeKey: campus.id,
+              },
+            },
+          },
+        });
+        const accounts = new FacultyAccessService(db, access);
+        await accounts.updateAccount(
+          unlinked.id,
+          { studentBatchId: batch.id },
+          manager,
+        );
+        const linkedProfile = await tx.studentProfile.findUniqueOrThrow({
+          where: { userId: unlinked.id },
+        });
+        expect(linkedProfile.batchId).toBe(batch.id);
+        const foreignBatch = await tx.batch.create({
+          data: {
+            semesterId: otherSemester.id,
+            trackId: batch.trackId,
+            name: 'Other batch',
+            code: 'OTHER',
+          },
+        });
+        await expect(
+          accounts.updateAccount(
+            unlinked.id,
+            { studentBatchId: foreignBatch.id },
+            admin,
+          ),
+        ).rejects.toThrow('assigned campus');
+        expect(
+          (
+            await tx.studentProfile.findUniqueOrThrow({
+              where: { userId: unlinked.id },
+            })
+          ).batchId,
+        ).toBe(batch.id);
+
         const bad: any = {
           originalname: 'bad.csv',
           buffer: Buffer.from(

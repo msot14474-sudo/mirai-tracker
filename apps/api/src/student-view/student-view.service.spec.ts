@@ -23,18 +23,34 @@ const student: AuthenticatedUser = {
 describe('StudentViewService', () => {
   it('loads only the authenticated student batch', async () => {
     const { service, prisma } = setup();
-    prisma.batch.findUnique.mockResolvedValue(batch());
+    prisma.batch.findFirst.mockResolvedValue(batch());
 
     await service.overview('2026-10-08', student);
 
-    expect(prisma.batch.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'batch-a' } }),
+    expect(prisma.batch.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'batch-a',
+          active: true,
+          semester: {
+            campusId: { in: ['campus-a'] },
+            campus: { active: true },
+          },
+          students: {
+            some: {
+              id: 'student-a',
+              userId: 'user-student',
+              enrollmentStatus: 'ACTIVE',
+            },
+          },
+        },
+      }),
     );
   });
 
   it('separates covered work from the next unfinished topics', async () => {
     const { service, prisma } = setup();
-    prisma.batch.findUnique.mockResolvedValue(batch());
+    prisma.batch.findFirst.mockResolvedValue(batch());
 
     const result = await service.overview('2026-10-08', student);
 
@@ -65,7 +81,7 @@ describe('StudentViewService', () => {
 
   it('shows only upcoming exams with their exact subject scope', async () => {
     const { service, prisma } = setup();
-    prisma.batch.findUnique.mockResolvedValue(batch());
+    prisma.batch.findFirst.mockResolvedValue(batch());
 
     const result = await service.overview('2026-10-08', student);
 
@@ -90,6 +106,56 @@ describe('StudentViewService', () => {
     );
   });
 
+  it('includes teachers, teaching hours and class dates without private staff data', async () => {
+    const { service, prisma } = setup();
+    prisma.batch.findFirst.mockResolvedValue(batch());
+    const result = await service.overview('2026-10-08', student);
+    expect(result.subjects[0]).toMatchObject({
+      teachers: [{ id: 'teacher-a', name: 'Teacher A' }],
+      weeklyHours: 1,
+      upcomingClasses: [{ date: '2026-10-21', isExtraClass: true }],
+    });
+    expect(result.subjects[0]!.syllabusTopics).toHaveLength(3);
+    expect(
+      result.exams
+        .at(1)
+        ?.subjects[0]!.topics.some((t) => t.title === 'Legacy topic'),
+    ).toBe(false);
+  });
+
+  it('retains ongoing exams and distinguishes an unpublished plan', async () => {
+    const { service, prisma } = setup();
+    const value = batch();
+    value.semester.examWindows[1]!.endDate = date('2026-10-16');
+    value.subjectOfferings[0]!.lessonPlans = [];
+    prisma.batch.findFirst.mockResolvedValue(value);
+    const result = await service.overview('2026-10-14', student);
+    expect(result.exams[0]).toMatchObject({
+      isOngoing: true,
+      daysUntilExam: 0,
+    });
+    expect(result.subjects[0]).toMatchObject({
+      lessonPlan: null,
+      coveragePercentage: null,
+      syllabusTopics: [],
+    });
+  });
+
+  it('denies missing campus assignments and unmatched active enrolments', async () => {
+    const { service, prisma } = setup();
+    await expect(
+      service.overview('2026-10-08', {
+        ...student,
+        roles: [{ role: UserRole.STUDENT, campusId: null }],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.batch.findFirst).not.toHaveBeenCalled();
+    prisma.batch.findFirst.mockResolvedValue(null);
+    await expect(
+      service.overview('2026-10-08', student),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('rejects users without a student profile before querying data', async () => {
     const { service, prisma } = setup();
     await expect(
@@ -99,12 +165,12 @@ describe('StudentViewService', () => {
         studentProfile: null,
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(prisma.batch.findUnique).not.toHaveBeenCalled();
+    expect(prisma.batch.findFirst).not.toHaveBeenCalled();
   });
 });
 
 describe('StudentViewController role contract', () => {
-  it('requires the student role for course views and lecture feedback', () => {
+  it('exposes only the read-only student overview, with no feedback routes', () => {
     expect(
       Reflect.getMetadata(REQUIRED_ROLES_KEY, StudentViewController),
     ).toEqual([UserRole.STUDENT]);
@@ -112,12 +178,12 @@ describe('StudentViewController role contract', () => {
       Object.getOwnPropertyNames(StudentViewController.prototype).filter(
         (name) => name !== 'constructor',
       ),
-    ).toEqual(['listLectures', 'reviewLecture', 'overview']);
+    ).toEqual(['overview']);
   });
 });
 
 function setup() {
-  const prisma = { batch: { findUnique: jest.fn() } };
+  const prisma = { batch: { findFirst: jest.fn() } };
   return {
     prisma,
     service: new StudentViewService(prisma as never),
@@ -133,6 +199,8 @@ function batch() {
     semester: {
       id: 'semester-a',
       name: 'Semester 2026',
+      startDate: date('2026-07-01'),
+      endDate: date('2026-12-31'),
       campus: { id: 'campus-a', code: 'MAIN', name: 'Main Campus' },
       examWindows: [
         exam('past', 'Sessional 1', ExamType.SESSIONAL, '2026-09-20'),
@@ -144,6 +212,32 @@ function batch() {
       {
         id: 'offering-a',
         status: SubjectOfferingStatus.ACTIVE,
+        faculty: [
+          {
+            startDate: date('2026-07-01'),
+            endDate: null,
+            staffProfile: { id: 'teacher-a', user: { name: 'Teacher A' } },
+          },
+        ],
+        timetableEntries: [
+          {
+            id: 'slot-a',
+            weekday: 1,
+            startTime: new Date('1970-01-01T09:00:00Z'),
+            endTime: new Date('1970-01-01T10:00:00Z'),
+            effectiveFrom: date('2026-07-01'),
+            effectiveTo: null,
+          },
+        ],
+        sessions: [
+          {
+            id: 'class-a',
+            sessionDate: date('2026-10-21'),
+            startsAt: new Date('2026-10-21T03:30:00Z'),
+            endsAt: new Date('2026-10-21T04:30:00Z'),
+            isExtraSession: true,
+          },
+        ],
         subject: {
           id: 'subject-a',
           code: 'CS-DSA',

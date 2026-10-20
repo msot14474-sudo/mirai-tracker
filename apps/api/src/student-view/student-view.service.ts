@@ -7,32 +7,68 @@ import {
   TopicStatus,
   UserRole,
 } from '@prisma/client';
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { formatIsoDate } from '../academic-calendar/calendar-engine';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 
 const studentBatchInclude = Prisma.validator<Prisma.BatchInclude>()({
-  track: { select: { id: true, code: true, name: true } },
   semester: {
     include: {
-      campus: { select: { id: true, code: true, name: true } },
+      campus: { select: { id: true, code: true, name: true, timezone: true } },
       examWindows: { orderBy: { startDate: 'asc' } },
     },
   },
   subjectOfferings: {
     where: {
       status: {
-        in: [SubjectOfferingStatus.ACTIVE, SubjectOfferingStatus.COMPLETE],
+        in: [
+          SubjectOfferingStatus.DRAFT,
+          SubjectOfferingStatus.ACTIVE,
+          SubjectOfferingStatus.COMPLETE,
+        ],
       },
     },
     orderBy: { subject: { code: 'asc' } },
     include: {
       subject: { select: { id: true, code: true, name: true } },
+      faculty: {
+        where: {
+          active: true,
+          staffProfile: { active: true, user: { status: 'ACTIVE' } },
+        },
+        select: {
+          startDate: true,
+          endDate: true,
+          staffProfile: {
+            select: { id: true, user: { select: { name: true } } },
+          },
+        },
+      },
+      timetableEntries: {
+        where: { active: true },
+        orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
+        select: {
+          id: true,
+          weekday: true,
+          startTime: true,
+          endTime: true,
+          effectiveFrom: true,
+          effectiveTo: true,
+        },
+      },
+      sessions: {
+        where: { status: 'SCHEDULED' },
+        orderBy: { startsAt: 'asc' },
+        take: 5,
+        select: {
+          id: true,
+          sessionDate: true,
+          startsAt: true,
+          endsAt: true,
+          isExtraSession: true,
+        },
+      },
       lessonPlans: {
         where: { status: LessonPlanStatus.ACTIVE },
         orderBy: { version: 'desc' },
@@ -84,11 +120,51 @@ export class StudentViewService {
       throw new ForbiddenException('An active student profile is required.');
     }
 
-    const batch = await this.prisma.batch.findUnique({
-      where: { id: user.studentProfile.batchId },
-      include: studentBatchInclude,
+    const campusIds = user.roles
+      .filter(
+        (assignment) =>
+          assignment.role === UserRole.STUDENT && assignment.campusId,
+      )
+      .map((assignment) => assignment.campusId!);
+    if (!campusIds.length)
+      throw new ForbiddenException(
+        'Your coordinator needs to assign your student campus.',
+      );
+    const batch = await this.prisma.batch.findFirst({
+      where: {
+        id: user.studentProfile.batchId,
+        active: true,
+        semester: { campusId: { in: campusIds }, campus: { active: true } },
+        students: {
+          some: {
+            id: user.studentProfile.id,
+            userId: user.id,
+            enrollmentStatus: 'ACTIVE',
+          },
+        },
+      },
+      include: {
+        ...studentBatchInclude,
+        subjectOfferings: {
+          ...studentBatchInclude.subjectOfferings,
+          include: {
+            ...studentBatchInclude.subjectOfferings.include,
+            sessions: {
+              ...studentBatchInclude.subjectOfferings.include.sessions,
+              where: {
+                status: 'SCHEDULED',
+                sessionDate: { gte: new Date(`${asOfDate}T00:00:00.000Z`) },
+                endsAt: { gt: new Date() },
+              },
+            },
+          },
+        },
+      },
     });
-    if (!batch) throw new NotFoundException('Student batch not found.');
+    if (!batch)
+      throw new ForbiddenException(
+        'Your coordinator needs to verify your active campus and batch enrolment.',
+      );
 
     return serializeStudentOverview(batch, asOfDate);
   }
@@ -123,11 +199,49 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
         })),
       ) ?? [];
     const calculation = calculateExamReadiness(topics);
+    const weeklyClasses = offering.timetableEntries
+      .filter(
+        (entry) =>
+          formatIsoDate(entry.effectiveFrom) <= asOfDate &&
+          (!entry.effectiveTo || formatIsoDate(entry.effectiveTo) >= asOfDate),
+      )
+      .map((entry) => ({
+        id: entry.id,
+        weekday: entry.weekday,
+        startTime: entry.startTime.toISOString().slice(11, 16),
+        endTime: entry.endTime.toISOString().slice(11, 16),
+        minutes: (entry.endTime.getTime() - entry.startTime.getTime()) / 60_000,
+      }));
 
     return {
       id: offering.id,
       subject: offering.subject,
       track: academicTrackIdentity(offering.academicTrack),
+      teachers: [
+        ...new Map(
+          offering.faculty
+            .filter(
+              (assignment) =>
+                formatIsoDate(assignment.startDate) <= asOfDate &&
+                (!assignment.endDate ||
+                  formatIsoDate(assignment.endDate) >= asOfDate),
+            )
+            .map(({ staffProfile }) => [
+              staffProfile.id,
+              { id: staffProfile.id, name: staffProfile.user.name },
+            ]),
+        ).values(),
+      ],
+      weeklyClasses,
+      weeklyHours:
+        weeklyClasses.reduce((total, entry) => total + entry.minutes, 0) / 60,
+      upcomingClasses: offering.sessions.map((session) => ({
+        id: session.id,
+        date: formatIsoDate(session.sessionDate),
+        startsAt: session.startsAt.toISOString(),
+        endsAt: session.endsAt.toISOString(),
+        isExtraClass: session.isExtraSession,
+      })),
       lessonPlan: plan
         ? { id: plan.id, version: plan.version, status: plan.status }
         : null,
@@ -137,6 +251,9 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       coveragePercentage: calculation.coveragePercentage,
       totalTopics: calculation.topicsInScope,
       completedTopics: calculation.completedTopics,
+      syllabusTopics: topics
+        .filter((topic) => topic.status !== TopicStatus.SKIPPED)
+        .map(publicTopic),
       coveredTopics: topics
         .filter(
           (topic) =>
@@ -158,7 +275,7 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
   });
 
   const exams = batch.semester.examWindows
-    .filter((exam) => formatIsoDate(exam.startDate) >= asOfDate)
+    .filter((exam) => formatIsoDate(exam.endDate) >= asOfDate)
     .map((exam) => ({
       id: exam.id,
       name: exam.name,
@@ -166,13 +283,21 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       startDate: formatIsoDate(exam.startDate),
       endDate: formatIsoDate(exam.endDate),
       syllabusDeadline: formatIsoDate(exam.syllabusDeadline),
-      daysUntilExam: daysBetween(asOfDate, formatIsoDate(exam.startDate)),
+      isOngoing: formatIsoDate(exam.startDate) < asOfDate,
+      daysUntilExam: Math.max(
+        0,
+        daysBetween(asOfDate, formatIsoDate(exam.startDate)),
+      ),
       subjects: subjects
         .map((subject) => ({
           id: subject.id,
           subject: subject.subject,
           topics: subject.topics
-            .filter((topic) => topic.examWindowIds.includes(exam.id))
+            .filter(
+              (topic) =>
+                topic.status !== TopicStatus.SKIPPED &&
+                topic.examWindowIds.includes(exam.id),
+            )
             .map(publicTopic),
         }))
         .filter((subject) => subject.topics.length > 0),
@@ -188,6 +313,8 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       semester: {
         id: batch.semester.id,
         name: batch.semester.name,
+        startDate: formatIsoDate(batch.semester.startDate),
+        endDate: formatIsoDate(batch.semester.endDate),
         campus: batch.semester.campus,
       },
     },

@@ -1,4 +1,5 @@
 import { StudentAccessImport } from './StudentAccessImport';
+import { StudentEnrollmentFields } from './StudentEnrollmentFields';
 import { CampusTeamDirectory } from './CampusTeamDirectory';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -213,6 +214,7 @@ export function FacultyAccessWorkspace({
             }
           : {}),
         ...(password ? { password } : {}),
+        ...(values.get('studentBatchId') ? { studentBatchId: String(values.get('studentBatchId')) } : {}),
       },
     });
   }
@@ -751,6 +753,8 @@ export function FacultyAccessWorkspace({
                     </div>
                     <span>{accountRoleLabel(selectedAccount)}</span>
                   </header>
+                  {selectedAccount.roleAssignments.some((r) => r.role === 'STUDENT') && !editRole &&
+                    <StudentEnrollmentFields key={selectedAccount.id} campusId={campusId} account={selectedAccount} />}
                   <div className="field-pair">
                     <label>
                       Full name

@@ -21,7 +21,7 @@ function renderOverview() {
 }
 
 describe('M13 student overview', () => {
-  it('shows the authenticated batch context and lecture feedback', async () => {
+  it('shows only the enrolled campus and batch, without lecture feedback', async () => {
     mockStudentRequests();
     renderOverview();
 
@@ -29,8 +29,13 @@ describe('M13 student overview', () => {
     expect(screen.getByText('HI-Tech Campus')).toBeInTheDocument();
     expect(screen.getByText('Mirai')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Lecture feedback' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('heading', { name: 'Lecture feedback' }),
+    ).not.toBeInTheDocument();
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes('/student/lectures')),
+    ).toBe(false);
   });
 
   it('shows covered work and the ordered topics coming next', async () => {
@@ -42,9 +47,11 @@ describe('M13 student overview', () => {
 
     expect(within(subject).getByText('What we covered')).toBeInTheDocument();
     expect(within(subject).getByText('Coming next')).toBeInTheDocument();
-    expect(within(subject).getByText('Arrays')).toBeInTheDocument();
-    expect(within(subject).getAllByText('Linked Lists')).toHaveLength(2);
-    expect(within(subject).getByText(/Planned 20 Oct/)).toBeInTheDocument();
+    expect(within(subject).getAllByText('Arrays')[0]).toBeInTheDocument();
+    expect(within(subject).getAllByText('Linked Lists')).toHaveLength(3);
+    expect(
+      within(subject).getAllByText(/Planned 20 Oct/)[0],
+    ).toBeInTheDocument();
     expect(within(subject).getByText('58.33%')).toBeInTheDocument();
   });
 
@@ -58,15 +65,50 @@ describe('M13 student overview', () => {
     expect(within(exam).getByText('4 DAYS')).toBeInTheDocument();
     expect(within(exam).getByText('12 Oct–16 Oct')).toBeInTheDocument();
     expect(within(exam).getByText('Syllabus scope')).toBeInTheDocument();
-    expect(within(exam).getByText('Arrays')).toBeInTheDocument();
+    expect(within(exam).getAllByText('Arrays')[0]).toBeInTheDocument();
     expect(within(exam).getByText('Linked Lists')).toBeInTheDocument();
     expect(within(exam).queryByText('Queues')).not.toBeInTheDocument();
+  });
+
+  it('shows teachers, weekly hours, full plan and extra class dates', async () => {
+    mockStudentRequests();
+    renderOverview();
+    expect(await screen.findByText('Teacher A')).toBeInTheDocument();
+    expect(screen.getByText('3h per week')).toBeInTheDocument();
+    expect(screen.getByText(/Extra class/)).toHaveTextContent(
+      '9:00 am–10:00 am',
+    );
+    expect(screen.getByText(/View teaching plan/)).toBeInTheDocument();
+  });
+
+  it('does not claim completion or zero coverage when the lesson plan is absent', async () => {
+    const empty = structuredClone(data);
+    Object.assign(empty.subjects[0]!, {
+      lessonPlan: null,
+      coveragePercentage: null,
+      totalTopics: 0,
+      completedTopics: 0,
+      coveredTopics: [],
+      comingNextTopics: [],
+      syllabusTopics: [],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(empty));
+    renderOverview();
+    expect(
+      await screen.findByText(
+        'Your teacher has not published a lesson plan yet.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('All published topics are complete.'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('0% covered')).not.toBeInTheDocument();
   });
 
   it('keeps academic progress read-only', async () => {
     mockStudentRequests();
     renderOverview();
-    await screen.findByRole('heading', { name: 'My course progress' });
+    await screen.findByRole('heading', { name: 'My subjects' });
 
     const subject = (
       await screen.findByRole('heading', { name: 'Data Structures' })
@@ -134,6 +176,21 @@ const data: StudentOverviewData = {
         code: 'CS-DSA',
         name: 'Data Structures',
       },
+      teachers: [{ id: 'teacher-a', name: 'Teacher A' }],
+      weeklyHours: 3,
+      weeklyClasses: [
+        { id: 'slot-a', weekday: 1, startTime: '09:00', endTime: '10:00' },
+      ],
+      upcomingClasses: [
+        {
+          id: 'class-a',
+          date: '2026-10-21',
+          startsAt: '2026-10-21T03:30:00Z',
+          endsAt: '2026-10-21T04:30:00Z',
+          isExtraClass: true,
+        },
+      ],
+      syllabusTopics: [arrays, linkedLists, queues],
       lessonPlan: { id: 'plan-a', version: 1, status: 'ACTIVE' },
       scheduleVersion: 4,
       plannedHours: 6,

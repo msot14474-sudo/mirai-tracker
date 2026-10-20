@@ -1,4 +1,3 @@
-import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { CampusAcademicOverview } from './CampusAcademicOverview';
 import { FacultyOverview } from './FacultyOverview';
 import { AcademicOverview } from './AcademicOverview';
@@ -1158,12 +1157,12 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   }
 
   const navigation: DashboardNavigationItem[] = [
-    { id: 'overview', label: 'Overview', icon: 'home' },
-    ...(canViewStudentOverview
+    { id: 'overview', label: canViewStudentOverview && !canViewProgressDashboard ? 'My subjects' : 'Overview', icon: 'home' },
+    ...(canViewStudentOverview && canViewProgressDashboard
       ? [
           {
             id: 'student-view' as const,
-            label: 'My course progress',
+            label: 'My subjects',
             icon: 'student' as const,
           },
         ]
@@ -1464,6 +1463,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                 name={user.name}
                 onReports={(subjectId) => { setReportSubjectId(subjectId); setActiveView('exports'); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }}
               />
+            ) : canViewStudentOverview ? (
+              <StudentOverview />
             ) : (
               <CampusOverview
                 user={user}
@@ -1473,7 +1474,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                 onOpen={openView}
               />
             )}
-            {canViewStudentOverview ? <StudentLectureFeedback /> : null}
           </>
         );
     }

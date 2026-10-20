@@ -178,7 +178,16 @@ export class FacultyAccessService {
           select: {
             studentCode: true,
             enrollmentStatus: true,
-            batch: { select: { code: true, name: true } },
+            batch: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                semester: {
+                  select: { name: true, campus: { select: { name: true } } },
+                },
+              },
+            },
           },
         },
       },
@@ -202,6 +211,7 @@ export class FacultyAccessService {
         notificationEmail: true,
         status: true,
         roleAssignments: { select: { role: true, campusId: true } },
+        studentProfile: { select: { batchId: true, enrollmentStatus: true } },
       },
     });
     if (!target) throw new NotFoundException('Account not found.');
@@ -251,6 +261,36 @@ export class FacultyAccessService {
     }
 
     let replacementCampusId: string | null = null;
+    if (input.studentBatchId) {
+      if (
+        input.role ||
+        !target.roleAssignments.some((r) => r.role === UserRole.STUDENT)
+      )
+        throw new BadRequestException(
+          'Update the enrolment of an existing student without changing their role.',
+        );
+      const batch = await this.prisma.batch.findFirst({
+        where: {
+          id: input.studentBatchId,
+          active: true,
+          semester: {
+            status: { not: 'ARCHIVED' },
+            campus: { active: true },
+            campusId: {
+              in: target.roleAssignments
+                .filter((r) => r.role === UserRole.STUDENT && r.campusId)
+                .map((r) => r.campusId!),
+            },
+          },
+        },
+        select: { semester: { select: { campusId: true } } },
+      });
+      if (!batch)
+        throw new BadRequestException(
+          'Choose a batch in the student’s assigned campus.',
+        );
+      this.access.assertCanManageCampus(actor, batch.semester.campusId);
+    }
     if (input.role) {
       this.access.assertGlobalManager(actor);
       if (actor.id === target.id) {
@@ -286,12 +326,25 @@ export class FacultyAccessService {
     try {
       return await this.prisma.$transaction(async (transaction) => {
         // Serialize role replacements for this account before deleting old grants.
-        if (input.role) {
+        if (input.role || input.studentBatchId) {
           await transaction.$queryRaw`SELECT id FROM "User" WHERE id = ${target.id}::uuid FOR UPDATE`;
         }
         const account = await transaction.user.update({
           where: { id: target.id },
           data: {
+            ...(input.studentBatchId
+              ? {
+                  studentProfile: {
+                    upsert: {
+                      create: {
+                        studentCode: `STU-${target.id}`,
+                        batchId: input.studentBatchId,
+                      },
+                      update: { batchId: input.studentBatchId },
+                    },
+                  },
+                }
+              : {}),
             ...(input.role
               ? {
                   roleAssignments: {
@@ -339,6 +392,9 @@ export class FacultyAccessService {
               notificationEmail: target.notificationEmail,
               status: target.status,
               roles: target.roleAssignments,
+              ...(input.studentBatchId
+                ? { studentBatchId: target.studentProfile?.batchId ?? null }
+                : {}),
             },
             after: {
               name: account.name,
@@ -349,6 +405,9 @@ export class FacultyAccessService {
                 ? { role: input.role, campusId: replacementCampusId }
                 : {}),
               passwordChanged: Boolean(credential),
+              ...(input.studentBatchId
+                ? { studentBatchId: input.studentBatchId }
+                : {}),
             },
           },
         });

@@ -47,6 +47,7 @@ export const updateManagedAccountSchema = z
   .object({
     role: z.nativeEnum(UserRole).optional(),
     campusId: uuidSchema.nullable().optional(),
+    studentBatchId: uuidSchema.optional(),
     name: z.string().trim().min(2).max(160).optional(),
     email: z
       .string()

@@ -76,11 +76,12 @@ export type ManagedAccount = {
   studentProfile: {
     studentCode: string;
     enrollmentStatus: string;
-    batch: { code: string; name: string };
+    batch: { id?: string; code: string; name: string; semester?: { name: string; campus: { name: string } } };
   } | null;
 };
 
 export type UpdateManagedAccountInput = {
+  studentBatchId?: string;
   role?: ManagedAccount['roleAssignments'][number]['role'];
   campusId?: string | null;
   name?: string;

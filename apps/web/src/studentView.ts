@@ -15,6 +15,11 @@ export type StudentSubject = {
   track?: { id: string; code: string; name: string };
   id: string;
   subject: { id: string; code: string; name: string };
+  teachers: Array<{ id: string; name: string }>;
+  weeklyHours: number;
+  weeklyClasses: Array<{ id: string; weekday: number; startTime: string; endTime: string }>;
+  upcomingClasses: Array<{ id: string; date: string; startsAt: string; endsAt: string; isExtraClass: boolean }>;
+  syllabusTopics: StudentTopic[];
   lessonPlan: { id: string; version: number; status: string } | null;
   scheduleVersion: number | null;
   plannedHours: number;
@@ -34,6 +39,7 @@ export type StudentExam = {
   endDate: string;
   syllabusDeadline: string;
   daysUntilExam: number;
+  isOngoing?: boolean;
   subjects: Array<{
     id: string;
     subject: { id: string; code: string; name: string };
@@ -52,7 +58,9 @@ export type StudentOverviewData = {
     semester: {
       id: string;
       name: string;
-      campus: { id: string; code: string; name: string };
+      startDate?: string;
+      endDate?: string;
+      campus: { id: string; code: string; name: string; timezone?: string };
     };
   };
   subjects: StudentSubject[];

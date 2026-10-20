@@ -402,58 +402,16 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows students only their read-only workspaces', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('STUDENT'));
+  it('opens a single read-only subject home for students without feedback or management workspaces', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => String(input).includes('/student/overview') ? new Response(JSON.stringify({ batch: null }), { headers: { 'Content-Type': 'application/json' } }) : userResponse('STUDENT'));
     renderApp();
-
-    expect(
-      await screen.findByRole('heading', { name: 'Welcome back, Sample' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'My course progress' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Available workspaces' }),
-    ).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('button', { name: 'Daily logging' }),
-      ).not.toBeInTheDocument(),
-    );
-    expect(
-      screen.queryByRole('heading', { name: 'My course progress' }),
-    ).not.toBeInTheDocument();
-
-    expect(
-      screen.queryByRole('button', { name: 'AI insights' }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'My course progress' }));
-    expect(
-      await screen.findByRole('heading', { name: 'My course progress' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Semester calendar' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', {
-        name: 'Lesson plans and exam scope',
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Planned topic dates' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Log today’s classes' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Progress dashboard' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Exam readiness' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Missed-log alerts' }),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'My subjects' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'My subjects' })).toBeInTheDocument();
+    for (const name of ['Overview', 'Daily logging', 'AI insights', 'Reports', 'Semester setup', 'User access', 'My course progress']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('heading', { name: 'Lecture feedback' })).not.toBeInTheDocument();
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/student/lectures'))).toBe(false);
   });
 
   it('shows the M04 semester workspace only to global managers', async () => {

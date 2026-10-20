@@ -9662,3 +9662,39 @@ body:has(.auth-shell) {
 .lecture-move-fields p { grid-column: 1 / -1; }
 .campus-person-row { padding: 16px 0; border-bottom: 1px solid #e5eaf2; }
 .campus-person-row > span { display: block; color: #61718a; margin: 4px 0; }
+
+/* Student home: one campus/batch context and read-only subject details. */
+.student-overview { margin-top: 0; background: #f7f9fd; border-color: #e0e7f2; min-width: 0; }
+.student-overview .student-overview-heading h2 { color: #172b54; font-size: clamp(1.7rem, 3vw, 2.4rem); font-weight: 750; }
+.student-overview .student-batch-banner { margin-top: 1.25rem; background: #193e80; }
+.student-overview .student-batch-banner dt,
+.student-overview .student-batch-banner > div span { color: #c4d5f5; }
+.student-overview .student-batch-banner dd { color: white; }
+.student-overview .student-subject-card,
+.student-overview .student-exam-card { min-width: 0; padding: clamp(1rem, 2vw, 1.5rem); border-color: #dce5f2; }
+.student-overview .student-subject-card > header h4 { font-size: 1.15rem; }
+.student-overview .student-section-heading { align-items: center; flex-wrap: wrap; }
+.student-overview .student-section-heading h3 { font-size: 1.35rem; font-weight: 700; }
+.student-overview .student-coverage-bar span { background: #2a5cd2; }
+.student-overview .student-subject-summary > span { background: #f0f4fb; }
+.student-overview .student-topic-row { min-width: 0; }
+.student-overview .student-topic-row strong { overflow-wrap: anywhere; font-size: .88rem; }
+.student-overview .student-topic-row small,
+.student-overview .student-topic-row div > span { font-size: .78rem; }
+.student-overview .student-topic-section > p,
+.student-overview .student-exam-scope > p { font-size: .85rem; line-height: 1.5; color: #5e6c83; }
+.student-teacher { display: grid; gap: .25rem; margin: 1rem 0; font-size: .9rem; }
+.student-teacher > span { color: #65748b; font-size: .75rem; }
+.student-overview .student-subject-summary small { font-size: .73rem; }
+.student-overview .student-topic-section h5 { font-size: .8rem; color: #3c5275; }
+.student-class-dates ul, .student-weekly-list { list-style: none; padding: 0; margin: .5rem 0 0; }
+.student-class-dates li, .student-weekly-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .35rem 1rem; padding: .55rem 0; border-top: 1px solid #e5eaf3; font-size: .85rem; }
+.student-overview .student-timezone { font-size: .75rem; margin: -.2rem 0 .6rem; }
+.student-plan-details { margin-top: 1rem; border-top: 1px solid #e0e7f2; padding-top: .85rem; }
+.student-plan-details > summary { cursor: pointer; color: #2855a6; font-size: .85rem; font-weight: 650; padding: .3rem 0; }
+.student-plan-details > summary:focus-visible { outline: 2px solid #295bd3; outline-offset: 4px; border-radius: .2rem; }
+.student-plan-details[open] > summary { margin-bottom: .65rem; }
+@media (max-width: 700px) {
+  .student-overview .student-batch-banner dl { grid-template-columns: 1fr; }
+  .student-overview .student-overview-heading h2 { font-size: 1.75rem; }
+}
