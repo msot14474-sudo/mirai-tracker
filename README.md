@@ -1,162 +1,105 @@
 # Mirai Course Progression Tracker
 
-A mobile-first course progression platform for tracking planned and delivered syllabus hours, calendar-aware topic dates, exam readiness, early warnings and student visibility across MSOT campuses.
+[Live application](https://mirai-tracker.vercel.app) · [Submission files](SUBMISSION.md) · [Test report](docs/test-report.md) · [Scalability report](docs/scalability-report.md)
 
-The consolidated architecture, design, Test Report, demo script and final checks are indexed in [SUBMISSION.md](SUBMISSION.md).
+Mirai Tracker connects semester calendars, batch timetables, lesson plans, teaching logs and exam readiness across **HI-Tech, Jaggannath and Rathinam**. A batch can contain subjects in both the **Mirai and University tracks**.
 
-## Technology
+![System architecture](docs/architecture.svg)
 
-- React, TypeScript and Vite PWA frontend
-- NestJS REST API
-- PostgreSQL with Prisma
-- Redis and BullMQ background worker
-- Mailpit local email capture
-- pnpm workspace monorepo
-- Docker Compose local environment
+## Populated demonstration
 
-## One-command setup
+Choose **Evaluator Demo · Odd Semester 2026** in any campus. Each has five fictional faculty, five subjects, a student batch, calendar, timetable, lesson plans, teaching history, two exams and visiting-faculty accounting. The live seed contains **450 topics, 885 dated classes and 540 lecture logs**.
 
-1. Copy `.env.example` to `.env`.
-2. Start the stack:
+Start with Subjects → a demo subject, then inspect Reports, Progress, Exam readiness and Visiting faculty. Faculty see assigned subjects; students see their enrolled batch without edit controls. [Evaluator guide](docs/evaluator-guide.md)
 
-```bash
-docker compose up --build
-```
+Existing institutional records remain separate. Passwords and OTP destinations are in the owner's private handoff file, not this repository. Local setup generates independent credentials.
 
-Services:
+## One-command local setup
 
-- Web: http://localhost:5173
-- API liveness: http://localhost:3000/health/live
-- API readiness: http://localhost:3000/health/ready
-- Mailpit: http://localhost:8025
-
-If ports 3000 or 5173 are already in use, set `API_PORT`, `WEB_PORT`, `VITE_API_URL` and `WEB_ORIGIN` in `.env`. Container-to-container ports remain unchanged.
-
-Docker Desktop or another Docker-compatible runtime is required.
-
-## Local development without Docker
-
-Node.js 22.13 or newer and pnpm are required. PostgreSQL and Redis must be available separately for the readiness endpoint and worker.
+Prerequisites: Git, Docker Desktop with Compose, and OpenSSL.
 
 ```bash
-pnpm install
-pnpm db:generate
-pnpm dev
+sh scripts/setup-demo.sh
 ```
+
+This generates a local `.env` if absent, builds and starts PostgreSQL, Redis, Mailpit, API, worker and web, applies migrations, and adds the three-campus demo. Existing configuration and completed demo semesters are preserved.
+
+Open http://localhost:5173. Sign in as `evaluator.admin@mirai.local`, using `DEMO_USER_PASSWORD` from `.env`. Read the six-digit verification code at http://localhost:8025. Other accounts are in `outputs/evaluator-accounts.json`. Stop with `docker compose down`.
+
+The one-command setup was exercised on a fresh isolated Docker Compose project on 20 October 2026: all six services became healthy and the three-campus demo loaded.
+
+API readiness: http://localhost:3000/health/ready. Set `API_PORT`, `WEB_PORT`, `VITE_API_URL` and `WEB_ORIGIN` in `.env` if application ports are occupied.
+
+## Roles
+
+| Role | Access |
+| --- | --- |
+| Administrator / Program Manager | All campuses; semester setup, calendar import, subjects, access, reports, progress, notifications, exams and exports |
+| Campus Manager | Assigned campus; subjects, calendar/exam edits, batch timetables, extra classes, faculty/student access, reports and visiting-faculty expenses |
+| Faculty | Assigned subjects; lesson plans, planned dates, daily logs, own teaching reports, notifications and subject analysis |
+| Student | Read-only subjects, teachers, coverage, upcoming classes and exams for the enrolled batch |
+
+## Connected workflow
+
+1. The administrator creates a semester and imports holidays, events and exams.
+2. The campus manager uploads a complete batch timetable or edits recurring and extra classes.
+3. Subjects retain allocated hours before a visiting teacher is assigned.
+4. Faculty review available hours, upload partial or semester plans, map exam topics and log teaching.
+5. Calendar/timetable changes recalculate dependent dates. Affected classes can require teacher review before a recovery move.
+6. Reports, notifications, exports and AI context follow campus and subject permissions.
+
+The full semester import interface is intentionally removed. Calendar, timetable, lesson-plan and student-access imports remain in their own workspaces. Full semester export is retained. Legacy backend import tests are labelled separately.
+
+## Analytics
+
+Canonical quantities are minutes. Coverage is weighted by planned topic duration, including partial completion. Missing logs mean teaching is unverified; they do not prove a class was missed.
+
+**Buffer ratio = available future teaching hours ÷ remaining syllabus hours.**
+
+| Default ratio | Status |
+| --- | --- |
+| ≥ 1.15 | ON TRACK |
+| ≥ 1.00 and < 1.15 | TIGHT |
+| < 1.00 | DANGER |
+
+Thresholds are configurable by semester. Completed and missing-plan cases are distinct. Subject views, exam readiness, reports and AI context use the shared rules.
+
+## Reports and automation
+
+Reports cover course progress, teaching delivery, faculty activity, exam readiness and manager-only campus/track analysis. Faculty reports are restricted to their teaching. Generated reports use formatted text and charts. Full semester exports preserve structured records.
+
+Notifications identify the actor and affected scope. Missing logs trigger end-of-day reminders and 48-hour manager escalation. Weekly summaries are scheduled for Monday 08:30 campus time, saved in AI insights and emailed through configured SMTP. Demo previews are labelled and not reported as sent email.
+
+AI helps interpret files, analyze subjects and suggest recovery actions. CSV/XLSX rows are parsed deterministically before verification. A calculated fallback handles unavailable models. WhatsApp logging requires configured Meta credentials and webhooks; see [API environment variables](apps/api/.env.vercel.example).
 
 ## Verification
 
+Node 22.13+ is the supported development runtime.
+
 ```bash
+pnpm install --frozen-lockfile
 pnpm check
+pnpm verify:m10
 ```
 
-This runs TypeScript checks, automated tests and production builds across the workspace.
+The dated evidence includes **586 automated tests**, **27 PostgreSQL integration tests**, **11 authenticated permission checks** and **18 independent numeric comparisons** across three subjects. Local scale data contains 3 campuses, 60 faculty, 30 subjects and 1,020 students. Real HTTP load tests cover 50/100/200 concurrent clients.
 
-## Database workflow
+Database integration tests use disposable databases. Never point them or the loopback-only load harness at production. Five fictional-account logging timings are automated API measurements, not human phone observations.
 
-The API container applies committed PostgreSQL migrations before NestJS starts. To add the fictional local sample after the stack is running:
+## Architecture and operations
 
-```bash
-docker compose exec api pnpm --filter @mirai/api prisma:seed
-```
+React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. Neon stores relational data; Upstash Redis stores sessions and transient state. QStash invokes protected scheduled jobs. SMTP, AI and WhatsApp are external integrations. Local Compose uses a BullMQ worker and Mailpit.
 
-Run the database constraint tests against that migrated container:
+| Directory | Purpose |
+| --- | --- |
+| apps/web | React interface |
+| apps/api | NestJS, Prisma, authorization and domain services |
+| apps/worker | BullMQ background jobs |
+| packages/calculations | Shared academic calculations |
+| packages/validation | Shared validation |
+| docs/submission | Downloadable reports and calculation workbook |
+| docs/evidence/2026-10-20 | Current measured evidence |
 
-```bash
-docker compose exec api pnpm --filter @mirai/api test:database
-```
+[Design](docs/design-document.md) · [Architecture source](docs/architecture.mmd) · [Backup/recovery](docs/m17-security-and-recovery.md)
 
-For local commands outside Docker, make `DATABASE_URL` available in the shell first, then use `pnpm db:migrate:deploy`, `pnpm db:seed` and `pnpm db:test`.
-
-The M02 model, relationship diagram and requirement mapping are documented in [docs/m02-database-model.md](docs/m02-database-model.md).
-
-## Local demo login
-
-Set `DEMO_USER_PASSWORD` and `DEMO_NOTIFICATION_EMAIL` in `.env`, start the stack and run the seed command. The login page can then use one of four fictional identities: `admin@mirai.local`, `campus.manager@mirai.local`, `faculty@mirai.local` or `student@mirai.local`. These addresses create no external accounts; the notification address receives their six-digit login codes. With local Mailpit, use any address such as `demo-inbox@mirai.local` and read the message at http://localhost:8025.
-
-After a correct password, the API emails a ten-minute one-time code. A session is created only after that code is verified. Sessions are stored in Redis and delivered through an HTTP-only cookie. The API reloads role and scope information from PostgreSQL on every protected request. See [docs/m03-authentication-and-permissions.md](docs/m03-authentication-and-permissions.md) for the security flow and permission matrix.
-
-Campus Managers can create faculty accounts only for their assigned campus from the Faculty access workspace. They set the login and OTP email, employee code, regular or visiting status, an initial password and optional subject assignments. Creation is transactional and audited; the password is stored only as a scrypt hash. See [docs/faculty-access.md](docs/faculty-access.md) for the workflow and safeguards.
-
-## Semester calendar
-
-Program Managers can create campus semesters, choose the working-Saturday rule, add dated holidays/events/extra working days and define exam windows. The API produces an explainable working/non-working result for every date. See [docs/m04-semester-calendar.md](docs/m04-semester-calendar.md) for the decision order, routes, validations and test coverage.
-
-## Semester import
-
-Admin and Program Manager users can download CSV or Excel templates, validate a complete semester before writing data, import the campus/semester/batch/subject graph atomically, inspect import history and download row-level error reports. The supplied fictional template demonstrates the three current campuses and 25 subjects. See [docs/m05-semester-import.md](docs/m05-semester-import.md) for columns, routes, validation and verification details.
-
-## Timetable setup
-
-Admin, Program Manager and Campus Manager users can define recurring weekly slots for each subject offering. The API derives planned minutes from start/end times and generates dated sessions using the M04 working calendar, campus timezone, effective dates and faculty assignments. It rejects batch and faculty overlaps and preserves logged academic history during regeneration. See [docs/m06-timetable.md](docs/m06-timetable.md) for rules, routes and verification details.
-
-## Lesson plans and exam scope
-
-Managers and assigned faculty can preview and import CSV/Excel lesson plans, edit draft units/topics and planned minutes, map topics to exact exam windows and activate a version without overwriting earlier plans. The fictional DSA template contains three units, eight topics and 23 planned hours. See [docs/m07-lesson-plan-and-exam-scope.md](docs/m07-lesson-plan-and-exam-scope.md) for the columns, version lifecycle, permissions and API routes.
-
-## Planned topic dates
-
-Managers and assigned faculty can allocate ordered lesson-plan minutes across real scheduled classes, inspect each topic's expected start/finish dates and see a clear capacity shortfall. Holidays are absent through the academic calendar, while cancelling or restoring an unlogged class shifts affected topics and saves a new calculation version. See [docs/m08-planned-date-engine.md](docs/m08-planned-date-engine.md) for the algorithm, hand-worked example, permissions and API routes.
-
-## Mobile daily session logging
-
-Faculty receive a phone-first list of their scheduled classes with subject, batch, time, current topic, suggested completion and carry-forward already filled in. One confirmation saves an immutable revision, per-topic progress, classwork/homework and an audit record; skipped, merged and cancelled paths keep topic progress safe. See [docs/m09-mobile-session-logging.md](docs/m09-mobile-session-logging.md) for the rules, API and the required five-faculty timing-study protocol.
-
-## Progress calculation engine
-
-The shared M10 engine calculates hour-weighted scope, coverage, remaining and available hours, configurable buffer status, signed pace against plan and overdue topics. Scoped API routes expose live subject results and let authorized staff store versioned, audited snapshots. Run `pnpm verify:m10` to compare ON TRACK, TIGHT and DANGER subjects with the three hand calculations in [docs/evidence/m10-hand-calculations.csv](docs/evidence/m10-hand-calculations.csv). See [docs/m10-progress-calculation-engine.md](docs/m10-progress-calculation-engine.md) for formulas, date conventions and routes.
-
-## Progress dashboards
-
-Faculty and managers receive one date-controlled dashboard with subject, track and campus views. Every level shows planned, covered, remaining and available hours, weighted coverage, buffer, status and pace. Track and campus status always carries the worst subject status, so a healthy aggregate cannot hide a subject in danger. See [docs/m11-progress-dashboards.md](docs/m11-progress-dashboards.md) for the permission scopes, formulas, API and verification.
-
-## Exam readiness
-
-Every upcoming exam has an independent readiness view built from its exact M07 topic mappings. Faculty and managers see hour-weighted in-scope coverage, planned and covered hours, hours still needed, deadlines and subject-level topic scope. Past exams are removed, while an unmapped future exam stays visible for correction. See [docs/m12-exam-readiness.md](docs/m12-exam-readiness.md) for the formulas, permissions, API and mid-term/end-term test evidence.
-
-## Student read-only view
-
-Students receive one authenticated batch view with subject coverage, completed and in-progress topics, the next planned topics and upcoming exam dates with exact syllabus scope. The browser supplies no batch identifier, and the student controller exposes only a protected `GET` route with no editing controls. See [docs/m13-student-read-only-view.md](docs/m13-student-read-only-view.md) for the scope, read-only safeguards and verification.
-
-## Missed-log reminders
-
-The worker scans unlogged scheduled classes every five minutes. It sends the assigned faculty member one SMTP and in-app reminder at the end of the campus day, then notifies the Campus Manager if the same log is still missing 48 hours after the class ended. Database deduplication prevents repeat sends, and adding the late log cancels pending delivery. Mailpit captures local email without an external account. See [docs/m14-missed-log-alerts.md](docs/m14-missed-log-alerts.md) for timing, worker security, delivery records and verification.
-
-## Reports and CSV exports
-
-Admin and Program Manager users can download campus and subject progress, monthly visiting-faculty planned-versus-taken lecture counts with calculated honorarium, and a complete long-form academic archive. Every request creates a visible export job and audit event. UTF-8/RFC 4180 output opens cleanly in Excel or Google Sheets, and formula-like user data is neutralised. See [docs/m15-csv-exports.md](docs/m15-csv-exports.md) for columns, calculation rules, permissions, routes and verification.
-
-## Performance and scalability
-
-The M16 load harness measures full client-observed latency and errors for dashboard reads and end-of-day session logging at 50, 100 and 200 concurrent users. The committed four-campus/30-subject local baseline completes 2,100 measured requests with zero errors; dashboard p95 stays below 79 ms and logging p95 below 30 ms. The API exposes `Server-Timing` and `X-Response-Time` for diagnostics. Run `pnpm load:m16` and `pnpm verify:m16`, or use the included k6 scenario. See [docs/m16-performance-and-scalability.md](docs/m16-performance-and-scalability.md) for methodology, exact results, environment variables and the required post-deployment rerun.
-
-## Security and recovery
-
-M17 adds production environment validation, failed-login throttling, browser-origin checks, manager-only audit history, safe unexpected-error responses and loopback-only local ports. PostgreSQL backup, checksum, disposable restore verification and deliberately confirmed restore scripts provide a documented recovery path. Run `pnpm verify:m17` for the machine-readable checklist. See [docs/m17-security-and-recovery.md](docs/m17-security-and-recovery.md) for controls, commands, recovery targets and production limitations.
-
-## Production deployment
-
-M18 provides production Docker targets for the web, API and worker; private persistent PostgreSQL and Redis services; automatic HTTPS through Caddy; startup migrations; an idempotent fictional demonstration seed; and static, database and public-URL verifiers. Run `pnpm verify:m18` to validate the deployment package. See [docs/m18-deployment-and-demo-data.md](docs/m18-deployment-and-demo-data.md) for the server, DNS, SMTP, seed and live-verification procedure.
-
-The verified public deployment is available at [mirai-tracker.vercel.app](https://mirai-tracker.vercel.app). It uses a same-origin `/api` proxy, managed Neon PostgreSQL, Upstash Redis, two five-minute QStash schedules and Brevo SMTP. All 11 static and 5 live M18 checks pass; SMTP acceptance evidence is recorded in `docs/evidence/m18-smtp-verification.json`.
-
-## What-if recovery planner
-
-M20 turns a warning into an explainable intervention plan. Managers and faculty can choose a TIGHT or ON TRACK target, see DANGER subjects first, calculate the minimum additional capacity in half-hour units, test proposed hours, then print or download a spreadsheet-safe CSV. The scenario is read-only and uses each subject's existing M10 thresholds. Run `pnpm verify:m20`; see [docs/m20-stretch-features.md](docs/m20-stretch-features.md) for formulas, safeguards and evidence.
-
-## Administrator UI redesign
-
-The first editable Figma administrator overview, interface content rules and implementation tracker are in [docs/admin-ui-redesign.md](docs/admin-ui-redesign.md).
-
-## Workspace
-
-```text
-apps/web                 React interface
-apps/api                 NestJS REST API
-apps/worker              BullMQ background jobs
-packages/calculations    Official hour-weighted calculation functions
-packages/validation      Shared Zod validation schemas
-docs                     Architecture and milestone notes
-```
-
-Real credentials belong in `.env`, which is excluded from Git. Never commit passwords, tokens or API keys.
+Secrets, local evaluator credentials and `outputs/` are excluded from Git and image build contexts. Earlier milestone documents are historical; this README and the dated submission reports describe the current product.

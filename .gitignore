@@ -14,3 +14,4 @@ test-results/
 backups/
 apps/api/prisma/*.db
 .vercel/
+outputs/

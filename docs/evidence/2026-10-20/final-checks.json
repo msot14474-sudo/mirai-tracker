@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-20",
+  "unitTests": {
+    "api": 408,
+    "web": 147,
+    "calculations": 23,
+    "worker": 6,
+    "validation": 2,
+    "total": 586
+  },
+  "typecheck": "passed",
+  "build": "passed",
+  "oneCommandSetup": {
+    "result": "passed",
+    "project": "isolated fresh Docker Compose project",
+    "servicesHealthy": 6,
+    "demoCampuses": 3,
+    "demoFaculty": 15,
+    "demoSubjects": 15,
+    "note": "Registry timeout resolved with bounded download concurrency and longer fetch timeout. Occupied host web port changed for isolated verification."
+  },
+  "liveBrowser": {
+    "role": "Administrator",
+    "campus": "Rathinam",
+    "verified": [
+      "5 demo subject cards and correct buffer ratios",
+      "Mirai and University track filters",
+      "Rathinam campus selectable",
+      "180 saved lecture logs in Teaching Delivery"
+    ],
+    "note": "All-role access boundaries separately tested via authenticated local HTTP and database integrations."
+  }
+}

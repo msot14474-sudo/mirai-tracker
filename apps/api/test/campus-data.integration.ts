@@ -78,8 +78,8 @@ it('imports all semester relationships atomically, isolates campuses and calcula
       [
         'A',
         'First Year A',
-        'CS',
-        'Computer Science',
+        'MIRAI',
+        'Mirai',
         'WEB',
         'Web Development',
         'Foundations',
@@ -411,7 +411,10 @@ it('routes notifications by hierarchy and persists one weekly summary/email per 
                   completion: 50,
                   nextTopics: ['TCP'],
                   exams: [],
-                  monitoring: { status: 'ON_TRACK', remainingHours: 2 },
+                  monitoring: {
+                    status: 'ON_TRACK', remainingHours: 2, availableHours: 3,
+                    bufferRatio: 1.5, thresholds: { onTrack: 1.15, tight: 1 },
+                  },
                 },
               ],
       }),

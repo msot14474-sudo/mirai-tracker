@@ -1,0 +1,286 @@
+{
+  "startedAt": "2026-10-20T14:37:26.735Z",
+  "environment": {
+    "target": "Loopback HTTP API with real PostgreSQL 16, Redis 7 and Mailpit OTP",
+    "node": "v20.18.0",
+    "platform": "darwin arm64",
+    "cpu": "Apple M5",
+    "logicalCpus": 10,
+    "memoryGiB": 16,
+    "databasePool": 10,
+    "campuses": 3,
+    "faculty": 60,
+    "subjects": 30,
+    "students": 1020
+  },
+  "permissions": [
+    {
+      "name": "Administrator sees all 30 subjects",
+      "role": "ADMIN",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "pass": true
+    },
+    {
+      "name": "Program manager sees all 30 subjects",
+      "role": "PROGRAM_MANAGER",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "pass": true
+    },
+    {
+      "name": "Campus manager sees only own 10 subjects",
+      "role": "CAMPUS_MANAGER",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "pass": true
+    },
+    {
+      "name": "Campus manager cannot read another campus subject",
+      "role": "CAMPUS_MANAGER",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    },
+    {
+      "name": "Faculty sees only assigned subject",
+      "role": "FACULTY",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "pass": true
+    },
+    {
+      "name": "Faculty cannot read another faculty subject",
+      "role": "FACULTY",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    },
+    {
+      "name": "Faculty cannot log another faculty class",
+      "role": "FACULTY",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    },
+    {
+      "name": "Student can read own overview",
+      "role": "STUDENT",
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "pass": true
+    },
+    {
+      "name": "Student cannot log teaching",
+      "role": "STUDENT",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    },
+    {
+      "name": "Student cannot create progress snapshot",
+      "role": "STUDENT",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    },
+    {
+      "name": "Administrator cannot use faculty logging route",
+      "role": "ADMIN",
+      "expectedStatus": 403,
+      "actualStatus": 403,
+      "pass": true
+    }
+  ],
+  "automatedLoggingFlows": [
+    {
+      "account": "Fictional faculty 1",
+      "method": "Automated HTTP list-and-save flow",
+      "seconds": 0.07,
+      "pass": true
+    },
+    {
+      "account": "Fictional faculty 2",
+      "method": "Automated HTTP list-and-save flow",
+      "seconds": 0.04,
+      "pass": true
+    },
+    {
+      "account": "Fictional faculty 3",
+      "method": "Automated HTTP list-and-save flow",
+      "seconds": 0.04,
+      "pass": true
+    },
+    {
+      "account": "Fictional faculty 4",
+      "method": "Automated HTTP list-and-save flow",
+      "seconds": 0.04,
+      "pass": true
+    },
+    {
+      "account": "Fictional faculty 5",
+      "method": "Automated HTTP list-and-save flow",
+      "seconds": 0.04,
+      "pass": true
+    }
+  ],
+  "load": [
+    {
+      "concurrentUsers": 50,
+      "iterationsPerUser": 3,
+      "seconds": 1.9,
+      "dashboard": {
+        "requests": 150,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 116.89,
+        "p95Ms": 289.92,
+        "p99Ms": 384.82,
+        "maxMs": 411.91025000000013,
+        "statusCounts": {
+          "200": 150
+        },
+        "failureExamples": []
+      },
+      "logging": {
+        "requests": 150,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 480.59,
+        "p95Ms": 541.93,
+        "p99Ms": 572.36,
+        "maxMs": 577.9361250000002,
+        "statusCounts": {
+          "201": 150
+        },
+        "failureExamples": []
+      }
+    },
+    {
+      "concurrentUsers": 60,
+      "iterationsPerUser": 3,
+      "seconds": 2.39,
+      "dashboard": {
+        "requests": 180,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 132.07,
+        "p95Ms": 335.02,
+        "p99Ms": 494.2,
+        "maxMs": 508.52420900000016,
+        "statusCounts": {
+          "200": 180
+        },
+        "failureExamples": []
+      },
+      "logging": {
+        "requests": 180,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 572.76,
+        "p95Ms": 781.14,
+        "p99Ms": 864.43,
+        "maxMs": 871.6470409999993,
+        "statusCounts": {
+          "201": 180
+        },
+        "failureExamples": []
+      }
+    },
+    {
+      "concurrentUsers": 100,
+      "iterationsPerUser": 3,
+      "seconds": 3.5,
+      "dashboard": {
+        "requests": 300,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 244.97,
+        "p95Ms": 570.31,
+        "p99Ms": 625.32,
+        "maxMs": 692.5200830000003,
+        "statusCounts": {
+          "200": 300
+        },
+        "failureExamples": []
+      },
+      "logging": {
+        "requests": 300,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 877.29,
+        "p95Ms": 1062.91,
+        "p99Ms": 1097.03,
+        "maxMs": 1109.7227079999993,
+        "statusCounts": {
+          "201": 300
+        },
+        "failureExamples": []
+      }
+    },
+    {
+      "concurrentUsers": 200,
+      "iterationsPerUser": 3,
+      "seconds": 6.59,
+      "dashboard": {
+        "requests": 600,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 587.42,
+        "p95Ms": 1046.38,
+        "p99Ms": 1162.7,
+        "maxMs": 1248.8892090000008,
+        "statusCounts": {
+          "200": 600
+        },
+        "failureExamples": []
+      },
+      "logging": {
+        "requests": 600,
+        "errors": 0,
+        "errorRate": 0,
+        "p50Ms": 1613.28,
+        "p95Ms": 1998.97,
+        "p99Ms": 2087.34,
+        "maxMs": 2195.6431250000005,
+        "statusCounts": {
+          "201": 600
+        },
+        "failureExamples": []
+      }
+    }
+  ],
+  "fullSemesterDashboard": {
+    "requests": 5,
+    "errors": 0,
+    "errorRate": 0,
+    "p50Ms": 83.8,
+    "p95Ms": 86.71,
+    "p99Ms": 86.71,
+    "maxMs": 86.7058340000001,
+    "statusCounts": {
+      "200": 5
+    },
+    "failureExamples": []
+  },
+  "endOfDayBurst": {
+    "distinctFaculty": 60,
+    "concurrentUsers": 60,
+    "seconds": 0.27,
+    "logging": {
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 257.14,
+      "p95Ms": 264.86,
+      "p99Ms": 266.23,
+      "maxMs": 266.2339589999999,
+      "statusCounts": {
+        "201": 60
+      },
+      "failureExamples": []
+    },
+    "method": "All 60 distinct faculty submit once simultaneously, inside a 15-minute window. Not a 15-minute soak."
+  },
+  "finishedAt": "2026-10-20T14:37:42.941Z"
+}

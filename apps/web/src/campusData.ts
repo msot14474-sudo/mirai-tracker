@@ -15,7 +15,11 @@ export async function campusRequest<T>(
   return response.json() as Promise<T>;
 }
 export async function campusDownload(path: string, name: string) {
-  const response = await apiFetch(`${apiUrl}/campus-data${path}`);
+  const response = await apiFetch(
+    `${apiUrl}/campus-data${path}`,
+    {},
+    { download: true },
+  );
   if (!response.ok)
     throw new Error('Download could not be prepared. Please try again.');
   const url = URL.createObjectURL(await response.blob());

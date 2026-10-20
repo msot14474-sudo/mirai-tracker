@@ -1,0 +1,26 @@
+[
+  {
+    "suite": "database",
+    "exitCode": 0
+  },
+  {
+    "suite": "manual-workflow",
+    "exitCode": 0
+  },
+  {
+    "suite": "reports",
+    "exitCode": 0
+  },
+  {
+    "suite": "campus-management",
+    "exitCode": 0
+  },
+  {
+    "suite": "campus-data",
+    "exitCode": 0
+  },
+  {
+    "suite": "ai-conversation",
+    "exitCode": 0
+  }
+]

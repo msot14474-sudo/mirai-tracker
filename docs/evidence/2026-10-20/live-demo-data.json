@@ -1,0 +1,42 @@
+{
+  "verifiedAt": "2026-10-20T14:45:11.590Z",
+  "fictional": true,
+  "campuses": [
+    {
+      "campus": "HI-TECH",
+      "semesters": 1,
+      "faculty": 5,
+      "students": 10,
+      "subjects": 5,
+      "topics": 150,
+      "sessions": 295,
+      "logs": 180,
+      "exams": 2,
+      "calendarOverrides": 13
+    },
+    {
+      "campus": "JAGGANNATH",
+      "semesters": 1,
+      "faculty": 5,
+      "students": 10,
+      "subjects": 5,
+      "topics": 150,
+      "sessions": 295,
+      "logs": 180,
+      "exams": 2,
+      "calendarOverrides": 13
+    },
+    {
+      "campus": "RATHINAM",
+      "semesters": 1,
+      "faculty": 5,
+      "students": 10,
+      "subjects": 5,
+      "topics": 150,
+      "sessions": 295,
+      "logs": 180,
+      "exams": 2,
+      "calendarOverrides": 13
+    }
+  ]
+}

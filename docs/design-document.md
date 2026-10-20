@@ -1,94 +1,37 @@
-# Design Document
+# Architecture and design
 
-## 1. Purpose
+## Purpose and scope
 
-Mirai Tracker replaces spreadsheet-based syllabus monitoring with one calendar-aware record of planned and delivered teaching. It answers four operational questions: what should have been covered, what was actually covered, whether enough timetable capacity remains, and what action is needed before an exam.
+Mirai Tracker connects planning to recorded teaching for HI-Tech, Jaggannath and Rathinam. A semester belongs to a campus. A batch contains offerings in Mirai and University tracks. Shared records drive dashboards, reports, faculty plans and the student view.
 
-## 2. Users and permissions
+## Deployment
 
-| Role                    | Main capabilities                                                           | Scope                          |
-| ----------------------- | --------------------------------------------------------------------------- | ------------------------------ |
-| Admin / Program Manager | Academic setup, imports, all dashboards, audit history and exports          | All campuses                   |
-| Campus Manager          | Faculty access, timetable, faculty coordination, dashboards and escalations | Assigned campus                |
-| Faculty                 | Lesson plans, assigned daily sessions and own subject dashboards            | Active assignments             |
-| Student                 | Covered topics, next topics and exam scope                                  | Authenticated batch, read-only |
+React/Vite serves the PWA from Vercel. Same-origin /api requests reach NestJS on Vercel. Prisma accesses Neon PostgreSQL. Upstash Redis stores opaque sessions and transient auth/job state. QStash invokes protected scheduled endpoints. SMTP delivers OTPs and summaries; AI and WhatsApp are separately configured providers.
 
-Authentication uses password plus a six-digit email OTP before issuing an HTTP-only opaque session. The permission layer can later accept Google Workspace or institutional identities without changing domain access rules.
+Local Compose runs the web, API, PostgreSQL, Redis, Mailpit and BullMQ worker. The load report uses a host API with local containerized data services. It does not claim to reproduce hosted network latency.
 
-## 3. Functional design
+## Data and authorization
 
-### Academic setup and import
+Users have campus-scoped roles. Faculty profiles link to offerings through dated assignments. Students link to a batch. Campus → semester → batch → offering → lesson plan → unit → topic forms the academic hierarchy. Timetable entries generate sessions; revisioned logs record topic updates. Exam windows map to exact topics.
 
-Semesters belong to campuses and define dates, timezone-aware working rules, default progress thresholds and exam windows. CSV/XLSX preview validates complete rows before an atomic import creates the campus-semester-batch-subject graph. Error exports identify the exact row and field.
+Administrators/program managers oversee all campuses. Campus managers manage their campuses. Faculty work with assigned subjects. Students read their enrolled batch. Server-side guards and row scoping apply to reads, writes, reports, exports and AI context.
 
-### Calendar and timetable
+## Calculation and calendar
 
-The calendar evaluates explicit overrides first, then Sunday and configured Saturday rules, then ordinary weekdays. Recurring timetable entries include effective dates, faculty assignment and planned minutes. Generation rejects batch or faculty overlap and preserves sessions with academic history.
+Topic minutes are canonical. Covered minutes include completed topics and weighted partial completion. Remaining minutes equal scope minus covered minutes. Available minutes come from eligible future sessions through the deadline. Buffer is available divided by remaining. Default thresholds are 1.15 for ON TRACK and 1.00 for TIGHT; complete and missing-plan states are distinct.
 
-### Lesson plans and planned dates
+Explicit calendar entries override weekly rules. Sundays and non-working Saturdays are excluded unless opened. Timetable generation checks conflicts and preserves logged history. Changes produce revised planned dates; affected classes can require faculty review before a recovery move.
 
-Versioned lesson plans contain ordered units and topics. Planned minutes are the source of truth; displayed hours are derived. Topic-level exam mappings define exact mid-term and end-term scope. The scheduling engine carries topic minutes across real sessions, exposes insufficient capacity and creates a new version after relevant changes.
+## Imports, delivery and reports
 
-### Daily logging
+CSV/XLSX rows are parsed, validated and previewed before domain writes. AI helps with unstructured calendars and ambiguous mappings. Separate pages import calendars, batch timetables, lesson plans and student access. The full-semester import interface is retired.
 
-Faculty receive scheduled classes with subject, batch, current topic and carry-forward pre-filled. Completed, partially completed, skipped, merged and cancelled paths are explicit. Corrections create a new revision. Topic progress, session state, audit data and recalculated planned dates are committed atomically.
+Logs record completion, classwork/homework and topic changes. Reports use shared scoped analytics. Exports retain structured records. Visiting-faculty honoraria derive from recorded classes and effective per-class rates, with expenses/payments shown separately.
 
-### Progress and readiness
+## Security and operations
 
-For non-skipped topics:
+Passwords use salted scrypt. OTPs expire after ten minutes with attempt/request limits. Session cookies are HTTP-only, SameSite and Secure in production. Authorization is refreshed from PostgreSQL. Validation, origin checks and safe errors protect mutations. AI receives scoped data and output is rendered without raw HTML execution.
 
-- hours in scope = sum of planned minutes / 60;
-- covered minutes = completed planned minutes plus in-progress planned minutes multiplied by completion percentage;
-- coverage = covered / in-scope;
-- remaining = in-scope minus covered;
-- available = future timetable minutes through the target finish date;
-- buffer = available / remaining;
-- pace = covered minus planned coverage expected by the selected date.
+Transactions protect related writes. Unique job/revision keys and leases reduce duplicate processing. Scheduler secrets protect internal routes. Audit records retain actor and scope. Secrets and demo passwords stay outside Git and Docker build contexts.
 
-The default status is ON TRACK at buffer >= 1.15, TIGHT at buffer >= 1.00 and DANGER below 1.00. Percentages are hour-weighted. Campus and track status uses the worst subject so healthy aggregates cannot hide a subject at risk. Exam readiness applies the same calculation only to topics mapped to that exam.
-
-### Alerts and exports
-
-The worker scans every five minutes. An unlogged class triggers a faculty reminder after the campus day ends and a Campus Manager escalation at 48 hours. Unique keys prevent duplicate delivery. Manager exports cover campus progress, subject progress, visiting-faculty honorarium and a long-form archive; every export creates job and audit records.
-
-## 4. Data design
-
-The PostgreSQL model contains 30 domain models. Major groups are:
-
-- identity: User, PasswordCredential, RoleAssignment, StaffProfile and StudentProfile, including audited campus-scoped faculty onboarding;
-- setup: Campus, Track, Semester, Batch, Subject and SubjectOffering;
-- calendar: CalendarDayOverride and ExamWindow;
-- scheduling: FacultyAssignment, TimetableEntry and ScheduledSession;
-- curriculum: LessonPlan, Unit, Topic, ExamScope, TopicScheduleVersion and TopicSchedule;
-- delivery: SessionLog and SessionTopicUpdate;
-- operations: ImportJob, ProgressSnapshot, MissedLogAlert, NotificationDelivery, ExportJob and AuditEvent.
-
-Foreign keys, compound uniqueness, enum states and SQL constraints complement application validation. Imports and session logging use transactions. Historical plans, schedule versions, log revisions, snapshots and audit events are retained instead of overwritten.
-
-## 5. Security design
-
-Passwords use scrypt with individual salts. OTP challenges expire after ten minutes, store only an HMAC digest and enforce request and verification limits. Session tokens contain 256 random bits and only an HMAC-derived key is stored in Redis. Cookies are HTTP-only, SameSite=Lax and Secure in production. Failed login counts expire after 15 minutes. Helmet, exact CORS, the mutation-origin guard, Zod schemas, upload limits and generic unexpected-error responses reduce common web risks.
-
-Production startup rejects weak secrets, HTTP origins and demo passwords. The local and production databases are not published directly. Backups use PostgreSQL custom format, owner-restricted file permissions and SHA-256 checksums. Verification restores into a disposable database before a real restore is allowed.
-
-## 6. Scalability and reliability
-
-The API is stateless apart from Redis sessions, so multiple replicas can share PostgreSQL and Redis. Indexed foreign keys support campus and subject filtering. Dashboards calculate from bounded relational queries and shared pure functions. BullMQ separates scheduled work from user requests. For wider use, managed PostgreSQL with point-in-time recovery, managed Redis, object storage for uploaded files and multiple API replicas are the next steps.
-
-The recorded target is four campuses, 60+ faculty, 30+ subjects and 1,000+ students. The local M16 workload used four campuses and 30 subjects at 50, 100 and 200 concurrent clients with zero errors. Production capacity must be rerun after M18 goes live.
-
-## 7. Deployment design
-
-The production Compose stack contains Caddy, Nginx web, API, worker, PostgreSQL and Redis. Caddy obtains HTTPS and routes `/api` to NestJS. PostgreSQL and Redis use private persistent volumes. Health checks order startup and the API applies migrations before serving. Demonstration seeding is a one-time command whose password is absent from the persistent runtime environment.
-
-## 8. Key decisions
-
-- PostgreSQL was selected over MongoDB because timetable, role scope, exam and log data need strong relations and transactional imports.
-- Minutes remain canonical to avoid floating-point drift; hours are presentation values.
-- The application stores calculated versions and audit events for explainability.
-- A responsive PWA provides one codebase for desktop managers and phone-first faculty.
-- Local password identities enable demonstration without external accounts; production identity integration is a later controlled change.
-
-## 9. Current limitations
-
-The machine used for development has no Docker runtime. PostgreSQL integration tests, the disposable restore drill and production image execution therefore remain pending. The required five-faculty phone study has a prepared capture sheet but still needs real volunteers. The public URL, DNS and SMTP credentials depend on the deployer. These items are visible in the submission checklist and are not reported as passed.
+The scale fixture contains three campuses, 60 faculty, 30 subjects and 1,020 students. The separate report records 50/100/200-client loads, a 60-faculty burst and full-semester reads. Pool budgeting, permission-safe aggregation and hosted sustained tests guide further scaling.

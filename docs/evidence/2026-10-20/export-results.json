@@ -1,0 +1,275 @@
+{
+  "environment": "Fresh local Docker demo seed, same seed profile as live",
+  "exports": [
+    {
+      "campus": "HI-TECH",
+      "elapsedMs": 723,
+      "datasets": [
+        {
+          "dataset": "Semester",
+          "records": 1
+        },
+        {
+          "dataset": "Calendar",
+          "records": 152
+        },
+        {
+          "dataset": "Exams",
+          "records": 2
+        },
+        {
+          "dataset": "Batches",
+          "records": 1
+        },
+        {
+          "dataset": "Subjects",
+          "records": 5
+        },
+        {
+          "dataset": "Faculty assignments",
+          "records": 5
+        },
+        {
+          "dataset": "Weekly timetable",
+          "records": 15
+        },
+        {
+          "dataset": "Scheduled classes",
+          "records": 295
+        },
+        {
+          "dataset": "Lecture logs",
+          "records": 180
+        },
+        {
+          "dataset": "Topic log updates",
+          "records": 241
+        },
+        {
+          "dataset": "Lesson plans",
+          "records": 5
+        },
+        {
+          "dataset": "Units",
+          "records": 30
+        },
+        {
+          "dataset": "Topics",
+          "records": 150
+        },
+        {
+          "dataset": "Exam syllabus",
+          "records": 225
+        },
+        {
+          "dataset": "Planned dates",
+          "records": 141
+        },
+        {
+          "dataset": "Course progress",
+          "records": 5
+        },
+        {
+          "dataset": "Exam readiness",
+          "records": 10
+        },
+        {
+          "dataset": "Visiting faculty",
+          "records": 1
+        },
+        {
+          "dataset": "Visiting classes",
+          "records": 59
+        },
+        {
+          "dataset": "Expenses and payments",
+          "records": 2
+        },
+        {
+          "dataset": "Cost summary",
+          "records": 1
+        }
+      ]
+    },
+    {
+      "campus": "JAGGANNATH",
+      "elapsedMs": 489,
+      "datasets": [
+        {
+          "dataset": "Semester",
+          "records": 1
+        },
+        {
+          "dataset": "Calendar",
+          "records": 152
+        },
+        {
+          "dataset": "Exams",
+          "records": 2
+        },
+        {
+          "dataset": "Batches",
+          "records": 1
+        },
+        {
+          "dataset": "Subjects",
+          "records": 5
+        },
+        {
+          "dataset": "Faculty assignments",
+          "records": 5
+        },
+        {
+          "dataset": "Weekly timetable",
+          "records": 15
+        },
+        {
+          "dataset": "Scheduled classes",
+          "records": 295
+        },
+        {
+          "dataset": "Lecture logs",
+          "records": 180
+        },
+        {
+          "dataset": "Topic log updates",
+          "records": 241
+        },
+        {
+          "dataset": "Lesson plans",
+          "records": 5
+        },
+        {
+          "dataset": "Units",
+          "records": 30
+        },
+        {
+          "dataset": "Topics",
+          "records": 150
+        },
+        {
+          "dataset": "Exam syllabus",
+          "records": 225
+        },
+        {
+          "dataset": "Planned dates",
+          "records": 141
+        },
+        {
+          "dataset": "Course progress",
+          "records": 5
+        },
+        {
+          "dataset": "Exam readiness",
+          "records": 10
+        },
+        {
+          "dataset": "Visiting faculty",
+          "records": 1
+        },
+        {
+          "dataset": "Visiting classes",
+          "records": 59
+        },
+        {
+          "dataset": "Expenses and payments",
+          "records": 2
+        },
+        {
+          "dataset": "Cost summary",
+          "records": 1
+        }
+      ]
+    },
+    {
+      "campus": "RATHINAM",
+      "elapsedMs": 341,
+      "datasets": [
+        {
+          "dataset": "Semester",
+          "records": 1
+        },
+        {
+          "dataset": "Calendar",
+          "records": 152
+        },
+        {
+          "dataset": "Exams",
+          "records": 2
+        },
+        {
+          "dataset": "Batches",
+          "records": 1
+        },
+        {
+          "dataset": "Subjects",
+          "records": 5
+        },
+        {
+          "dataset": "Faculty assignments",
+          "records": 5
+        },
+        {
+          "dataset": "Weekly timetable",
+          "records": 15
+        },
+        {
+          "dataset": "Scheduled classes",
+          "records": 295
+        },
+        {
+          "dataset": "Lecture logs",
+          "records": 180
+        },
+        {
+          "dataset": "Topic log updates",
+          "records": 241
+        },
+        {
+          "dataset": "Lesson plans",
+          "records": 5
+        },
+        {
+          "dataset": "Units",
+          "records": 30
+        },
+        {
+          "dataset": "Topics",
+          "records": 150
+        },
+        {
+          "dataset": "Exam syllabus",
+          "records": 225
+        },
+        {
+          "dataset": "Planned dates",
+          "records": 141
+        },
+        {
+          "dataset": "Course progress",
+          "records": 5
+        },
+        {
+          "dataset": "Exam readiness",
+          "records": 10
+        },
+        {
+          "dataset": "Visiting faculty",
+          "records": 1
+        },
+        {
+          "dataset": "Visiting classes",
+          "records": 59
+        },
+        {
+          "dataset": "Expenses and payments",
+          "records": 2
+        },
+        {
+          "dataset": "Cost summary",
+          "records": 1
+        }
+      ]
+    }
+  ]
+}

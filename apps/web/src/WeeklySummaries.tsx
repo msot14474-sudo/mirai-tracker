@@ -56,17 +56,21 @@ export function WeeklySummaries({
               <span>
                 <strong>{s.title}</strong>
                 <small>
-                  {s.mode === 'ai'
-                    ? 'AI summary'
-                    : 'Calculated summary · AI unavailable'}{' '}
+                  {s.mode === 'demo'
+                    ? 'Demo calculated summary'
+                    : s.mode === 'ai'
+                      ? 'AI summary'
+                      : 'Calculated summary · AI unavailable'}{' '}
                   ·{' '}
-                  {s.emailStatus === 'SENT'
-                    ? 'Email sent'
-                    : s.emailStatus === 'FAILED'
-                      ? 'Email delivery needs attention'
-                      : s.emailStatus === 'UNKNOWN'
-                        ? 'Check email delivery status'
-                        : 'Email pending'}
+                  {s.emailStatus === 'NOT_SENT'
+                    ? 'Preview · not emailed'
+                    : s.emailStatus === 'SENT'
+                      ? 'Email sent'
+                      : s.emailStatus === 'FAILED'
+                        ? 'Email delivery needs attention'
+                        : s.emailStatus === 'UNKNOWN'
+                          ? 'Check email delivery status'
+                          : 'Email pending'}
                 </small>
               </span>
             </summary>

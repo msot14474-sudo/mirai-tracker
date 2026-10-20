@@ -37,7 +37,7 @@ const publicAuthPaths = [
 export async function apiFetch(
   url: string,
   init: RequestInit = {},
-  options: { htmlAttachment?: boolean } = {},
+  options: { htmlAttachment?: boolean; download?: boolean } = {},
 ): Promise<Response> {
   const generation = sessionGeneration;
   const read = ['GET', 'HEAD'].includes((init.method ?? 'GET').toUpperCase());
@@ -53,7 +53,10 @@ export async function apiFetch(
     const abort = () => controller.abort();
     if (init.signal?.aborted) abort();
     init.signal?.addEventListener('abort', abort, { once: true });
-    const timeout = window.setTimeout(abort, read ? 15_000 : 60_000);
+    const timeout = window.setTimeout(
+      abort,
+      options.download ? 60_000 : read ? 15_000 : 60_000,
+    );
     let error: RequestError;
     try {
       const received = await fetch(url, {

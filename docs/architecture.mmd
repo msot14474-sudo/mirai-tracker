@@ -1,0 +1,14 @@
+flowchart LR
+  Web["React PWA on Vercel"] -->|Same-origin /api| API["NestJS API on Vercel"]
+  API -->|Prisma| DB[("Neon PostgreSQL")]
+  API --> Redis[("Upstash Redis")]
+  Jobs["QStash schedules"] -->|Protected jobs| API
+  API -.-> SMTP["SMTP"]
+  API -.-> AI["AI provider"]
+  WhatsApp["WhatsApp webhooks"] -.-> API
+  subgraph Local["Local Compose alternative"]
+    Worker["BullMQ worker"]
+    Mailpit["Mailpit OTP inbox"]
+    Postgres[("PostgreSQL")]
+    LocalRedis[("Redis")]
+  end

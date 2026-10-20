@@ -1,0 +1,200 @@
+{
+  "method": "Independent database sums compared with authenticated HTTP dashboard; no shared calculation helper used in expected values.",
+  "rows": [
+    {
+      "subject": "Data Structures and Algorithms (Demo)",
+      "asOf": "2026-10-20",
+      "target": "2026-12-11",
+      "topicCount": 30,
+      "scopeMinutes": 2700,
+      "coveredMinutes": 2205,
+      "availableMinutes": 1200,
+      "expected": {
+        "hoursInScope": 45,
+        "coveredHours": 36.75,
+        "coveragePercentage": 81.67,
+        "remainingHours": 8.25,
+        "availableHours": 20,
+        "bufferRatio": 2.42
+      },
+      "actual": {
+        "hoursInScope": 45,
+        "coveredHours": 36.75,
+        "coveragePercentage": 81.67,
+        "remainingHours": 8.25,
+        "availableHours": 20,
+        "bufferRatio": 2.42
+      },
+      "status": "ON_TRACK",
+      "comparisons": [
+        {
+          "metric": "hoursInScope",
+          "expected": 45,
+          "actual": 45,
+          "pass": true
+        },
+        {
+          "metric": "coveredHours",
+          "expected": 36.75,
+          "actual": 36.75,
+          "pass": true
+        },
+        {
+          "metric": "coveragePercentage",
+          "expected": 81.67,
+          "actual": 81.67,
+          "pass": true
+        },
+        {
+          "metric": "remainingHours",
+          "expected": 8.25,
+          "actual": 8.25,
+          "pass": true
+        },
+        {
+          "metric": "availableHours",
+          "expected": 20,
+          "actual": 20,
+          "pass": true
+        },
+        {
+          "metric": "bufferRatio",
+          "expected": 2.42,
+          "actual": 2.42,
+          "pass": true
+        }
+      ],
+      "pass": true
+    },
+    {
+      "subject": "Web Development (Demo)",
+      "asOf": "2026-10-20",
+      "target": "2026-12-11",
+      "topicCount": 30,
+      "scopeMinutes": 3600,
+      "coveredMinutes": 2145,
+      "availableMinutes": 1200,
+      "expected": {
+        "hoursInScope": 60,
+        "coveredHours": 35.75,
+        "coveragePercentage": 59.58,
+        "remainingHours": 24.25,
+        "availableHours": 20,
+        "bufferRatio": 0.82
+      },
+      "actual": {
+        "hoursInScope": 60,
+        "coveredHours": 35.75,
+        "coveragePercentage": 59.58,
+        "remainingHours": 24.25,
+        "availableHours": 20,
+        "bufferRatio": 0.82
+      },
+      "status": "DANGER",
+      "comparisons": [
+        {
+          "metric": "hoursInScope",
+          "expected": 60,
+          "actual": 60,
+          "pass": true
+        },
+        {
+          "metric": "coveredHours",
+          "expected": 35.75,
+          "actual": 35.75,
+          "pass": true
+        },
+        {
+          "metric": "coveragePercentage",
+          "expected": 59.58,
+          "actual": 59.58,
+          "pass": true
+        },
+        {
+          "metric": "remainingHours",
+          "expected": 24.25,
+          "actual": 24.25,
+          "pass": true
+        },
+        {
+          "metric": "availableHours",
+          "expected": 20,
+          "actual": 20,
+          "pass": true
+        },
+        {
+          "metric": "bufferRatio",
+          "expected": 0.82,
+          "actual": 0.82,
+          "pass": true
+        }
+      ],
+      "pass": true
+    },
+    {
+      "subject": "Database Systems (Demo)",
+      "asOf": "2026-10-20",
+      "target": "2026-12-11",
+      "topicCount": 30,
+      "scopeMinutes": 4500,
+      "coveredMinutes": 2085,
+      "availableMinutes": 1200,
+      "expected": {
+        "hoursInScope": 75,
+        "coveredHours": 34.75,
+        "coveragePercentage": 46.33,
+        "remainingHours": 40.25,
+        "availableHours": 20,
+        "bufferRatio": 0.5
+      },
+      "actual": {
+        "hoursInScope": 75,
+        "coveredHours": 34.75,
+        "coveragePercentage": 46.33,
+        "remainingHours": 40.25,
+        "availableHours": 20,
+        "bufferRatio": 0.5
+      },
+      "status": "DANGER",
+      "comparisons": [
+        {
+          "metric": "hoursInScope",
+          "expected": 75,
+          "actual": 75,
+          "pass": true
+        },
+        {
+          "metric": "coveredHours",
+          "expected": 34.75,
+          "actual": 34.75,
+          "pass": true
+        },
+        {
+          "metric": "coveragePercentage",
+          "expected": 46.33,
+          "actual": 46.33,
+          "pass": true
+        },
+        {
+          "metric": "remainingHours",
+          "expected": 40.25,
+          "actual": 40.25,
+          "pass": true
+        },
+        {
+          "metric": "availableHours",
+          "expected": 20,
+          "actual": 20,
+          "pass": true
+        },
+        {
+          "metric": "bufferRatio",
+          "expected": 0.5,
+          "actual": 0.5,
+          "pass": true
+        }
+      ],
+      "pass": true
+    }
+  ]
+}

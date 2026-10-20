@@ -19,6 +19,28 @@ const json = (value: unknown, status = 200) =>
   });
 
 describe('shared request protection', () => {
+  it('allows a full semester download to finish beyond the normal read deadline', async () => {
+    vi.useFakeTimers();
+    const bytes = new Uint8Array([80, 75, 3, 4]);
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_url, init) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(() => resolve(new Response(bytes)), 20_000);
+          init?.signal?.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }),
+    );
+    const pending = apiFetch(
+      '/api/campus-data/semesters/demo/export',
+      {},
+      { download: true },
+    );
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(new Uint8Array(await (await pending).arrayBuffer())).toEqual(bytes);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it('recovers a transient read failure and sends the session cookie', async () => {
     const fetcher = vi
       .spyOn(globalThis, 'fetch')

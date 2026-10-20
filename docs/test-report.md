@@ -1,96 +1,95 @@
-# Test Report
+# Test report
 
-## 1. Result summary
+Mirai Course Progression Tracker. Evidence date: 20 October 2026. Code baseline: 43ea893 plus the submission packaging and demo-label changes recorded in Git.
 
-The verified source baseline passes **266 automated tests**, all TypeScript checks and all production application builds. Static evidence also passes the M10 calculation verifier, M16 load thresholds, 13/13 M17 security and recovery controls, 11/11 M18 deployment-package controls and 8/8 M20 stretch-feature controls.
+## Scope and outcome
 
-The production Docker smoke test, PostgreSQL integration suite and public Vercel deployment have now passed. The live deployment uses managed PostgreSQL and Redis, authenticated five-minute QStash jobs and verified Brevo SMTP delivery. The five-faculty phone study remains an external activity.
+The test scope covers administrator, program manager, campus manager, faculty and student access; calendar/timetable propagation; lesson plans and logs; calculations; exams; reports; notifications; imports; and scale. The requested deployment has three campuses: HI-Tech, Jaggannath and Rathinam.
 
-## 2. Automated suite inventory
+| Evidence | Result |
+| --- | --- |
+| Unit/component tests | 586 passed: API 408, web 147, calculations 23, worker 6, validation 2 |
+| PostgreSQL integrations | 27 passed across six suites |
+| Authenticated HTTP permissions | 11 passed using password and Mailpit OTP |
+| Independent calculations | 18 of 18 numeric comparisons match to two decimals |
+| Concurrent load | 50, 100 and 200 users, zero HTTP/payload errors |
+| Live demonstration | 3 campuses, 15 faculty, 15 subjects, 540 lecture logs |
 
-| Area                           | Framework                |                  Result |
-| ------------------------------ | ------------------------ | ----------------------: |
-| NestJS API and domain services | Jest                     | 189 passed in 32 suites |
-| React interface                | Vitest + Testing Library |   51 passed in 15 files |
-| Background worker              | Vitest                   |                6 passed |
-| Shared calculations            | Vitest                   |               18 passed |
-| Shared validation              | Vitest                   |                2 passed |
-| **Total**                      |                          |          **266 passed** |
+A regression check also verifies that a larger semester download can complete beyond the normal 15-second read deadline; downloads have a bounded 60-second budget.
 
-`pnpm check` runs workspace type checks, tests and production builds. Prisma schema contracts and committed SQL safeguards are included in the API suite.
+The two stale integration fixtures were updated for Mirai/University terminology and the new buffer-threshold context. Their affected suite then passed against a fresh migrated database.
 
-## 3. Mandatory evidence matrix
+## Roles and permissions
 
-| Requirement                                           | Status                           | Evidence                                                                                                       |
-| ----------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Three hand-calculated subjects match to two decimals  | Pass                             | M10 CSV and executable verifier; ON TRACK, TIGHT and DANGER all match                                          |
-| Holiday shifts affected planned dates                 | Pass                             | Calendar and topic-schedule engine tests                                                                       |
-| Cancellation shifts affected planned dates            | Pass                             | Topic-schedule service and engine tests                                                                        |
-| Second/fourth Saturdays across three months           | Pass                             | Academic calendar tests                                                                                        |
-| Five-faculty median logging time under 60 seconds     | Pending external study           | M09 capture CSV and analyzer are ready; no volunteer times are invented                                        |
-| Faculty reminder and 48-hour manager escalation       | Pass in automated boundary tests | M14 engine, service, worker and UI evidence                                                                    |
-| Faculty cannot edit another faculty member's subject  | Pass                             | Access-policy and feature-service tests                                                                        |
-| Students cannot edit                                  | Pass                             | Student-only GET controller, role guards and interface tests                                                   |
-| Mid-term and end-term readiness correct               | Pass                             | M12 calculation and UI tests                                                                                   |
-| Three-campus, 25+ subject import without manual fixes | Pass in parser/service tests     | Fictional template validates HI-Tech, Rathinam and Jaggannath with 25 subjects; live PostgreSQL import pending |
-| Load at 50, 100 and 200 concurrent users              | Pass on local demo harness       | 2,100 requests, zero errors                                                                                    |
-| End-of-day logging p95 below one second               | Pass locally                     | Maximum recorded p95 29.99 ms                                                                                  |
-| Full dashboard below two seconds                      | Pass locally                     | Maximum recorded p95 78.73 ms                                                                                  |
+| Role | Check | Outcome |
+| --- | --- | --- |
+| Admin | Administrator sees all 30 subjects | HTTP 200; passed |
+| Program Manager | Program manager sees all 30 subjects | HTTP 200; passed |
+| Campus Manager | Campus manager sees only own 10 subjects | HTTP 200; passed |
+| Campus Manager | Campus manager cannot read another campus subject | HTTP 403; passed |
+| Faculty | Faculty sees only assigned subject | HTTP 200; passed |
+| Faculty | Faculty cannot read another faculty subject | HTTP 403; passed |
+| Faculty | Faculty cannot log another faculty class | HTTP 403; passed |
+| Student | Student can read own overview | HTTP 200; passed |
+| Student | Student cannot log teaching | HTTP 403; passed |
+| Student | Student cannot create progress snapshot | HTTP 403; passed |
+| Admin | Administrator cannot use faculty logging route | HTTP 403; passed |
 
-## 4. Hand-calculation results
+Additional database integrations exercise scoped reports/exports, campus calendar edits, bulk access, manual semester-to-subject linkage and AI conversation ownership. A student's controller is read-only. Faculty are blocked from another faculty member's subject and log route, including direct API attempts.
 
-| Subject  | Coverage | Remaining | Available | Buffer |    Pace | Status   |
-| -------- | -------: | --------: | --------: | -----: | ------: | -------- |
-| CS-DSA   |   58.33% |    2.50 h |    3.00 h |   1.20 | -0.50 h | ON TRACK |
-| MATH-101 |   41.67% |    3.50 h |    3.75 h |   1.07 | -0.50 h | TIGHT    |
-| PHY-201  |   38.89% |    5.50 h |    4.00 h |   0.73 | -1.00 h | DANGER   |
+## Calculation accuracy
 
-Skipped time is excluded from PHY-201 scope. The verifier recalculates from integer minutes and compares every displayed value to two decimals.
+Expected values are independently summed from topic and future-session database rows, then compared with the authenticated dashboard API. The expected calculation does not call the shared analytics helper. The accompanying Excel workbook exposes the formulas and the saved API values.
 
-## 5. Performance results
+| Subject | Coverage % | Remaining h | Available h | Buffer | Result |
+| --- | --- | --- | --- | --- | --- |
+| Data Structures and Algorithms | 81.67 | 8.25 | 20.00 | 2.42 | Match |
+| Web Development | 59.58 | 24.25 | 20.00 | 0.82 | Match |
+| Database Systems | 46.33 | 40.25 | 20.00 | 0.50 | Match |
 
-| Scenario  | Concurrency | Requests |      p50 |      p95 | Errors | Threshold |
-| --------- | ----------: | -------: | -------: | -------: | -----: | --------: |
-| Dashboard |          50 |      150 |  2.76 ms | 37.38 ms |     0% |  2,000 ms |
-| Logging   |          50 |      150 |  7.49 ms | 10.90 ms |     0% |  1,000 ms |
-| Dashboard |         100 |      300 |  9.14 ms | 52.18 ms |     0% |  2,000 ms |
-| Logging   |         100 |      300 | 12.39 ms | 15.42 ms |     0% |  1,000 ms |
-| Dashboard |         200 |      600 | 36.37 ms | 78.73 ms |     0% |  2,000 ms |
-| Logging   |         200 |      600 | 25.19 ms | 29.99 ms |     0% |  1,000 ms |
+Scope, covered hours, coverage percentage, remaining hours, available hours and buffer ratio are all checked. The earlier hand-worked CSV separately exercises ON TRACK, TIGHT and DANGER. Threshold boundaries use raw ratios before display rounding.
 
-This is a deterministic local API baseline without PostgreSQL, Redis, TLS or network latency. The identical authenticated scenario must be rerun against M18 before making production-capacity claims.
+## Calendar and exam evidence
 
-## 6. Security and recovery
+Calendar-engine tests select exactly the second and fourth Saturdays across three months, reject fifth Saturdays, and apply explicit holiday/working-day overrides. Schedule-engine tests show every affected later topic shifting after cancellation or a missing holiday slot. Service tests check regeneration after holiday creation, editing, deletion and semester-rule changes.
 
-M17 verifies production secret rules, protected-by-default routing, role scopes, exact mutation origin, login throttling, audited login, headers, generic errors, loopback local ports, ignored secrets, source scanning, checksummed backups, disposable restore logic and a confirmation-gated real restore. All 13 static and automated controls pass. The live restore drill is pending Docker/PostgreSQL.
+Recovery tests reject closed dates and conflicts, preserve logged history and prevent already-resolved cancellations from moving again. Exam tests calculate only mapped topics, compare mid-term/end-term scopes and enforce deadlines. The live demo has two scoped exam windows per campus.
 
-## 7. Deployment package
+## Logging and alerts
 
-M18's 11 static checks verify private persistent data services, Caddy HTTPS, startup migrations, unprivileged API/worker users, same-origin routing, restart/health policy, secret templates, one-time demo password handling, seed completeness, database verification and SPA headers. The public Vercel deployment at `https://mirai-tracker.vercel.app` passes all five live checks: web availability, API dependency readiness, demonstration login, deployed campus data and populated progress results. Brevo accepted an authenticated production test email, recorded in `docs/evidence/m18-smtp-verification.json`. The package status is `live-verified`.
+| Fictional account | Measured automated flow (seconds) | Result |
+| --- | --- | --- |
+| Fictional faculty 1 | 0.07 | Passed |
+| Fictional faculty 2 | 0.04 | Passed |
+| Fictional faculty 3 | 0.04 | Passed |
+| Fictional faculty 4 | 0.04 | Passed |
+| Fictional faculty 5 | 0.04 | Passed |
 
-## 8. Known gaps and risk
+Median automated list-and-save time: **0.04 seconds**. These are five fictional-account HTTP workflows with actual timings. They measure API responsiveness, not human reading, typing or phone usability; no human-volunteer timing is claimed.
 
-| Gap                                      | Impact                                                        | Required close-out                                                      |
-| ---------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Production restore drill pending         | Recovery time is not yet measured against the hosted database | Restore a fresh backup into a disposable database and record the result |
-| Volunteer study empty                    | Required usability evidence is incomplete                     | Time five faculty on phones and run `pnpm study:m09`                    |
-| Hosted M16 load rerun pending            | Local performance evidence excludes public network latency    | Run the authenticated M16 scenario against the Vercel deployment        |
-| Real institutional sample data undecided | Demo remains fictional                                        | Obtain approval and import only non-sensitive data                      |
+Alert tests verify end-of-campus-day faculty reminders, the exact 48-hour escalation boundary, deduplication, retries and cancellation of pending messages after logging. SMTP behavior is tested with local capture or mocks. External delivery is not inferred from those tests.
 
-## 9. Stretch-feature evidence
+## Imports and connected workflows
 
-M20's read-only recovery planner ranks DANGER before TIGHT, calculates the exact and half-hour-rounded capacity needed for a selected target, previews the resulting buffer and status, and exports a spreadsheet-safe plan. Seven focused tests cover its formulas, ordering, validation, CSV defence and interaction; 8/8 machine-readable controls pass.
+The current interface has separate calendar, batch timetable, lesson-plan and student-access imports. Parser and service tests cover row preservation, invalid dates, partial plans, worksheet selection, errors and relationships. The retired full-semester backend importer has an integration test; that is not a claim that the removed interface is available.
 
-## 10. Reproduction commands
+The full scale seed is loaded through a dedicated additive evaluator script, not a CSV import. Thus the large-dataset exercise proves storage and application behavior with 30 subjects, not a 30-subject CSV import acceptance result.
 
-```bash
-pnpm check
-pnpm verify:m10
-pnpm verify:m16
-pnpm verify:m17
-pnpm verify:m18
-pnpm verify:m19
-pnpm verify:m20
-```
+## Load and live data
 
-Before final submission, run the disposable restore drill, the authenticated production M16 load test and the five-faculty M09 phone study.
+| Clients | Requests | Dashboard p95 ms | Logging p95 ms | Error rate |
+| --- | --- | --- | --- | --- |
+| 50 | 300 | 289.92 | 541.93 | 0.00% |
+| 60 | 360 | 335.02 | 781.14 | 0.00% |
+| 100 | 600 | 570.31 | 1062.91 | 0.00% |
+| 200 | 1200 | 1046.38 | 1998.97 | 0.00% |
+
+The separate burst used 60 distinct authenticated faculty, one submission each: p95 **264.86 ms**, 0 errors. All completed in 0.27 seconds. This is a simultaneous burst within the requested 15-minute window, not a sustained 15-minute soak.
+
+The live additive seed preserves existing records and provides 450 topics, 885 classes, 540 logs, 6 exams and 39 dated overrides. Demo notifications and calculated weekly previews make their respective interfaces inspectable. Visiting-faculty rates, expenses and payments are fictional examples.
+
+## Reproduction and evidence boundaries
+
+Run `pnpm test`, the six files in `apps/api/test` using `jest.database.config.cjs` against disposable migrated databases, and the scripts `submission-load-test.mjs` and `submission-calculations.mjs` with private local manifests. The seed script has a local scale profile and a separately guarded live demo profile.
+
+Evidence is stored in `docs/evidence/2026-10-20`. Load measurements include response-body validation and real HTTP authentication, PostgreSQL and Redis. Browser layout is checked separately; API timing does not measure page paint. Production capacity, a sustained soak, external WhatsApp delivery and human phone-task duration are outside these measured results.
