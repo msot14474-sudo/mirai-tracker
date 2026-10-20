@@ -4,6 +4,7 @@ import {
   validateCalendarEntries,
 } from './calendar-file.service';
 import { createHash } from 'node:crypto';
+import { Workbook } from 'exceljs';
 const entry = (changes = {}) =>
   calendarEntrySchema.parse({
     title: 'Holiday',
@@ -197,6 +198,64 @@ describe('Calendar extraction and resumable AI verification', () => {
     expect(result.entries[0]?.start).toBe('2026-10-02');
     expect(fetch).not.toHaveBeenCalled();
   });
+  it.each(['csv', 'xlsx'])(
+    'reads all 42 %s entries directly and keeps them when AI confirms only the 31 within the semester',
+    async (extension) => {
+      process.env.OLLAMA_API_KEY = 'test-only';
+      const { service, semester } = fixture();
+      semester.startDate = new Date('2026-08-08');
+      semester.endDate = new Date('2026-12-08');
+      const rows = Array.from({ length: 42 }, (_, i) => [
+        new Date(
+          Date.parse(i < 11 ? '2026-07-01' : '2026-08-08') +
+            (i < 11 ? i : i - 11) * 86400000,
+        )
+          .toISOString()
+          .slice(0, 10),
+        `Calendar entry ${i + 1}`,
+        'HOLIDAY',
+      ]);
+      const data = [['Date', 'Event', 'Type'], ...rows];
+      const workbook = new Workbook();
+      workbook.addWorksheet('Calendar').addRows(data);
+      const input = {
+        originalname: `calendar.${extension}`,
+        buffer:
+          extension === 'csv'
+            ? Buffer.from(data.map((row) => row.join(',')).join('\n'))
+            : Buffer.from(await workbook.xlsx.writeBuffer()),
+      } as any;
+      const ai = jest
+        .spyOn(service as any, 'ai')
+        .mockImplementation(async (...args: any[]) => ({
+          entries: args[2].filter((e: any) => e.start >= '2026-08-08'),
+          warnings: [],
+        }));
+      let preview = await service.inspect(input, 'semester', user);
+      expect(preview.entries).toHaveLength(42);
+      expect(preview.sourceCounts).toEqual({
+        total: 42,
+        withinSemester: 31,
+        outsideSemester: 11,
+        crossingBoundary: 0,
+      });
+      expect(preview.method).toBe('ai');
+      expect(preview.progress.phase).toBe('checking');
+      const sections = preview.progress.sections;
+      for (let i = 0; i < sections; i++) {
+        preview = await service.verify(preview.token, user);
+      }
+      expect(preview.verified).toBe(true);
+      expect(preview.entries).toHaveLength(42);
+      expect(preview.sourceCounts?.total).toBe(42);
+      expect(ai).toHaveBeenCalledTimes(sections);
+      expect(ai.mock.calls.every((call) => (call[2] as any[]).length > 0)).toBe(
+        true,
+      );
+      expect(ai.mock.calls[0]![0]).toContain('Date: 2026-07-01');
+      expect(preview.entries[0]!.concern).toContain('file values were kept');
+    },
+  );
   it('keeps completed AI work after a provider failure and resumes the next pass', async () => {
     const { service, redis } = fixture();
     const ai = jest

@@ -21,6 +21,12 @@ type Preview = {
   warnings: string[];
   verified: boolean;
   method?: 'direct' | 'ai';
+  sourceCounts?: {
+    total: number;
+    withinSemester: number;
+    outsideSemester: number;
+    crossingBoundary: number;
+  };
   progress?: {
     completed: number;
     total: number;
@@ -374,12 +380,27 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
       )}
       {preview && (
         <fieldset disabled={!!busy || !!message}>
-          <h3>Review {preview.entries.length} detected entries</h3>
+          <h3>Review {preview.entries.length} selected entries</h3>
+          {preview.sourceCounts && (
+            <p className="calendar-file-note">
+              Read directly from file:{' '}
+              <strong>{preview.sourceCounts.total} entries</strong>
+              {' · '}
+              {preview.sourceCounts.withinSemester} within this semester
+              {' · '}
+              {preview.sourceCounts.outsideSemester} outside this semester
+              {preview.sourceCounts.crossingBoundary > 0 &&
+                ` · ${preview.sourceCounts.crossingBoundary} cross a semester boundary`}
+              . Outside dates remain in the review until you remove them.
+            </p>
+          )}
           <p>
             {preview.verified
               ? preview.method === 'direct'
-                ? 'CSV dates and events read directly. Check any flagged rows and review the entries before saving.'
-                : 'AI reading and verification completed. Check the dates and resolve any concerns before saving.'
+                ? 'Spreadsheet dates and events read directly. AI cross-check is not configured. Check any flagged rows and review the entries before saving.'
+                : preview.sourceCounts
+                  ? 'AI cross-check completed. File dates and values were kept; review any differences flagged below before saving.'
+                  : 'AI reading and verification completed. Check the dates and resolve any concerns before saving.'
               : 'Calendar reading and verification are in progress. Nothing has been saved.'}
           </p>
           {!preview.verified && !busy && (

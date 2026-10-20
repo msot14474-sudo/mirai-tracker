@@ -182,7 +182,12 @@ export function readCalendarSheets(
       const row = sheet.rows[i]!;
       if (!row.some((v) => v.trim())) continue;
       const get = (key: keyof typeof aliases) => row[col(key)]?.trim() || '';
-      const evidence = `${sheet.name}, row ${i + 1}: ${JSON.stringify(row)}`;
+      const evidence = `${sheet.name}, row ${i + 1}: ${JSON.stringify(
+        row.map(
+          (value, index) =>
+            `${header[index] || `Column ${index + 1}`}: ${value}`,
+        ),
+      )}`;
       const from = readCalendarDate(
         get('start'),
         years,

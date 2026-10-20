@@ -153,8 +153,75 @@ it('shows direct CSV verification without making an AI request', async () => {
     target: { files: [new File(['Date,Event'], 'calendar.csv')] },
   });
   fireEvent.click(screen.getByText('Read and verify calendar'));
-  await screen.findByText(/CSV dates and events read directly/);
+  await screen.findByText(/Spreadsheet dates and events read directly/);
   expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the file total visible after removing dates outside the selected semester', async () => {
+  vi.spyOn(academicApi, 'semesters').mockResolvedValue([
+    {
+      id: 'semester',
+      name: 'Autumn',
+      startDate: '2026-08-08',
+      endDate: '2026-12-08',
+      workingSaturdayRule: 'SECOND_AND_FOURTH',
+      campusId: 'campus',
+      status: 'ACTIVE',
+    },
+  ]);
+  const entries = Array.from({ length: 42 }, (_, i) => ({
+    title: `Entry ${i + 1}`,
+    start: new Date(
+      Date.parse(i < 11 ? '2026-07-01' : '2026-08-08') +
+        (i < 11 ? i : i - 11) * 86400000,
+    )
+      .toISOString()
+      .slice(0, 10),
+    kind: 'HOLIDAY',
+    teachingAllowed: false,
+    examType: 'OTHER',
+    evidence: '',
+    concern: '',
+  })).map((entry) => ({ ...entry, end: entry.start }));
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        token: 'token',
+        entries,
+        warnings: [],
+        verified: true,
+        method: 'ai',
+        sourceCounts: {
+          total: 42,
+          withinSemester: 31,
+          outsideSemester: 11,
+          crossingBoundary: 0,
+        },
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    ),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CalendarFileImport campusId="campus" />
+    </QueryClientProvider>,
+  );
+  await screen.findByText(/Autumn/);
+  fireEvent.change(screen.getByLabelText('1. Choose semester'), {
+    target: { value: 'semester' },
+  });
+  fireEvent.change(screen.getByLabelText('2. Upload calendar'), {
+    target: { files: [new File(['Date,Event'], 'calendar.xlsx')] },
+  });
+  fireEvent.click(screen.getByText('Read and verify calendar'));
+  await screen.findByText('Review 42 selected entries');
+  fireEvent.click(screen.getByText('Remove 11 entries outside semester'));
+  expect(screen.getByText('Review 31 selected entries')).toBeInTheDocument();
+  expect(screen.getByText('42 entries')).toBeInTheDocument();
+  expect(screen.getByText(/31 within this semester/)).toHaveTextContent(
+    /11 outside/,
+  );
+  expect(screen.getByText(/AI cross-check completed/)).toBeInTheDocument();
 });
 
 it('automatically continues sections and resumes verification after a failure', async () => {
@@ -242,36 +309,34 @@ it('prefills missing exam deadlines, blocks invalid edits inline and saves a cor
       status: 'ACTIVE',
     },
   ]);
-  const fetch = vi
-    .spyOn(globalThis, 'fetch')
-    .mockImplementation(
-      async (url) =>
-        new Response(
-          JSON.stringify(
-            String(url).endsWith('/commit')
-              ? { saved: true, message: 'Saved calendar' }
-              : {
-                  token: 'token',
-                  verified: true,
-                  method: 'ai',
-                  warnings: [],
-                  entries: [
-                    {
-                      title: '1st Sessional',
-                      kind: 'EXAM',
-                      start: '2026-09-28',
-                      end: '2026-09-30',
-                      examType: 'SESSIONAL',
-                      teachingAllowed: false,
-                      evidence: 'Academic Calendar row 17',
-                      concern: '',
-                    },
-                  ],
-                },
-          ),
-          { headers: { 'Content-Type': 'application/json' } },
+  const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(
+    async (url) =>
+      new Response(
+        JSON.stringify(
+          String(url).endsWith('/commit')
+            ? { saved: true, message: 'Saved calendar' }
+            : {
+                token: 'token',
+                verified: true,
+                method: 'ai',
+                warnings: [],
+                entries: [
+                  {
+                    title: '1st Sessional',
+                    kind: 'EXAM',
+                    start: '2026-09-28',
+                    end: '2026-09-30',
+                    examType: 'SESSIONAL',
+                    teachingAllowed: false,
+                    evidence: 'Academic Calendar row 17',
+                    concern: '',
+                  },
+                ],
+              },
         ),
-    );
+        { headers: { 'Content-Type': 'application/json' } },
+      ),
+  );
   render(
     <QueryClientProvider client={new QueryClient()}>
       <CalendarFileImport campusId="campus" />

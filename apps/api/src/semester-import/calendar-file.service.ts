@@ -64,6 +64,12 @@ type Draft = {
   warnings: string[];
   directEntries?: Entry[];
   structuredOnly?: boolean;
+  sourceCounts?: {
+    total: number;
+    withinSemester: number;
+    outsideSemester: number;
+    crossingBoundary: number;
+  };
   examDeadlines?: Record<string, string>;
   verified: boolean;
   method?: 'direct' | 'ai';
@@ -281,12 +287,36 @@ export class CalendarFileService {
       throw new BadRequestException(
         'No readable calendar text found. Upload a text PDF, Excel or CSV file.',
       );
-    const verified =
-      /\.csv$/i.test(file.originalname) && !!direct && !direct.needsAi;
+    const structuredOnly = !!direct && !direct.needsAi;
+    const verified = structuredOnly && !process.env.OLLAMA_API_KEY?.trim();
     const token = randomUUID();
-    const sections = verified
+    let sections: NonNullable<Draft['sections']> = verified
       ? []
       : calendarChunks(source).map((part) => ({ source: part }));
+    // The spreadsheet reader has already extracted every dated row. AI checks
+    // those records against their original cells instead of extracting them twice.
+    if (!verified && structuredOnly && !direct!.warnings.length) {
+      sections = [];
+      for (const entry of direct!.entries) {
+        let section = sections[sections.length - 1];
+        if (
+          !section ||
+          section.entries!.length >= 6 ||
+          section.source.length + entry.evidence.length > 4500
+        ) {
+          section = { source: '', entries: [] };
+          sections.push(section);
+        }
+        section.source += `${entry.evidence}\n`;
+        section.entries!.push(entry);
+      }
+    }
+    const withinSemester = (direct?.entries || []).filter(
+      (entry) => entry.start >= iso(s.startDate) && entry.end <= iso(s.endDate),
+    ).length;
+    const outsideSemester = (direct?.entries || []).filter(
+      (entry) => entry.end < iso(s.startDate) || entry.start > iso(s.endDate),
+    ).length;
     const draft: Draft = {
       semesterId,
       fingerprint: this.fingerprint(s),
@@ -294,7 +324,16 @@ export class CalendarFileService {
       fileName: file.originalname,
       entries: direct?.entries || [],
       directEntries: direct?.entries,
-      structuredOnly: !!direct && !direct.needsAi,
+      structuredOnly,
+      ...(direct && {
+        sourceCounts: {
+          total: direct.entries.length,
+          withinSemester,
+          outsideSemester,
+          crossingBoundary:
+            direct.entries.length - withinSemester - outsideSemester,
+        },
+      }),
       examDeadlines: Object.fromEntries(
         s.examWindows.map((exam) => [exam.name, iso(exam.syllabusDeadline)]),
       ),
@@ -335,6 +374,7 @@ export class CalendarFileService {
       ),
       verified: draft.verified,
       method: draft.method || 'ai',
+      sourceCounts: draft.sourceCounts,
       progress: {
         completed: sections.reduce(
           (sum, section) =>
