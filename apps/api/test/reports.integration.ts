@@ -313,9 +313,10 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
     await expect(
       service.csv(faculty, { ...q, campusId: campuses[1]!.id }),
     ).rejects.toThrow('assigned campus');
-    await expect(service.csv(faculty, { ...q, tab: 'campus' })).rejects.toThrow(
-      'Campus-wide',
-    );
+    for (const tab of ['campus', 'faculty', 'exams'] as const)
+      await expect(service.csv(faculty, { ...q, tab })).rejects.toThrow(
+        'Faculty reports are limited',
+      );
     expect((await service.csv(faculty, q)).content.toString()).not.toContain(
       'Private campus',
     );
@@ -363,6 +364,29 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
     expect(
       (await service.csv(admin, { ...q, tab: 'exams' })).content.toString(),
     ).toContain('Scope mode');
+    const otherClass = await db.scheduledSession.findFirstOrThrow({
+      where: { offeringId: web.id, sessionDate: new Date('2000-01-11') },
+    });
+    await db.sessionLog.create({
+      data: {
+        scheduledSessionId: otherClass.id,
+        revision: 1,
+        status: 'COMPLETED',
+        coveredSummary: 'Another teacher taught this class',
+        loggedById: otherFaculty.id,
+      },
+    });
+    expect((await service.read(admin, q)).delivery).toHaveLength(2);
+    const ownTeaching = await service.read(faculty, { ...q, tab: 'delivery' });
+    expect(ownTeaching.delivery).toHaveLength(1);
+    expect(ownTeaching.delivery.every((r) => r.teacher.id === faculty.id)).toBe(
+      true,
+    );
+    expect(
+      (
+        await service.csv(faculty, { ...q, tab: 'delivery' })
+      ).content.toString(),
+    ).not.toContain('Another teacher taught');
     await db.facultyAssignment.updateMany({
       where: { staffProfileId: faculty.staffProfileId! },
       data: { active: false },

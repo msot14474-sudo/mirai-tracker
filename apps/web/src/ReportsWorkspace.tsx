@@ -566,7 +566,8 @@ export function ReportsWorkspace({
     campusId,
     subjectId: initialSubjectId,
     tab:
-      mode === 'progress' || (facultyRole && initialTab === 'campus')
+      mode === 'progress' ||
+      (facultyRole && !['course', 'delivery'].includes(initialTab))
         ? 'course'
         : initialTab,
     deliveryStatus: 'TAUGHT',
@@ -588,7 +589,16 @@ export function ReportsWorkspace({
   });
   const data = query.data;
   const facultyOnly = facultyRole || Boolean(data?.facultyOnly);
-  const tab = facultyOnly && selectedTab === 'campus' ? 'course' : selectedTab;
+  const tab =
+    facultyOnly && !['course', 'delivery'].includes(selectedTab)
+      ? 'course'
+      : selectedTab;
+  const tabLabel = (id: ReportTab) =>
+    facultyOnly
+      ? id === 'delivery'
+        ? 'My Teaching'
+        : 'My Subjects'
+      : reportTabs.find((t) => t.id === id)!.label;
   const options = data?.options ?? [];
   function update(key: keyof ReportFilters, value: string) {
     setFilters((f) => ({
@@ -678,11 +688,19 @@ export function ReportsWorkspace({
       <header className="rp-header">
         <div>
           <p className="rp-eyebrow">Academic intelligence</p>
-          <h1>{mode === 'progress' ? 'Campus progress' : 'Reports'}</h1>
+          <h1>
+            {mode === 'progress'
+              ? 'Campus progress'
+              : facultyOnly
+                ? 'My reports'
+                : 'Reports'}
+          </h1>
           <p>
             {mode === 'progress'
               ? `${values('campus').find((c) => c.id === filters.campusId)?.name ?? 'Your permitted campuses'} · Compare syllabus coverage, teaching hours and subjects that need attention.`
-              : 'Course progress, teaching records and exam readiness in one place.'}
+              : facultyOnly
+                ? 'Progress for your assigned subjects and your own recorded teaching.'
+                : 'Course progress, teaching records and exam readiness in one place.'}
           </p>
         </div>
         <button
@@ -701,7 +719,9 @@ export function ReportsWorkspace({
           aria-label="Report categories"
         >
           {reportTabs
-            .filter((t) => !facultyOnly || t.id !== 'campus')
+            .filter(
+              (t) => !facultyOnly || ['course', 'delivery'].includes(t.id),
+            )
             .map((t) => (
               <button
                 key={t.id}
@@ -712,7 +732,7 @@ export function ReportsWorkspace({
                 aria-selected={tab === t.id}
                 onClick={() => update('tab', t.id)}
               >
-                {facultyOnly && t.id === 'faculty' ? 'My Activity' : t.label}
+                {tabLabel(t.id)}
               </button>
             ))}
         </div>
@@ -824,7 +844,9 @@ export function ReportsWorkspace({
         <p className="rp-filter-note">
           {mode === 'progress'
             ? 'Mirai and University are tracks within each batch. Coverage uses saved lesson plans and logs; teaching hours left use future class dates.'
-            : 'Dates filter class dates, faculty log/upload dates and exam windows. Course progress shows the current saved position; teaching capacity is calculated after today.'}
+            : facultyOnly
+              ? 'Dates filter your recorded classes. Subject progress shows the current saved position; teaching capacity uses upcoming classes.'
+              : 'Dates filter class dates, faculty log/upload dates and exam windows. Course progress shows the current saved position; teaching capacity is calculated after today.'}
         </p>
         {dateError ? (
           <p role="alert" className="form-error">
@@ -901,12 +923,12 @@ export function ReportsWorkspace({
           <section className="rp-results">
             <div className="rp-section-heading">
               <div>
-                <h2>
-                  {data.facultyOnly && tab === 'faculty'
-                    ? 'My Activity'
-                    : reportTabs.find((t) => t.id === tab)!.label}
-                </h2>
-                <p>{reportTabs.find((t) => t.id === tab)!.description}</p>
+                <h2>{tabLabel(tab)}</h2>
+                <p>
+                  {facultyOnly && tab === 'delivery'
+                    ? 'Your saved class logs for your assigned subjects, including covered and remaining work.'
+                    : reportTabs.find((t) => t.id === tab)!.description}
+                </p>
               </div>
               {tab === 'delivery' ? (
                 <label>

@@ -67,7 +67,7 @@ export function reportRecommendations(data: ReportSnapshot): Recommendation[] {
         ],
       });
   }
-  for (const e of data.exams) {
+  for (const e of data.facultyOnly ? [] : data.exams) {
     if (e.status === 'NEEDS_DATA')
       recommendations.push({
         id: `${e.id}:exam-data`,
@@ -175,36 +175,40 @@ export function renderReportDocument(
   )}
   <figure><figcaption>From planning to recorded delivery</figcaption><div class="flow"><div><strong>${data.summary.subjects} subjects</strong><small>Campus → semester → batch → Mirai / University</small></div><div><strong>${data.summary.upcoming} upcoming classes</strong><small>Generated from the timetable and calendar</small></div><div><strong>${data.summary.logged} logged classes</strong><small>Saved lecture records</small></div><div><strong>${data.summary.unlogged} awaiting logs</strong><small>Teaching not yet verified</small></div></div></figure>
   <h2>Subject-by-subject review</h2>${data.subjects.map((s) => `<article class="subject"><h3>${text(s.subject.name)} · ${text(s.subject.code)}</h3><p class="muted">${text(s.campus.name)} · ${text(s.batch.name)} · ${text(s.track.name)}<br>Teacher: ${text(s.teachers.map((t) => t.name).join(', ') || 'Not assigned')}</p><p><strong>${text(label(s.status))}.</strong> ${text(s.reason)}</p>${table(['Recorded coverage', 'Syllabus hours left', 'Teaching hours left', 'Time cushion'], [[num(s.metrics?.coveragePercentage, '%'), num(s.metrics?.remainingHours, ' h'), num(s.metrics?.availableHours, ' h'), num(s.metrics?.bufferRatio, '×')]])}<p>Next topic: ${text(s.nextTopic || 'No upcoming topic recorded')}. Deadline: ${text(s.deadline)}.</p></article>`).join('')}
-  <h2>Exam readiness</h2>${chart(
-    'Recorded in-scope exam coverage',
-    data.exams.map((e) => ({
-      label: `${e.subject.name} · ${e.exam}`,
-      value: e.coverage,
-    })),
-    '%',
-    100,
-  )}${table(
-    [
-      'Exam / date',
-      'Subject / batch',
-      'Readiness',
-      'Coverage',
-      'Syllabus left',
-      'Teaching left',
-      'Time cushion',
-      'Scope',
-    ],
-    data.exams.map((e) => [
-      `${e.exam} · ${e.date}`,
-      `${e.subject.name} · ${e.batch.name}`,
-      `${label(e.status)}. ${e.reason}`,
-      num(e.coverage, '%'),
-      num(e.remainingHours, ' h'),
-      num(e.teachingHours, ' h'),
-      num(e.bufferRatio, '×'),
-      e.scopeMode,
-    ]),
-  )}
+  ${
+    data.facultyOnly
+      ? ''
+      : `<h2>Exam readiness</h2>${chart(
+          'Recorded in-scope exam coverage',
+          data.exams.map((e) => ({
+            label: `${e.subject.name} · ${e.exam}`,
+            value: e.coverage,
+          })),
+          '%',
+          100,
+        )}${table(
+          [
+            'Exam / date',
+            'Subject / batch',
+            'Readiness',
+            'Coverage',
+            'Syllabus left',
+            'Teaching left',
+            'Time cushion',
+            'Scope',
+          ],
+          data.exams.map((e) => [
+            `${e.exam} · ${e.date}`,
+            `${e.subject.name} · ${e.batch.name}`,
+            `${label(e.status)}. ${e.reason}`,
+            num(e.coverage, '%'),
+            num(e.remainingHours, ' h'),
+            num(e.teachingHours, ' h'),
+            num(e.bufferRatio, '×'),
+            e.scopeMode,
+          ]),
+        )}`
+  }
   <h2>Teaching delivery</h2><p class="muted">Only saved logs matching the selected delivery status and dates. No log is invented from a scheduled class.</p>${table(
     [
       'Date / subject',
@@ -221,24 +225,28 @@ export function renderReportDocument(
       `${d.leftOver}\n${d.carryForward}`,
     ]),
   )}
-  <h2>${data.facultyOnly ? 'My recorded activity' : 'Faculty recorded activity'}</h2>${table(
-    [
-      'Faculty',
-      'Subjects',
-      'Sessions logged',
-      'Recorded classes taught',
-      'Plans uploaded',
-      'Last activity',
-    ],
-    data.faculty.map((f) => [
-      f.name,
-      f.subjects.join(', '),
-      f.sessionsLogged,
-      f.classesTaught,
-      f.plansUploaded,
-      f.lastActivity ?? 'No saved activity',
-    ]),
-  )}
+  ${
+    data.facultyOnly
+      ? ''
+      : `<h2>Faculty recorded activity</h2>${table(
+          [
+            'Faculty',
+            'Subjects',
+            'Sessions logged',
+            'Recorded classes taught',
+            'Plans uploaded',
+            'Last activity',
+          ],
+          data.faculty.map((f) => [
+            f.name,
+            f.subjects.join(', '),
+            f.sessionsLogged,
+            f.classesTaught,
+            f.plansUploaded,
+            f.lastActivity ?? 'No saved activity',
+          ]),
+        )}`
+  }
   ${
     !data.facultyOnly
       ? `<h2>Campus and track status</h2><p>Each status follows the worst subject. It is not an average of subject statuses.</p>${table(
@@ -302,8 +310,8 @@ export class ReportDocumentService {
       period: { from: filters.from, to: filters.to },
       summary: data.summary,
       subjects: data.subjects,
-      exams: data.exams,
-      faculty: data.faculty,
+      exams: data.facultyOnly ? [] : data.exams,
+      faculty: data.facultyOnly ? [] : data.faculty,
       delivery: data.delivery.map((d) => ({
         date: d.date,
         subject: d.subject.name,

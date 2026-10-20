@@ -57,6 +57,11 @@ it('renders escaped readable text, unknown metrics and charts without exposing c
   expect(html).not.toContain('Private aggregate');
   expect(html).not.toContain('## Findings');
   expect(html).not.toContain('**Check**');
+  expect(html).not.toContain('<h2>Exam readiness</h2>');
+  expect(html).not.toContain('Faculty recorded activity');
+  expect(html).not.toContain('My recorded activity');
+  expect(html).toContain('Subject-by-subject review');
+  expect(html).toContain('Teaching delivery');
 });
 it('uses AI only to prioritize verified recommendations, preserving all candidates and unknown coverage', async () => {
   const service = new ReportDocumentService(

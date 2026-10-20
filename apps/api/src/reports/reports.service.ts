@@ -328,9 +328,9 @@ export class ReportsService {
     const facultyOnly = !user.roles.some((r) =>
       ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(r.role),
     );
-    if (facultyOnly && q.tab === 'campus')
+    if (facultyOnly && !['course', 'delivery'].includes(q.tab))
       throw new ForbiddenException(
-        'Campus-wide reports are available to campus and program managers.',
+        'Faculty reports are limited to your assigned subjects and your own teaching.',
       );
     if (
       facultyOnly &&
@@ -474,6 +474,7 @@ export class ReportsService {
         const taught = ['COMPLETED', 'IN_PROGRESS'].includes(log.status);
         if (
           inRange(iso(s.sessionDate), q) &&
+          (!facultyOnly || log.loggedById === user.id) &&
           (!q.facultyId || log.loggedById === q.facultyId) &&
           (q.deliveryStatus === 'ALL' ||
             (q.deliveryStatus === 'TAUGHT'

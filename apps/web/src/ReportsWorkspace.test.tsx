@@ -20,14 +20,14 @@ afterEach(() => {
 beforeEach(() => {
   vi.spyOn(reportsApi, 'read').mockResolvedValue(reportFixture());
 });
-function show() {
+function show(props: Parameters<typeof ReportsWorkspace>[0] = {}) {
   render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <ReportsWorkspace />
+      <ReportsWorkspace {...props} />
     </QueryClientProvider>,
   );
 }
@@ -92,14 +92,18 @@ it('does not show scheduled classes as taught and can select all logged statuses
     ),
   );
 });
-it('shows faculty only their own activity and prevents reversed date queries and exports', async () => {
+it('shows faculty only subject and teaching reports and prevents reversed date queries and exports', async () => {
   vi.mocked(reportsApi.read).mockResolvedValue({
     ...reportFixture(),
     facultyOnly: true,
     activeCampusId: 'campus-a',
   });
   show();
-  await screen.findByRole('tab', { name: 'My Activity' });
+  await screen.findByRole('tab', { name: 'My Teaching' });
+  expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+    'My Subjects',
+    'My Teaching',
+  ]);
   expect(
     screen.queryByRole('tab', { name: 'Campus & Track' }),
   ).not.toBeInTheDocument();
@@ -116,8 +120,8 @@ it('shows faculty only their own activity and prevents reversed date queries and
       .getAllByRole('option')
       .some((o) => o.textContent?.includes('Other campus')),
   ).toBe(false);
-  fireEvent.click(screen.getByRole('tab', { name: 'My Activity' }));
-  await screen.findByRole('table', { name: 'Faculty Activity' });
+  fireEvent.click(screen.getByRole('tab', { name: 'My Teaching' }));
+  await screen.findByText('No matching records');
   fireEvent.change(screen.getByLabelText('From date'), {
     target: { value: '2026-11-01' },
   });
@@ -148,7 +152,7 @@ it('exports faculty reports only for their current authorized campus, including 
     filename: 'own.csv',
   });
   show();
-  await screen.findByRole('tab', { name: 'My Activity' });
+  await screen.findByRole('tab', { name: 'My Teaching' });
   fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
   await waitFor(() =>
     expect(
@@ -167,4 +171,22 @@ it('exports faculty reports only for their current authorized campus, including 
       }),
     ),
   );
+});
+it('never shows management report tabs while a faculty session is loading or opens a retired tab', async () => {
+  vi.mocked(reportsApi.read).mockReturnValue(new Promise(() => {}));
+  show({ facultyOnly: true, initialTab: 'exams' });
+  expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+    'My Subjects',
+    'My Teaching',
+  ]);
+  expect(screen.getByRole('tab', { name: 'My Subjects' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  expect(
+    screen.queryByRole('tab', { name: 'Exam Readiness' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('tab', { name: 'Faculty Activity' }),
+  ).not.toBeInTheDocument();
 });
