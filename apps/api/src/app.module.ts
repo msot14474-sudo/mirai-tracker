@@ -1,3 +1,4 @@
+import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { CampusDataModule } from './campus-data/campus-data.module';
@@ -25,6 +26,7 @@ import { SafeHttpExceptionFilter } from './security/http-exception.filter';
 
 @Module({
   imports: [
+    ReportsModule,
     CampusDataModule,
     NotificationsModule,
     AiInsightsModule,

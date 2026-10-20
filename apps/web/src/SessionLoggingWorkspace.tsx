@@ -127,6 +127,7 @@ function SessionLogCard({
           'timetable',
           'topic-schedules',
           'progress-dashboard',
+        'reports',
           'exam-readiness',
           'student-overview',
           'ai-insights',

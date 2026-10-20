@@ -19,6 +19,7 @@ export function FacultyPlanSchedule({ detail }: { detail: LessonPlanDetail }) {
         'lesson-plans',
         'timetable',
         'progress-dashboard',
+        'reports',
         'exam-readiness',
         'session-logs',
         'student-overview',

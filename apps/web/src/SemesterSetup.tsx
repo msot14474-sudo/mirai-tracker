@@ -60,6 +60,7 @@ export function SemesterSetup({
         'timetable',
         'topic-schedules',
         'progress-dashboard',
+        'reports',
         'exam-readiness',
         'student-overview',
       ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),

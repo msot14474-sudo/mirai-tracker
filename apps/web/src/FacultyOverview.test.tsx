@@ -8,8 +8,8 @@ import {
 } from '@testing-library/react';
 import { afterEach, it, expect, vi } from 'vitest';
 import { FacultyOverview } from './FacultyOverview';
-vi.mock('./ProgressDashboard', () => ({
-  ProgressDashboard: () => <div>Own subject progress</div>,
+vi.mock('./AcademicOverview', () => ({
+  AcademicOverview: () => <div>Own subject progress</div>,
 }));
 afterEach(() => {
   cleanup();
@@ -66,8 +66,14 @@ it('refreshes a newly assigned batch without requiring sign out', async () => {
   show();
   await screen.findByText(/No subjects have been assigned/);
   fireEvent.click(screen.getByRole('button', { name: 'Refresh subjects' }));
-  expect(await screen.findByText('Web Development')).toBeInTheDocument();
+  await waitFor(() =>
+    expect(
+      screen.queryByText(/No subjects have been assigned/),
+    ).not.toBeInTheDocument(),
+  );
   expect(
-    screen.getByRole('button', { name: 'Open lesson plans' }),
+    screen.getByText(
+      'Your overview follows your current teaching assignments.',
+    ),
   ).toBeInTheDocument();
 });

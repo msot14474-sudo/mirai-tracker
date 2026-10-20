@@ -1,7 +1,7 @@
 import { StudentLectureFeedback } from './StudentLectureFeedback';
 import { CampusAcademicOverview } from './CampusAcademicOverview';
 import { FacultyOverview } from './FacultyOverview';
-import { CampusAnalytics } from './CampusAnalytics';
+import { AcademicOverview } from './AcademicOverview';
 import { advanceSessionGeneration, apiUrl, sessionExpiredEvent } from './http';
 import { RequestRecovery, AppErrorBoundary } from './RequestRecovery';
 import {
@@ -91,8 +91,8 @@ const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
 );
 
-const ExportCenter = lazy(() =>
-  import('./ExportCenter').then((module) => ({ default: module.ExportCenter })),
+const ReportsWorkspace = lazy(() =>
+  import('./ReportsWorkspace').then((module) => ({ default: module.ReportsWorkspace })),
 );
 
 const FacultyAccessWorkspace = lazy(() =>
@@ -1061,6 +1061,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const [selectedCampusId, setSelectedCampusId] = useState('');
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [facultyPlanOfferingId, setFacultyPlanOfferingId] = useState('');
+  const [reportSubjectId, setReportSubjectId] = useState<string | undefined>();
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -1095,9 +1096,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     (role) => ['ADMIN','PROGRAM_MANAGER','FACULTY','CAMPUS_MANAGER'].includes(role),
   );
   const canViewProgressDashboard = roles.some((role) => role !== 'STUDENT');
-  const canExport = roles.some(
-    (role) => role === 'ADMIN' || role === 'PROGRAM_MANAGER',
-  );
+  const canExport = roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER','FACULTY'].includes(role));
   const progressScope = roles.some(
     (role) =>
       role === 'ADMIN' ||
@@ -1261,7 +1260,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       ? [
           {
             id: 'exports' as const,
-            label: 'Reports and exports',
+            label: 'Reports',
             icon: 'exports' as const,
           },
         ]
@@ -1295,6 +1294,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     if (view === activeView) return;
     if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
     if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
+    if (view === 'exports') setReportSubjectId(undefined);
     setActiveView(view);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
@@ -1342,9 +1342,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         );
       case 'exports':
         return (
-          <ExportCenter
-            key={selectedCampusId}
+          <ReportsWorkspace
+            key={`${selectedCampusId}:${reportSubjectId ?? ''}`}
             campusId={selectedCampusId || undefined}
+            initialSubjectId={reportSubjectId}
           />
         );
       case 'academic-setup':
@@ -1443,16 +1444,18 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
               <FacultyOverview
                 userId={user.id}
                 name={user.name}
+                onReports={(subjectId) => { setReportSubjectId(subjectId); setActiveView('exports'); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }}
                 onOpen={(view, offeringId) => {
                   if (view === 'lesson-plans') setFacultyPlanOfferingId(offeringId || '');
                   openView(view);
                 }}
               />
             ) : canViewProgressDashboard ? (
-              <CampusAnalytics
+              <AcademicOverview
                 campusId={selectedCampusId || undefined}
                 campusName={selectedCampus?.name}
                 name={user.name}
+                onReports={(subjectId) => { setReportSubjectId(subjectId); setActiveView('exports'); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }}
               />
             ) : (
               <CampusOverview

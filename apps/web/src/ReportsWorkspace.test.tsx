@@ -1,0 +1,123 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { ReportsWorkspace } from './ReportsWorkspace';
+import { reportsApi } from './reports';
+import { reportFixture } from './reportTestData';
+import { saveDownload } from './exports';
+vi.mock('./exports', () => ({ saveDownload: vi.fn() }));
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+beforeEach(() => {
+  vi.spyOn(reportsApi, 'read').mockResolvedValue(reportFixture());
+});
+function show() {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <ReportsWorkspace />
+    </QueryClientProvider>,
+  );
+}
+it('shows the marked exam columns and exports the selected filters and tab', async () => {
+  vi.spyOn(reportsApi, 'csv').mockResolvedValue({
+    blob: new Blob(['exam']),
+    filename: 'exam.csv',
+  });
+  show();
+  await screen.findByRole('table', { name: 'Course Progress' });
+  fireEvent.click(screen.getByRole('tab', { name: 'Exam Readiness' }));
+  const table = await screen.findByRole('table', { name: 'Exam Readiness' });
+  expect(reportsApi.read).toHaveBeenCalledTimes(1);
+  for (const name of [
+    'Subject',
+    'Batch',
+    'Faculty',
+    'Readiness Status',
+    'Coverage',
+    'Syllabus Left',
+    'Teaching Left',
+    'Time Cushion',
+    'Scope Mode',
+  ])
+    expect(
+      within(table).getByRole('columnheader', { name }),
+    ).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox', { name: 'Subject' }), {
+    target: { value: 'subject-a' },
+  });
+  await waitFor(() =>
+    expect(reportsApi.read).toHaveBeenLastCalledWith(
+      expect.objectContaining({ subjectId: 'subject-a' }),
+    ),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+  await waitFor(() =>
+    expect(reportsApi.csv).toHaveBeenCalledWith(
+      expect.objectContaining({ subjectId: 'subject-a', tab: 'exams' }),
+    ),
+  );
+  expect(saveDownload).toHaveBeenCalled();
+});
+it('does not show scheduled classes as taught and can select all logged statuses', async () => {
+  show();
+  await screen.findByRole('table', { name: 'Course Progress' });
+  fireEvent.click(screen.getByRole('tab', { name: 'Teaching Delivery' }));
+  expect(await screen.findByText('No matching records')).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox', { name: 'Delivery status' }), {
+    target: { value: 'ALL' },
+  });
+  await waitFor(() =>
+    expect(reportsApi.read).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deliveryStatus: 'ALL' }),
+    ),
+  );
+});
+it('shows faculty only their own activity and prevents reversed date queries and exports', async () => {
+  vi.mocked(reportsApi.read).mockResolvedValue({
+    ...reportFixture(),
+    facultyOnly: true,
+  });
+  show();
+  await screen.findByRole('tab', { name: 'My Activity' });
+  expect(
+    screen.queryByRole('combobox', { name: 'Faculty' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen
+      .getAllByRole('option')
+      .some((o) => o.textContent?.includes('Other campus')),
+  ).toBe(false);
+  fireEvent.click(screen.getByRole('tab', { name: 'My Activity' }));
+  await screen.findByRole('table', { name: 'Faculty Activity' });
+  fireEvent.change(screen.getByLabelText('From date'), {
+    target: { value: '2026-11-01' },
+  });
+  fireEvent.change(screen.getByLabelText('To date'), {
+    target: { value: '2026-10-01' },
+  });
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'From date must be on or before To date',
+  );
+  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+  expect(
+    vi
+      .mocked(reportsApi.read)
+      .mock.calls.every(([f]) => !(f.from && f.to && f.from > f.to)),
+  ).toBe(true);
+});

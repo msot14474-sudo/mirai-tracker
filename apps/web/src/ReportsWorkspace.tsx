@@ -1,0 +1,821 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { ReactNode, useState } from 'react';
+import { LoadingSkeleton } from './LoadingSkeleton';
+import { saveDownload } from './exports';
+import {
+  CourseReport,
+  ReportBase,
+  ReportFilters,
+  ReportsData,
+  ReportStatus,
+  ReportTab,
+  reportsApi,
+  reportDate,
+  reportNumber as num,
+  statusLabel,
+} from './reports';
+import './reports.css';
+
+export const reportTabs: {
+  id: ReportTab;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: 'course',
+    label: 'Course Progress',
+    description:
+      'Recorded syllabus coverage, teaching capacity and pace against the current plan.',
+  },
+  {
+    id: 'delivery',
+    label: 'Teaching Delivery',
+    description:
+      'Saved lecture logs, what was covered, and work carried forward.',
+  },
+  {
+    id: 'faculty',
+    label: 'Faculty Activity',
+    description:
+      'Lesson-plan uploads and the latest saved log for each class, attributed to its author.',
+  },
+  {
+    id: 'exams',
+    label: 'Exam Readiness',
+    description:
+      'Upcoming and ongoing exams, syllabus coverage and teaching time before each deadline.',
+  },
+  {
+    id: 'campus',
+    label: 'Campus & Track',
+    description:
+      'Campus and track progress. The worst subject determines status, never an average.',
+  },
+];
+export function ReportBadge({ status }: { status: string }) {
+  return (
+    <span className={`rp-badge rp-${status.toLowerCase()}`}>
+      {statusLabel(status)}
+    </span>
+  );
+}
+export function ReportKpis({
+  items,
+}: {
+  items: { label: string; value: ReactNode; note: string }[];
+}) {
+  return (
+    <div className="rp-kpis">
+      {items.map((i) => (
+        <div key={i.label}>
+          <span>{i.label}</span>
+          <strong>{i.value}</strong>
+          <small>{i.note}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+function SubjectCell({ row }: { row: ReportBase }) {
+  return (
+    <div className="rp-subject-cell">
+      <strong>{row.subject.name}</strong>
+      <small>
+        {row.subject.code} · {row.campus.name}
+      </small>
+      <small>{row.track.name}</small>
+    </div>
+  );
+}
+function Teachers({ row }: { row: ReportBase }) {
+  return (
+    <span>{row.teachers.map((t) => t.name).join(', ') || 'Not assigned'}</span>
+  );
+}
+function Coverage({ value }: { value: number | null | undefined }) {
+  return (
+    <div className="rp-coverage">
+      <strong>{num(value, '%')}</strong>
+      {value != null ? (
+        <progress value={value} max={100} aria-label="Recorded coverage" />
+      ) : (
+        <small>Needs data</small>
+      )}
+    </div>
+  );
+}
+function ReportTable({
+  headers,
+  rows,
+  caption,
+}: {
+  headers: string[];
+  rows: { id: string; cells: ReactNode[] }[];
+  caption: string;
+}) {
+  const [page, setPage] = useState(0);
+  const size = 25,
+    pages = Math.ceil(rows.length / size),
+    current = Math.min(page, Math.max(0, pages - 1));
+  if (!rows.length)
+    return (
+      <div className="rp-empty">
+        <strong>No matching records</strong>
+        <p>
+          {caption === 'Teaching Delivery'
+            ? 'Scheduled classes appear here only after a lecture log is saved. Try another status or date filter.'
+            : 'No records match these filters. Try another selection.'}
+        </p>
+      </div>
+    );
+  return (
+    <>
+      <div
+        className="rp-table-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label={`${caption} table`}
+      >
+        <table>
+          <caption>{caption}</caption>
+          <thead>
+            <tr>
+              {headers.map((h) => (
+                <th key={h} scope="col">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(current * size, (current + 1) * size).map((r) => (
+              <tr key={r.id}>
+                {r.cells.map((cell, i) => (
+                  <td key={headers[i]}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="rp-pagination">
+        <span>
+          {current * size + 1}–{Math.min((current + 1) * size, rows.length)} of{' '}
+          {rows.length} records
+        </span>
+        {pages > 1 ? (
+          <div>
+            <button
+              type="button"
+              disabled={!current}
+              onClick={() => setPage(current - 1)}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={current + 1 >= pages}
+              onClick={() => setPage(current + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </>
+  );
+}
+function Detail({
+  children,
+  label = 'Details',
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
+  return (
+    <details className="rp-details">
+      <summary>{label}</summary>
+      {children}
+    </details>
+  );
+}
+export function ReportContent({
+  tab,
+  data,
+}: {
+  tab: ReportTab;
+  data: ReportsData;
+}) {
+  let headers: string[], rows: { id: string; cells: ReactNode[] }[];
+  if (tab === 'exams') {
+    headers = [
+      'Exam',
+      'Subject',
+      'Batch',
+      'Faculty',
+      'Readiness Status',
+      'Coverage',
+      'Syllabus Left',
+      'Teaching Left',
+      'Time Cushion',
+      'Scope Mode',
+    ];
+    rows = data.exams.map((r) => ({
+      id: r.id,
+      cells: [
+        <div>
+          <strong>{r.exam}</strong>
+          <small>{reportDate(r.date)}</small>
+          <small>Deadline {reportDate(r.deadline)}</small>
+        </div>,
+        <SubjectCell row={r} />,
+        r.batch.name,
+        <Teachers row={r} />,
+        <div>
+          <ReportBadge status={r.status} />
+          <Detail label="Why this status?">
+            <p>{r.reason}</p>
+          </Detail>
+        </div>,
+        <Coverage value={r.coverage} />,
+        num(r.remainingHours, ' h'),
+        num(r.teachingHours, ' h'),
+        num(r.bufferRatio, '×'),
+        <div>
+          {r.scopeMode}
+          <small>{r.scopeTopics} topics in scope</small>
+        </div>,
+      ],
+    }));
+  } else if (tab === 'delivery') {
+    headers = [
+      'Class',
+      'Subject',
+      'Batch',
+      'Logged by',
+      'Delivery Status',
+      'Scheduled Hours',
+      'Topic Hours Recorded',
+      'Completion',
+      'Teaching Record',
+    ];
+    rows = data.delivery.map((r) => ({
+      id: r.id,
+      cells: [
+        <div>
+          <strong>{reportDate(r.date)}</strong>
+          <small>
+            {new Date(r.startsAt).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: r.timezone,
+            })}{' '}
+            –{' '}
+            {new Date(r.endsAt).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: r.timezone,
+            })}
+          </small>
+          <small>{r.timezone}</small>
+        </div>,
+        <SubjectCell row={r} />,
+        r.batch.name,
+        r.teacher.name,
+        <ReportBadge status={r.status} />,
+        num(r.scheduledHours, ' h'),
+        num(r.recordedTopicHours, ' h'),
+        num(r.completion, '%'),
+        <div className="rp-log-summary">
+          <p>{r.covered || 'No coverage text recorded'}</p>
+          <Detail label="View full log">
+            <dl>
+              <dt>Left over</dt>
+              <dd>{r.leftOver || 'None recorded'}</dd>
+              <dt>Carry forward</dt>
+              <dd>{r.carryForward || 'None recorded'}</dd>
+              <dt>Classwork</dt>
+              <dd>{statusLabel(r.classwork)}</dd>
+              <dt>Homework</dt>
+              <dd>{statusLabel(r.homework)}</dd>
+              <dt>Notes</dt>
+              <dd>{r.notes || 'None recorded'}</dd>
+              <dt>Log revision</dt>
+              <dd>
+                {r.revision} · saved {new Date(r.loggedAt).toLocaleString()}
+              </dd>
+            </dl>
+          </Detail>
+        </div>,
+      ],
+    }));
+  } else if (tab === 'faculty') {
+    headers = [
+      'Faculty',
+      'Assigned Subjects / Recorded Work',
+      'Sessions Logged',
+      'Classes Recorded as Taught',
+      'Scheduled Teaching Hours',
+      'Plans Uploaded',
+      'Last Activity',
+      'Activity',
+    ];
+    rows = data.faculty.map((r) => ({
+      id: r.id,
+      cells: [
+        <strong>{r.name}</strong>,
+        <ul className="rp-subject-list">
+          {r.subjects.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ul>,
+        r.sessionsLogged,
+        r.classesTaught,
+        num(r.scheduledHours, ' h'),
+        r.plansUploaded,
+        r.lastActivity
+          ? new Date(r.lastActivity).toLocaleString()
+          : 'No activity recorded',
+        <Detail label={`View activity (${r.recent.length})`}>
+          <ol className="rp-timeline">
+            {r.recent.map((a, i) => (
+              <li key={i}>
+                <strong>{a.action}</strong>
+                <span>{a.subject}</span>
+                <small>{new Date(a.date).toLocaleString()}</small>
+              </li>
+            ))}
+          </ol>
+          {!r.recent.length ? (
+            <p>No saved logs or plan uploads for this period.</p>
+          ) : null}
+        </Detail>,
+      ],
+    }));
+  } else if (tab === 'campus') {
+    headers = [
+      'Campus / Track',
+      'Subjects',
+      'Status',
+      'Coverage',
+      'Planned Hours',
+      'Covered Hours',
+      'Remaining Hours',
+      'Teaching Left',
+      'Needs Data',
+      'Worst Subject',
+    ];
+    rows = data.groups.map((r) => ({
+      id: `${r.kind}:${r.id}`,
+      cells: [
+        <div>
+          <strong>{r.name}</strong>
+          <small>
+            {r.kind === 'campus' ? 'Campus' : `Track · ${r.campus}`}
+          </small>
+        </div>,
+        r.subjectCount,
+        <ReportBadge status={r.status} />,
+        <Coverage value={r.metrics?.coveragePercentage} />,
+        num(r.metrics?.hoursInScope, ' h'),
+        num(r.metrics?.coveredHours, ' h'),
+        num(r.metrics?.remainingHours, ' h'),
+        num(r.metrics?.availableHours, ' h'),
+        r.needsData,
+        r.worstSubject,
+      ],
+    }));
+  } else {
+    headers = [
+      'Subject',
+      'Batch / Semester',
+      'Faculty',
+      'Status',
+      'Coverage',
+      'Planned Hours',
+      'Covered Hours',
+      'Behind Plan',
+      'Syllabus Left',
+      'Teaching Left',
+      'Time Cushion',
+      'Deadline',
+    ];
+    rows = data.subjects.map((r) => ({
+      id: r.id,
+      cells: [
+        <SubjectCell row={r} />,
+        <div>
+          {r.batch.name}
+          <small>{r.semester.name}</small>
+        </div>,
+        <Teachers row={r} />,
+        <div>
+          <ReportBadge status={r.status} />
+          <Detail label="Why this status?">
+            <p>{r.reason}</p>
+            <p>
+              {r.logged} classes have logs; {r.unlogged} past classes have none.
+            </p>
+            <p>
+              {r.planStatus
+                ? `Plan v${r.planVersion} · ${statusLabel(r.planStatus)}`
+                : 'No lesson plan'}
+            </p>
+          </Detail>
+        </div>,
+        <Coverage value={r.metrics?.coveragePercentage} />,
+        num(r.metrics?.hoursInScope, ' h'),
+        num(r.metrics?.coveredHours, ' h'),
+        num(r.metrics ? Math.max(0, -r.metrics.paceVsPlanHours) : null, ' h'),
+        num(r.metrics?.remainingHours, ' h'),
+        num(r.metrics?.availableHours, ' h'),
+        num(r.metrics?.bufferRatio, '×'),
+        reportDate(r.deadline),
+      ],
+    }));
+  }
+  return (
+    <ReportTable
+      key={tab}
+      headers={headers}
+      rows={rows}
+      caption={reportTabs.find((t) => t.id === tab)!.label}
+    />
+  );
+}
+function metricsFor(tab: ReportTab, data: ReportsData) {
+  const s = data.summary;
+  if (tab === 'exams')
+    return [
+      {
+        label: 'Upcoming / ongoing exams',
+        value: new Set(data.exams.map((e) => e.examId)).size,
+        note: 'Within the selected date range',
+      },
+      {
+        label: 'Assessed subjects',
+        value: data.exams.filter((e) => e.scopeMode === 'Assessed').length,
+        note: 'Subject–exam combinations',
+      },
+      {
+        label: 'At risk',
+        value: data.exams.filter((e) => ['DANGER', 'TIGHT'].includes(e.status))
+          .length,
+        note: 'Insufficient or tight teaching capacity',
+      },
+      {
+        label: 'Needs data',
+        value: data.exams.filter((e) => e.status === 'NEEDS_DATA').length,
+        note: 'Missing scope, plan or timetable',
+      },
+    ];
+  if (tab === 'delivery')
+    return [
+      {
+        label: 'Matching session logs',
+        value: data.delivery.length,
+        note: 'Latest saved revision per class',
+      },
+      {
+        label: 'Recorded as taught',
+        value: data.delivery.filter((r) =>
+          ['COMPLETED', 'IN_PROGRESS'].includes(r.status),
+        ).length,
+        note: 'Completed or in progress',
+      },
+      {
+        label: 'Scheduled hours',
+        value: num(
+          data.delivery.reduce((n, r) => n + r.scheduledHours, 0),
+          ' h',
+        ),
+        note: 'Class duration, not measured teaching time',
+      },
+      {
+        label: 'With leftover work',
+        value: data.delivery.filter((r) => r.leftOver).length,
+        note: 'Follow-up recorded by faculty',
+      },
+    ];
+  if (tab === 'faculty')
+    return [
+      {
+        label: 'Faculty',
+        value: data.faculty.length,
+        note: data.facultyOnly
+          ? 'Your own activity'
+          : 'Within your permitted scope',
+      },
+      {
+        label: 'Sessions logged',
+        value: data.faculty.reduce((n, r) => n + r.sessionsLogged, 0),
+        note: 'Latest log author; revisions counted once',
+      },
+      {
+        label: 'Plans uploaded',
+        value: data.faculty.reduce((n, r) => n + r.plansUploaded, 0),
+        note: 'Includes archived plan versions',
+      },
+      {
+        label: 'Recorded teaching',
+        value: num(
+          data.faculty.reduce((n, r) => n + r.scheduledHours, 0),
+          ' h',
+        ),
+        note: 'Scheduled duration of logged teaching',
+      },
+    ];
+  return [
+    {
+      label: 'Subject offerings',
+      value: s.subjects,
+      note: `${s.assessed} assessed · ${s.needsData} need data`,
+    },
+    {
+      label: 'Recorded coverage',
+      value: num(s.metrics?.coveragePercentage, '%'),
+      note: 'Weighted by known lesson-plan hours',
+    },
+    {
+      label: 'Behind plan',
+      value: num(s.metrics ? s.behindHours : null, ' h'),
+      note: 'Sum of each subject’s recorded shortfall',
+    },
+    {
+      label: 'Subjects at risk',
+      value: s.atRisk,
+      note: 'Tight or danger; missing data is separate',
+    },
+  ];
+}
+export function ReportsWorkspace({
+  campusId,
+  initialTab = 'course',
+  initialSubjectId,
+}: {
+  campusId?: string;
+  initialTab?: ReportTab;
+  initialSubjectId?: string;
+}) {
+  const [filters, setFilters] = useState<ReportFilters>({
+    campusId,
+    subjectId: initialSubjectId,
+    tab: initialTab,
+    deliveryStatus: 'TAUGHT',
+  });
+  const [exporting, setExporting] = useState(false),
+    [exportError, setExportError] = useState('');
+  const tab = filters.tab ?? 'course';
+  const dateError = Boolean(
+    filters.from && filters.to && filters.from > filters.to,
+  );
+  const { tab: _tab, ...queryFilters } = filters;
+  const query = useQuery({
+    queryKey: ['reports', queryFilters],
+    queryFn: () => reportsApi.read(queryFilters),
+    enabled: !dateError,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
+  const data = query.data;
+  const options = data?.options ?? [];
+  function update(key: keyof ReportFilters, value: string) {
+    setFilters((f) => ({
+      ...f,
+      [key]: value || undefined,
+      ...(['campusId', 'trackId', 'semesterId'].includes(key)
+        ? { batchId: undefined, subjectId: undefined, facultyId: undefined }
+        : {}),
+      ...(key === 'campusId'
+        ? { trackId: undefined, semesterId: undefined }
+        : {}),
+      ...(key === 'batchId'
+        ? { subjectId: undefined, facultyId: undefined }
+        : {}),
+    }));
+    setExportError('');
+  }
+  function values(
+    key: 'campus' | 'track' | 'semester' | 'batch' | 'subject' | 'teachers',
+  ) {
+    const filtered = options.filter(
+      (o) =>
+        (key === 'campus' ||
+          !filters.campusId ||
+          o.campus.id === filters.campusId) &&
+        (key === 'campus' ||
+          key === 'track' ||
+          !filters.trackId ||
+          o.track.id === filters.trackId) &&
+        (['campus', 'track', 'semester'].includes(key) ||
+          !filters.semesterId ||
+          o.semester.id === filters.semesterId) &&
+        (['campus', 'track', 'semester', 'batch'].includes(key) ||
+          !filters.batchId ||
+          o.batch.id === filters.batchId),
+    );
+    return [
+      ...new Map(
+        filtered
+          .flatMap((o) => (key === 'teachers' ? o.teachers : [o[key]]))
+          .map((v) => [v.id, v]),
+      ).values(),
+    ]
+      .filter((v) => key !== 'teachers' || !data?.facultyOnly)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function exportCsv() {
+    setExporting(true);
+    setExportError('');
+    try {
+      const file = await reportsApi.csv(filters);
+      saveDownload(file.blob, file.filename);
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : 'Could not export this report.',
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+  return (
+    <section className="reports-workspace" aria-label="Reports">
+      <header className="rp-header">
+        <div>
+          <p className="rp-eyebrow">Academic intelligence</p>
+          <h1>Reports</h1>
+          <p>
+            Course progress, teaching records and exam readiness in one place.
+          </p>
+        </div>
+        <button
+          className="rp-primary"
+          type="button"
+          disabled={!data || query.isFetching || dateError || exporting}
+          onClick={() => void exportCsv()}
+        >
+          {exporting ? 'Preparing CSV…' : 'Export CSV'}
+        </button>
+      </header>
+      <div className="rp-tabbar" role="tablist" aria-label="Report categories">
+        {reportTabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`report-tab-${t.id}`}
+            aria-controls="report-panel"
+            aria-selected={tab === t.id}
+            onClick={() => update('tab', t.id)}
+          >
+            {data?.facultyOnly && t.id === 'faculty' ? 'My Activity' : t.label}
+          </button>
+        ))}
+      </div>
+      <section className="rp-filters" aria-label="Report filters">
+        <div className="rp-section-heading">
+          <div>
+            <h2>Report filters</h2>
+            <p>
+              {data?.facultyOnly
+                ? 'Only your assigned subjects are available.'
+                : 'Only records within your account’s campus access are available.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rp-text-button"
+            onClick={() => {
+              setFilters({ tab, campusId, deliveryStatus: 'TAUGHT' });
+              setExportError('');
+            }}
+          >
+            Reset filters
+          </button>
+        </div>
+        <div className="rp-filter-grid">
+          {(
+            [
+              ['campusId', 'Campus', 'campus', 'All permitted campuses'],
+              ['trackId', 'Track', 'track', 'All tracks'],
+              ['semesterId', 'Semester', 'semester', 'All semesters'],
+              ['batchId', 'Batch', 'batch', 'All batches'],
+              ['subjectId', 'Subject', 'subject', 'All subjects'],
+              ...(!data?.facultyOnly
+                ? [['facultyId', 'Faculty', 'teachers', 'All faculty']]
+                : []),
+            ] as const
+          ).map(([field, label, key, all]) => (
+            <label key={field}>
+              {label}
+              <select
+                aria-label={label}
+                value={filters[field as keyof ReportFilters] ?? ''}
+                onChange={(e) =>
+                  update(field as keyof ReportFilters, e.target.value)
+                }
+              >
+                <option value="">{all}</option>
+                {values(key as 'campus').map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <label>
+            From date
+            <input
+              aria-label="From date"
+              type="date"
+              value={filters.from ?? ''}
+              onChange={(e) => update('from', e.target.value)}
+            />
+          </label>
+          <label>
+            To date
+            <input
+              aria-label="To date"
+              type="date"
+              value={filters.to ?? ''}
+              min={filters.from}
+              onChange={(e) => update('to', e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="rp-filter-note">
+          Dates filter class dates, faculty log/upload dates and exam windows.
+          Course and campus progress show the current saved position; teaching
+          capacity is calculated after today.
+        </p>
+        {dateError ? (
+          <p role="alert" className="form-error">
+            From date must be on or before To date.
+          </p>
+        ) : null}
+      </section>
+      {exportError ? (
+        <p role="alert" className="form-error">
+          {exportError}
+        </p>
+      ) : null}
+      {query.isError ? (
+        <div role="alert" className="rp-empty">
+          <p>{query.error.message}</p>
+          <button type="button" onClick={() => void query.refetch()}>
+            Retry reports
+          </button>
+        </div>
+      ) : query.isPending || query.isPlaceholderData ? (
+        <LoadingSkeleton variant="cards" label="Loading report records" />
+      ) : data && !dateError ? (
+        <div
+          id="report-panel"
+          role="tabpanel"
+          aria-labelledby={`report-tab-${tab}`}
+        >
+          <ReportKpis items={metricsFor(tab, data)} />
+          <section className="rp-results">
+            <div className="rp-section-heading">
+              <div>
+                <h2>
+                  {data.facultyOnly && tab === 'faculty'
+                    ? 'My Activity'
+                    : reportTabs.find((t) => t.id === tab)!.label}
+                </h2>
+                <p>{reportTabs.find((t) => t.id === tab)!.description}</p>
+              </div>
+              {tab === 'delivery' ? (
+                <label>
+                  Show
+                  <select
+                    aria-label="Delivery status"
+                    value={filters.deliveryStatus ?? 'TAUGHT'}
+                    onChange={(e) => update('deliveryStatus', e.target.value)}
+                  >
+                    <option value="TAUGHT">Taught classes</option>
+                    <option value="ALL">All logged statuses</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="IN_PROGRESS">In progress</option>
+                    <option value="SKIPPED">Skipped</option>
+                    <option value="MERGED">Merged</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            <ReportContent tab={tab} data={data} />
+          </section>
+          <footer className="rp-footnote">
+            Updated {new Date(data.generatedAt).toLocaleString()} · Coverage is
+            recorded progress. Missing logs do not prove that teaching was
+            missed. Time cushion = teaching hours left ÷ syllabus hours left; no
+            remaining work is shown as —.
+          </footer>
+        </div>
+      ) : null}
+    </section>
+  );
+}

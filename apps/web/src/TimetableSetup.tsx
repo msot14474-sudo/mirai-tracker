@@ -101,6 +101,7 @@ export function TimetableSetup({
         'timetable',
         'topic-schedules',
         'progress-dashboard',
+        'reports',
         'exam-readiness',
         'student-overview',
         'lesson-plans',

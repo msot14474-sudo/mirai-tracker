@@ -1,3 +1,4 @@
+import { reportFixture } from './reportTestData';
 import { apiFetch } from './http';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -277,7 +278,7 @@ describe('App authentication', () => {
       });
     });
     renderApp();
-    await screen.findByRole('heading', { name: 'Welcome back, Sample' });
+    await screen.findByRole('heading', { name: 'Your teaching overview' });
     await act(async () => {
       await expect(apiFetch('/api/protected')).rejects.toMatchObject({
         name: 'AbortError',
@@ -306,6 +307,7 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
+      if (url.includes('/reports?')) return new Response(JSON.stringify(reportFixture()), { headers: { 'Content-Type': 'application/json' } });
       if (url.includes('/ai-insights'))
         return new Response(
           JSON.stringify({
@@ -362,7 +364,7 @@ describe('App authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify and sign in' }));
 
     expect(
-      await screen.findByRole('heading', { name: 'Welcome back, Sample' }),
+      await screen.findByRole('heading', { name: 'Your teaching overview' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Daily logging' }),
@@ -481,7 +483,7 @@ describe('App authentication', () => {
     fireEvent.click(await screen.findByRole('button', { name: /HI-Tech/i }));
 
     expect(
-      await screen.findByRole('heading', { name: 'Welcome back, Program' }),
+      await screen.findByRole('heading', { name: 'Overview' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester calendar' }),
@@ -580,7 +582,7 @@ describe('App authentication', () => {
     fireEvent.click(screen.getByRole('button', { name: /HI-Tech Campus/i }));
 
     expect(
-      await screen.findByRole('heading', { name: 'Welcome back, Yatharth' }),
+      await screen.findByRole('heading', { name: 'Overview' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Change campus/i }),
@@ -645,7 +647,7 @@ describe('App authentication', () => {
     renderApp();
 
     expect(
-      await screen.findByRole('heading', { name: 'Welcome back, Campus' }),
+      await screen.findByRole('heading', { name: 'Overview' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'User access' }),

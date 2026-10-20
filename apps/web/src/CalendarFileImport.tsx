@@ -236,6 +236,7 @@ export function CalendarFileImport({ campusId }: { campusId?: string }) {
           'timetable',
           'topic-schedules',
           'progress-dashboard',
+        'reports',
           'exam-readiness',
           'student-overview',
         ].map((key) => client.invalidateQueries({ queryKey: [key] })),

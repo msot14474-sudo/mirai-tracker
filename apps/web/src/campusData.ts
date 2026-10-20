@@ -104,6 +104,7 @@ export type VisitingDashboard = {
   }[];
 };
 export const campusDataKeys = [
+  'reports',
   'campus-data',
   'academic',
   'timetable',

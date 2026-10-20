@@ -160,6 +160,7 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
         'topic-schedules',
         'session-logs',
         'progress-dashboard',
+        'reports',
         'exam-readiness',
         'student-overview',
       ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
