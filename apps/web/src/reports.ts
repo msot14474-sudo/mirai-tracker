@@ -141,6 +141,7 @@ export const reportsApi = {
     const response = await apiFetch(
       `${apiUrl}/reports/document?${query(filters)}`,
       { method: 'POST' },
+      { htmlAttachment: true },
     );
     return {
       blob: await response.blob(),

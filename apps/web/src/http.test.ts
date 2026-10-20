@@ -200,6 +200,49 @@ it('preserves binary downloads and their filenames', async () => {
   expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
   expect(response.headers.get('Content-Disposition')).toContain('report.xlsx');
 });
+it('preserves an explicitly requested HTML report attachment', async () => {
+  const content = '<!doctype html><h1>Academic analysis</h1>';
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(content, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="report.html"',
+      },
+    }),
+  );
+  const response = await apiFetch(
+    '/api/reports/document',
+    { method: 'POST' },
+    { htmlAttachment: true },
+  );
+  expect(await response.text()).toBe(content);
+  expect(response.headers.get('Content-Disposition')).toContain('report.html');
+});
+it.each([
+  { requested: true, attachment: false },
+  { requested: false, attachment: true },
+])(
+  'rejects unexpected HTML even on report routes (%o)',
+  async ({ requested, attachment }) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>Proxy fallback</html>', {
+        headers: {
+          'Content-Type': 'text/html',
+          ...(attachment
+            ? { 'Content-Disposition': 'attachment; filename="report.html"' }
+            : {}),
+        },
+      }),
+    );
+    await expect(
+      apiFetch(
+        '/api/reports/document',
+        { method: 'POST' },
+        { htmlAttachment: requested },
+      ),
+    ).rejects.toThrow('unexpected response');
+  },
+);
 it('does not send a queued retry after the session changes', async () => {
   vi.useFakeTimers();
   const fetcher = vi
@@ -225,8 +268,13 @@ it('keeps production requests on the cookie-bearing website origin', () => {
 });
 
 it('shows an actionable AI provider error without retrying the request', async () => {
-  const message = 'The AI provider rejected its credentials. Ask your administrator to check the AI API key.';
-  const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ message }, 503));
-  await expect(apiFetch('/api/ai-insights/report', { method: 'POST' })).rejects.toThrow(message);
+  const message =
+    'The AI provider rejected its credentials. Ask your administrator to check the AI API key.';
+  const fetcher = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(json({ message }, 503));
+  await expect(
+    apiFetch('/api/ai-insights/report', { method: 'POST' }),
+  ).rejects.toThrow(message);
   expect(fetcher).toHaveBeenCalledTimes(1);
 });

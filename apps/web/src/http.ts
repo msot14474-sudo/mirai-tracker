@@ -37,6 +37,7 @@ const publicAuthPaths = [
 export async function apiFetch(
   url: string,
   init: RequestInit = {},
+  options: { htmlAttachment?: boolean } = {},
 ): Promise<Response> {
   const generation = sessionGeneration;
   const read = ['GET', 'HEAD'].includes((init.method ?? 'GET').toUpperCase());
@@ -111,7 +112,17 @@ export async function apiFetch(
           response.status,
         );
       }
-      if (response.headers.get('content-type')?.includes('text/html')) {
+      // Only an explicitly requested download may return HTML. Keep rejecting
+      // proxy/login pages that accidentally replace an API response.
+      const htmlAttachment =
+        options.htmlAttachment &&
+        /^attachment\s*;/i.test(
+          response.headers.get('content-disposition') ?? '',
+        );
+      if (
+        response.headers.get('content-type')?.includes('text/html') &&
+        !htmlAttachment
+      ) {
         throw new RequestError(
           'The service returned an unexpected response. Please try again.',
           502,
