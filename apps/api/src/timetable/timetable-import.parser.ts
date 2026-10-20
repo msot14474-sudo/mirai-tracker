@@ -80,6 +80,93 @@ function value(cell: ExcelJS.Cell): unknown {
     ? raw
     : cell.text.trim();
 }
+
+function weekday(value: string) {
+  return (
+    ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].indexOf(
+      value.trim().toLowerCase().slice(0, 3),
+    ) + 1
+  );
+}
+
+// A spreadsheet can be a conventional week grid or one row per class.
+// Cells use a subject code, optionally followed by " | teacher@email".
+function parseWeekGrid(sheet: ExcelJS.Worksheet, from: string, to: string) {
+  const rows: TimetableImportRow[] = [];
+  const errors: { source: string; message: string }[] = [];
+  const timeRange = (text: string) => {
+    const parts = text.trim().split(/\s*(?:–|—|-|\bto\b)\s*/i);
+    if (parts.length !== 2) return null;
+    try {
+      const startTime = importTime(parts[0]),
+        endTime = importTime(parts[1]);
+      return endTime > startTime ? { startTime, endTime } : null;
+    } catch {
+      return null;
+    }
+  };
+  for (let n = 1; n <= Math.min(sheet.rowCount, 30); n++) {
+    const first = normalize(sheet.getRow(n).getCell(1).text);
+    const dayRows = ['day', 'weekday'].includes(first);
+    const timeRows = ['time', 'period', 'timeslot'].includes(first);
+    if (!dayRows && !timeRows) continue;
+    const columns = new Map<number, string>();
+    sheet.getRow(n).eachCell((cell, c) => {
+      if (c > 1 && cell.text.trim()) columns.set(c, cell.text.trim());
+    });
+    if (!columns.size) continue;
+    for (const [c, text] of columns) {
+      if (dayRows ? !timeRange(text) : !weekday(text))
+        errors.push({
+          source: `${sheet.name} · ${sheet.getRow(n).getCell(c).address}`,
+          message: dayRows
+            ? 'Use an explicit time range, such as 09:00–10:00, for each column.'
+            : 'Use weekday names as column headings.',
+        });
+    }
+    if (errors.length) return { rows, errors };
+    for (let r = n + 1; r <= sheet.rowCount; r++) {
+      if (!sheet.getRow(r).hasValues) continue;
+      const label = sheet.getRow(r).getCell(1).text;
+      for (const [c, heading] of columns) {
+        const cell = sheet.getRow(r).getCell(c);
+        const source = `${sheet.name} · ${cell.address}`;
+        try {
+          const text = String(value(cell) ?? '').trim();
+          if (!text || /^(?:[-–—]|break|lunch|free|off)$/i.test(text)) continue;
+          const day = weekday(dayRows ? label : heading);
+          const time = timeRange(dayRows ? heading : label);
+          if (!day || !time)
+            throw new Error(
+              'Use a weekday and a time range such as 09:00–10:00 for this class.',
+            );
+          if (cell.isMerged && cell.master.address !== cell.address)
+            throw new Error(
+              'Split merged class cells into explicit periods before importing.',
+            );
+          const parts = text.split(/\s*[|\n]\s*/);
+          if (parts.length > 2 || !parts[0]?.trim())
+            throw new Error(
+              'Use one subject per cell, optionally followed by | teacher email.',
+            );
+          rows.push({
+            source,
+            subject: parts[0]!.trim(),
+            teacher: parts[1]?.trim() ?? '',
+            weekday: day,
+            ...time,
+            effectiveFrom: from,
+            effectiveTo: to,
+          });
+        } catch (e) {
+          errors.push({ source, message: (e as Error).message });
+        }
+      }
+    }
+    return { rows, errors };
+  }
+  return null;
+}
 export async function parseBatchTimetable(
   file: UploadedImportFile,
   from: string,
@@ -122,6 +209,12 @@ export async function parseBatchTimetable(
       }
     }
     if (!header) {
+      const grid = parseWeekGrid(sheet, from, to);
+      if (grid) {
+        rows.push(...grid.rows);
+        errors.push(...grid.errors);
+        continue;
+      }
       errors.push({
         source: sheet.name,
         message:

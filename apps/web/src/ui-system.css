@@ -997,3 +997,676 @@
     flex: 1 1 180px;
   }
 }
+
+/* Shared campus records and batch scheduling. */
+.dashboard-shell .campus-academic-overview {
+  display: grid;
+  gap: 26px;
+}
+.dashboard-shell .campus-academic-overview > .workspace-heading {
+  margin: 0;
+}
+.dashboard-shell .campus-academic-overview > header p {
+  margin-bottom: 0;
+}
+.dashboard-shell .academic-readonly,
+.dashboard-shell .academic-count {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  background: #eef3fb;
+  color: #4a648a;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dashboard-shell .academic-count {
+  margin-left: 6px;
+}
+.dashboard-shell .academic-meta {
+  color: var(--ui-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.dashboard-shell .campus-academic-section {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--ui-border);
+}
+.dashboard-shell .campus-academic-section .subheading-row {
+  margin: 0;
+}
+.dashboard-shell .campus-academic-section h3 {
+  margin: 0;
+}
+.dashboard-shell .campus-subject-card {
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+  min-width: 0;
+}
+.dashboard-shell .campus-subject-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.dashboard-shell .campus-subject-card h4 {
+  margin: 0;
+}
+.dashboard-shell .campus-subject-card .subject-code {
+  font-size: 11px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #eef3fc;
+  color: #315d9e;
+  font-weight: 650;
+}
+.dashboard-shell .campus-assignment-list {
+  display: grid;
+  gap: 12px;
+}
+.dashboard-shell .campus-assignment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 14px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f6;
+}
+.dashboard-shell .campus-assignment dt {
+  color: var(--ui-muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.dashboard-shell .campus-assignment dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .campus-exam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 14px;
+}
+.dashboard-shell .campus-exam-window {
+  background: #f8faff;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  padding: 18px;
+}
+.dashboard-shell .campus-exam-window h4 {
+  margin: 8px 0;
+}
+.dashboard-shell .campus-exam-window p {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.dashboard-shell .campus-exam-window small {
+  color: var(--ui-muted);
+}
+.dashboard-shell .batch-timetable-board {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.dashboard-shell .batch-timetable-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px;
+}
+.dashboard-shell .batch-timetable-toolbar > label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 260px;
+  max-width: 380px;
+}
+.dashboard-shell .batch-timetable-totals {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 120px;
+  padding-bottom: 2px;
+}
+.dashboard-shell .batch-timetable-totals span {
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.dashboard-shell .batch-timetable-board .batch-import {
+  margin: 0;
+}
+.dashboard-shell .batch-week-grid {
+  background: #fff;
+}
+.dashboard-shell .batch-week-grid table {
+  min-width: 960px;
+  table-layout: fixed;
+}
+.dashboard-shell .batch-week-grid th:first-child {
+  width: 108px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.dashboard-shell .batch-week-grid th {
+  font-size: 12px;
+  text-transform: none;
+}
+.dashboard-shell .batch-week-grid td {
+  padding: 6px;
+  vertical-align: top;
+  border-right: 1px solid #edf1f6;
+}
+.dashboard-shell .batch-week-grid td:last-child {
+  border-right: 0;
+}
+.dashboard-shell .batch-week-class {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  margin: 0 0 5px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #dce5f7;
+  border-left: 3px solid #4b78cb;
+  background: #f2f6fe;
+  color: #244575;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: normal;
+}
+.dashboard-shell .batch-week-class strong {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.dashboard-shell .batch-week-class span {
+  font-size: 10px;
+  font-weight: 650;
+}
+.dashboard-shell .batch-week-class small {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .batch-week-class:hover {
+  background: #e8effd;
+  border-color: #8aa7da;
+}
+.dashboard-shell .batch-week-class.tone-1 {
+  background: #eff8f5;
+  color: #226054;
+  border-left-color: #54a18d;
+}
+.dashboard-shell .batch-week-class.tone-2 {
+  background: #f6f3fc;
+  color: #62458a;
+  border-left-color: #9171ba;
+}
+.dashboard-shell .batch-week-class.tone-3 {
+  background: #fff8ee;
+  color: #886331;
+  border-left-color: #cc9e59;
+}
+.dashboard-shell .batch-week-class.tone-4 {
+  background: #f0f7fa;
+  color: #306777;
+  border-left-color: #66a4b6;
+}
+.dashboard-shell .batch-free-slot {
+  display: block;
+  text-align: center;
+  color: #b4bfce;
+  padding: 20px 0;
+}
+.dashboard-shell .batch-grid-empty {
+  padding: 30px 20px;
+  text-align: center;
+  white-space: normal;
+}
+.dashboard-shell .batch-grid-empty p {
+  color: var(--ui-muted);
+  font-size: 13px;
+}
+.dashboard-shell .batch-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: #fff;
+  scroll-margin-top: 110px;
+}
+.dashboard-shell .batch-detail-layout .offering-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 20px;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+}
+.dashboard-shell .batch-detail-layout .offering-list > .subheading-row {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+}
+.dashboard-shell .batch-detail-layout .offering-list > button {
+  flex: 0 1 240px;
+  padding: 12px 16px;
+  margin: 0;
+  border-radius: 8px;
+}
+.dashboard-shell .batch-detail-layout .offering-list > button strong {
+  font-size: 14px;
+}
+.dashboard-shell .batch-detail-layout .offering-list > button span,
+.dashboard-shell .batch-detail-layout .offering-list > button small {
+  font-size: 11px;
+}
+.dashboard-shell .batch-detail-layout .timetable-detail {
+  padding: 24px;
+}
+.dashboard-shell .batch-detail-layout .session-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.dashboard-shell .batch-detail-layout .session-row time {
+  font-weight: 600;
+}
+.dashboard-shell .batch-detail-layout .session-row .session-status {
+  margin-left: auto;
+  color: var(--ui-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.dashboard-shell .single-class-editor {
+  margin: 18px 0 0;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+.dashboard-shell .single-class-editor h4,
+.dashboard-shell .single-class-editor p {
+  margin: 0;
+}
+.dashboard-shell .single-class-editor > button {
+  justify-self: start;
+}
+.dashboard-shell .action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dashboard-shell .action-row > button {
+  width: auto;
+  margin: 0;
+}
+.dashboard-shell :is(.form-grid, .field-pair, .timetable-filters) > label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+.dashboard-shell :is(.weekly-slot, .subject-catalog-row) > div {
+  min-width: 0;
+}
+.dashboard-shell :is(.timetable-grid, .form-grid, .field-pair) {
+  min-width: 0;
+}
+@media (max-width: 1200px) {
+  .dashboard-shell .batch-detail-layout .timetable-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .dashboard-shell .campus-academic-overview {
+    gap: 20px;
+  }
+  .dashboard-shell .batch-detail-layout .timetable-detail,
+  .dashboard-shell .batch-detail-layout .offering-list {
+    padding: 16px;
+  }
+  .dashboard-shell .batch-detail-layout .offering-list > button {
+    flex-basis: 100%;
+  }
+  .dashboard-shell .batch-timetable-toolbar > label {
+    max-width: none;
+  }
+  .dashboard-shell .batch-timetable-toolbar > button {
+    width: 100%;
+  }
+  .dashboard-shell .campus-assignment {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+
+/* Planning surfaces share the same compact hierarchy and responsive spacing. */
+.faculty-plan-schedule,
+.calendar-change-review,
+.recovery-class {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.faculty-plan-schedule {
+  padding-bottom: 24px;
+}
+.faculty-plan-schedule h3,
+.faculty-plan-schedule p {
+  margin: 0;
+}
+.faculty-plan-schedule .subheading-row > div {
+  display: grid;
+  gap: 6px;
+}
+.plan-capacity-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.plan-capacity-metrics > div {
+  background: #f4f7fb;
+  border: 1px solid #e4eaf3;
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  gap: 7px;
+}
+.plan-capacity-metrics span,
+.plan-capacity-metrics small {
+  color: #63738c;
+  font-size: 12px;
+}
+.plan-capacity-metrics strong {
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: #193055;
+}
+.plan-timeline {
+  border: 1px solid #e0e7f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.plan-timeline summary,
+.plan-upload-disclosure > summary {
+  cursor: pointer;
+  padding: 16px;
+  font-weight: 600;
+  color: #203b67;
+}
+.plan-timeline table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+}
+.plan-timeline th {
+  background: #f5f7fb;
+  color: #63738c;
+  font-weight: 550;
+}
+.plan-timeline th,
+.plan-timeline td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e6ebf2;
+}
+.plan-timeline td > small,
+.plan-timeline td > strong {
+  display: block;
+}
+.plan-timeline td > small {
+  color: #6c7c92;
+  margin-bottom: 4px;
+}
+.plan-timeline progress {
+  display: block;
+  width: 70px;
+  height: 5px;
+  accent-color: #345fbb;
+  margin-bottom: 5px;
+}
+.plan-timeline .table-scroll {
+  max-height: 400px;
+  overflow: auto;
+}
+.plan-timeline th {
+  position: sticky;
+  top: 0;
+}
+.plan-upload-disclosure {
+  border: 1px solid #e0e7f0;
+  border-radius: 12px;
+  margin: 0 0 22px;
+  background: #fff;
+}
+.plan-upload-disclosure .plan-upload-card {
+  border: 0;
+  margin: 0;
+  box-shadow: none;
+}
+.plan-unit-readonly header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #f7f9fc;
+}
+.plan-unit-readonly header > div {
+  flex: 1;
+}
+.plan-unit-readonly header h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.plan-unit-readonly p {
+  font-size: 13px;
+  color: #6c7c92;
+  margin: 5px 0;
+}
+.plan-topic-readonly {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 80px 100px;
+  gap: 12px;
+  padding: 15px 18px;
+  border-top: 1px solid #e7ebf1;
+  align-items: center;
+  font-size: 13px;
+}
+.plan-topic-readonly small {
+  display: block;
+  margin-top: 5px;
+  color: #697a91;
+}
+.calendar-change-review {
+  border: 1px solid #ead7ad;
+  border-radius: 14px;
+  padding: 20px;
+  background: #fffcf5;
+  margin-bottom: 20px;
+}
+.calendar-change-review h3 {
+  margin: 6px 0 10px;
+  font-size: 18px;
+}
+.calendar-change-review p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.recovery-class {
+  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+  background: white;
+  padding: 16px;
+}
+.recovery-class small {
+  color: #6c7c92;
+}
+.recovery-options {
+  display: grid;
+  gap: 12px;
+}
+.recovery-manual {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.recovery-class label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 550;
+}
+.recovery-class > .primary-button {
+  justify-self: start;
+}
+.lesson-plan-workspace .lesson-plan-layout {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.lesson-plan-workspace .plan-offering-list button {
+  padding: 14px;
+  border-radius: 12px;
+}
+.lesson-plan-workspace .plan-offering-list button strong {
+  font-size: 14px;
+}
+.lesson-plan-workspace .plan-offering-list button span,
+.lesson-plan-workspace .plan-offering-list button small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.lesson-plan-workspace .plan-offering-list h3 {
+  font-size: 14px;
+}
+.campus-person-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 2fr);
+  gap: 6px 18px;
+  padding: 16px 18px;
+  margin: 10px 0;
+  border: 1px solid #e4e9f1;
+  border-radius: 12px;
+  background: #fff;
+}
+.campus-person-row > strong {
+  font-size: 14px;
+}
+.campus-person-row > span {
+  color: #65758b;
+  font-size: 12px;
+  text-align: right;
+}
+.campus-person-row > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #54677f;
+}
+@media (max-width: 1100px) {
+  .lesson-plan-workspace .lesson-plan-layout {
+    grid-template-columns: 1fr;
+  }
+  .lesson-plan-workspace .plan-offering-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 0 20px;
+    border-right: 0;
+  }
+  .lesson-plan-workspace .plan-offering-list .subheading-row {
+    width: 100%;
+  }
+  .lesson-plan-workspace .plan-offering-list button {
+    flex: 1 1 180px;
+  }
+}
+@media (max-width: 600px) {
+  .plan-capacity-metrics {
+    grid-template-columns: 1fr;
+  }
+  .plan-capacity-metrics > div {
+    padding: 14px;
+  }
+  .recovery-manual {
+    grid-template-columns: 1fr;
+  }
+  .plan-topic-readonly {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .plan-topic-readonly > span:nth-last-child(-n + 2) {
+    grid-column: 2;
+  }
+  .campus-person-row {
+    grid-template-columns: 1fr;
+  }
+  .campus-person-row > span {
+    text-align: left;
+  }
+  .calendar-change-review {
+    padding: 14px;
+  }
+}
+.dashboard-shell .session-log-workspace {
+  margin: 0;
+  padding: 24px;
+  border: 1px solid #e0e7f0;
+  border-radius: 16px;
+  background: white;
+}
+@media (max-width: 600px) {
+  .dashboard-shell .topbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .dashboard-shell .topbar-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .dashboard-shell .topbar-actions {
+    width: auto;
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .dashboard-shell .session-log-workspace {
+    padding: 16px;
+  }
+}
+.dashboard-shell .account-hero {
+  min-height: 0;
+  padding: 28px 32px;
+  border-radius: 18px;
+  gap: 22px;
+}
+.dashboard-shell .account-hero h1 {
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.dashboard-shell .account-hero-avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  font-size: 21px;
+  border-radius: 16px;
+}
+.dashboard-shell .account-settings-card {
+  padding: 28px 32px;
+  border-radius: 18px;
+}
+@media (max-width: 600px) {
+  .dashboard-shell .account-hero,
+  .dashboard-shell .account-settings-card {
+    padding: 20px;
+  }
+}

@@ -92,6 +92,7 @@ export type TopicScheduleDetail = {
     status: string;
     cancellationReason: string | null;
     hasLogs: boolean;
+    needsCalendarReview?: boolean;
     isExtraSession: boolean;
   }>;
   baseline?: {
@@ -151,7 +152,25 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type RecoverySuggestion = {
+  options: Array<{
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    afterTarget: boolean;
+  }>;
+  recommendedId: string | null;
+  explanation: string;
+  source: 'ai' | 'calendar';
+  timezone: string;
+};
 export const topicScheduleApi = {
+  recoveryOptions: (sessionId: string) =>
+    api<RecoverySuggestion>(
+      `/topic-schedules/sessions/${sessionId}/recovery-options`,
+      { method: 'POST' },
+    ),
   move: (
     sessionId: string,
     input: { date: string; startTime: string; endTime: string; reason: string },

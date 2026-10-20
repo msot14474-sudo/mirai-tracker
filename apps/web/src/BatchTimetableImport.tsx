@@ -18,16 +18,23 @@ const weekdays = [
 export function BatchTimetableImport({
   offerings,
   onChanged,
+  selectedBatchId,
+  open,
+  onToggle,
 }: {
   offerings: OfferingListItem[];
+  selectedBatchId?: string;
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   onChanged: () => Promise<void>;
 }) {
   const batches = [
     ...new Map(offerings.map((o) => [o.batch.id, o.batch])).values(),
   ];
-  const [batchId, setBatchId] = useState(
+  const [localBatchId, setBatchId] = useState(
     batches.length === 1 ? batches[0]!.id : '',
   );
+  const batchId = selectedBatchId ?? localBatchId;
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<BatchTimetablePreview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,7 +61,13 @@ export function BatchTimetableImport({
     }
   }
   return (
-    <details className="batch-import">
+    <details
+      hidden={selectedBatchId !== undefined && !open}
+      id="batch-timetable-upload"
+      className="batch-import"
+      open={open}
+      onToggle={(e) => onToggle?.(e.currentTarget.open)}
+    >
       <summary>
         Upload batch timetable
         <small>
@@ -66,14 +79,14 @@ export function BatchTimetableImport({
         Use one row per weekly class with{' '}
         <strong>Subject, Teacher, Day, Start time and End time</strong>. Match
         subjects by code and teachers by email. Repeat dates are optional and
-        default to the semester dates.
+        default to the semester dates. A weekly grid also works: use Day with time-range columns, or Time with weekday columns. Each cell contains a subject code, optionally followed by | teacher email.
       </p>
       <div className="form-grid">
         <label>
           Batch for timetable
           <select
             value={batchId}
-            disabled={busy}
+            disabled={busy || selectedBatchId !== undefined}
             onChange={(e) => {
               setBatchId(e.target.value);
               reset();

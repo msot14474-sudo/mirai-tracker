@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import { BatchTimetableGrid } from './BatchTimetableGrid';
+import { TimetableSessionEditor } from './TimetableSessionEditor';
 import { BatchTimetableImport } from './BatchTimetableImport';
 import { OfferingTimetable, TimetableEntry, timetableApi } from './timetable';
 
@@ -27,6 +29,12 @@ export function TimetableSetup({
   const [campusId, setCampusId] = useState(initialCampusId);
   const [semesterId, setSemesterId] = useState('');
   const [offeringId, setOfferingId] = useState('');
+  const [chosenBatchId, setBatchId] = useState('');
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [requestedEntry, setRequestedEntry] = useState<TimetableEntry | null>(
+    null,
+  );
+  const editorRef = useRef<HTMLDivElement>(null);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -51,6 +59,9 @@ export function TimetableSetup({
     queryKey: ['timetable', 'offering', offeringId],
     queryFn: () => timetableApi.offering(offeringId),
     enabled: Boolean(offeringId),
+    staleTime: 15000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   });
 
   useEffect(() => {
@@ -59,11 +70,21 @@ export function TimetableSetup({
   useEffect(() => {
     if (!semesterId && semesters.data?.[0]) setSemesterId(semesters.data[0].id);
   }, [semesterId, semesters.data]);
+  const batches = [
+    ...new Map(
+      offerings.data?.offerings.map((o) => [o.batch.id, o.batch]) ?? [],
+    ).values(),
+  ];
+  const batchId =
+    batches.find((b) => b.id === chosenBatchId)?.id ?? batches[0]?.id ?? '';
+  const batchOfferings =
+    offerings.data?.offerings.filter((o) => o.batch.id === batchId) ?? [];
   useEffect(() => {
-    if (!offeringId && offerings.data?.offerings[0]) {
-      setOfferingId(offerings.data.offerings[0].id);
+    if (!batchOfferings.some((o) => o.id === offeringId)) {
+      setOfferingId(batchOfferings[0]?.id ?? '');
+      setRequestedEntry(null);
     }
-  }, [offeringId, offerings.data]);
+  }, [batchId, offerings.data, offeringId]);
 
   const selectionIsLoading =
     campuses.isLoading ||
@@ -81,6 +102,11 @@ export function TimetableSetup({
         'progress-dashboard',
         'exam-readiness',
         'student-overview',
+        'lesson-plans',
+        'session-logs',
+        'faculty-subjects',
+        'ai-insights',
+        'academic',
       ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
     );
   };
@@ -91,8 +117,8 @@ export function TimetableSetup({
         <div>
           <h2 id="timetable-title">Weekly timetable</h2>
           <p className="schedule-help">
-            Upload a full batch timetable, or choose a subject below to add and
-            edit weekly classes.
+            Manage every subject in one weekly timetable. Upload a batch
+            schedule, edit a repeating class or change a single lecture.
           </p>
         </div>
         <div className="timetable-filters">
@@ -149,20 +175,82 @@ export function TimetableSetup({
       ) : null}
 
       {semesterId && offerings.data && (
-        <BatchTimetableImport
-          key={semesterId}
-          offerings={offerings.data.offerings}
-          onChanged={refresh}
-        />
+        <section className="batch-timetable-board" aria-label="Batch schedule">
+          <div className="batch-timetable-toolbar">
+            <label>
+              Batch
+              <select
+                value={batchId}
+                disabled={!batches.length}
+                onChange={(e) => {
+                  setBatchId(e.target.value);
+                  setRequestedEntry(null);
+                }}
+              >
+                {!batches.length && <option value="">No batches linked</option>}
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} · {b.code}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="batch-timetable-totals">
+              <strong>{batchOfferings.length} subjects</strong>
+              <span>
+                {formatMinutes(
+                  batchOfferings.reduce(
+                    (sum, o) => sum + o.weeklyPlannedMinutes,
+                    0,
+                  ),
+                )}{' '}
+                per week
+              </span>
+            </div>
+            <button
+              type="button"
+              className="primary-button"
+              aria-expanded={uploadOpen}
+              aria-controls="batch-timetable-upload"
+              onClick={() => setUploadOpen((v) => !v)}
+            >
+              Upload timetable
+            </button>
+          </div>
+          <BatchTimetableImport
+            key={`${semesterId}:${batchId}`}
+            offerings={offerings.data.offerings}
+            selectedBatchId={batchId}
+            open={uploadOpen}
+            onToggle={setUploadOpen}
+            onChanged={refresh}
+          />
+          <BatchTimetableGrid
+            offerings={batchOfferings}
+            onEdit={(id, entry) => {
+              setOfferingId(id);
+              setRequestedEntry(entry);
+              editorRef.current?.scrollIntoView?.({
+                behavior: 'smooth',
+                block: 'start',
+              });
+            }}
+          />
+          <p className="schedule-help">
+            Select a class to edit its weekly schedule. Class dates follow the
+            campus calendar, including holidays and working Saturdays.
+            Lesson-plan dates and progress update when you save.
+          </p>
+        </section>
       )}
-      <div className="timetable-layout">
+      <div className="timetable-layout batch-detail-layout" ref={editorRef}>
         <div className="offering-list" aria-label="Subject offerings">
           <div className="subheading-row">
-            <h3>1. Choose a subject</h3>
+            <h3>Subject details</h3>
             <span>
               {selectionIsLoading
                 ? 'Loading…'
-                : `${offerings.data?.offerings.length ?? 0} subjects`}
+                : `${batchOfferings.length} subjects`}
             </span>
           </div>
           {selectionIsLoading ? (
@@ -172,7 +260,7 @@ export function TimetableSetup({
               label="Loading subject offerings"
             />
           ) : (
-            offerings.data?.offerings.map((offering) => (
+            batchOfferings.map((offering) => (
               <button
                 key={offering.id}
                 className={offering.id === offeringId ? 'selected' : ''}
@@ -190,7 +278,10 @@ export function TimetableSetup({
                     staleTime: 60_000,
                   })
                 }
-                onClick={() => setOfferingId(offering.id)}
+                onClick={() => {
+                  setOfferingId(offering.id);
+                  setRequestedEntry(null);
+                }}
               >
                 <strong>{offering.subject.name}</strong>
                 <span>
@@ -240,6 +331,7 @@ export function TimetableSetup({
             <TimetableDetail
               key={offeringId}
               detail={detail.data}
+              requestedEntry={requestedEntry}
               offeringId={offeringId}
               onChanged={refresh}
             />
@@ -252,14 +344,24 @@ export function TimetableSetup({
 
 function TimetableDetail({
   detail,
+  requestedEntry,
   offeringId,
   onChanged,
 }: {
   detail: OfferingTimetable;
+  requestedEntry: TimetableEntry | null;
   offeringId: string;
   onChanged: () => Promise<void>;
 }) {
-  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(
+    requestedEntry,
+  );
+  const [editingSession, setEditingSession] = useState<
+    OfferingTimetable['sessions'][number] | null
+  >(null);
+  useEffect(() => {
+    setEditingEntry(requestedEntry);
+  }, [requestedEntry]);
   const generate = useMutation({
     mutationFn: () => timetableApi.generate(offeringId),
     onSuccess: onChanged,
@@ -315,8 +417,8 @@ function TimetableDetail({
             </button>
           </div>
           <p className="schedule-help">
-            Your recurring classes. Update class dates after changing the
-            semester calendar.
+            Changes automatically update class dates and lesson-plan timing.
+            Completed or logged classes keep their history.
           </p>
           {detail.entries
             .filter((entry) => entry.active)
@@ -386,9 +488,35 @@ function TimetableDetail({
                 {localTime(session.endsAt, detail.semester.campus.timezone)}
               </span>
               <b>{session.plannedMinutes} min</b>
+              <span
+                className={`session-status status-${session.status.toLowerCase()}`}
+              >
+                {session.status.toLowerCase().replaceAll('_', ' ')}
+              </span>
+              {session.status === 'SCHEDULED' &&
+                !session.hasLogs &&
+                new Date(session.endsAt) > new Date() && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    aria-label={`Change class on ${session.sessionDate}`}
+                    onClick={() => setEditingSession(session)}
+                  >
+                    Change this class
+                  </button>
+                )}
             </div>
           ))}
         </div>
+        {editingSession && (
+          <TimetableSessionEditor
+            key={editingSession.id}
+            session={editingSession}
+            detail={detail}
+            onChanged={onChanged}
+            onClose={() => setEditingSession(null)}
+          />
+        )}
         {detail.sessions.length === 0 ? (
           <p className="empty-copy">
             Save a weekly class above to see all its teaching dates here.

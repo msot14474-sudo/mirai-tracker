@@ -163,10 +163,12 @@ describe('TopicScheduleService', () => {
         cancellationReason: 'Faculty unavailable',
       },
     });
-    expect(result.version.reason).toBe(
+    expect('version' in result && result.version.reason).toBe(
       ScheduleCalculationReason.SESSION_CANCELLED,
     );
-    expect(result.preview.summary.excludedSessions).toBe(1);
+    expect('preview' in result && result.preview.summary.excludedSessions).toBe(
+      1,
+    );
   });
 
   it('protects logged sessions from cancellation', async () => {
@@ -210,6 +212,7 @@ function setup() {
     auditEvent: { create: jest.fn() },
   };
   const prisma = {
+    lessonPlan: { findFirst: jest.fn().mockResolvedValue({ id: 'plan' }) },
     topicScheduleVersion: { findFirst: jest.fn().mockResolvedValue(null) },
     subjectOffering: { findMany: jest.fn(), findUnique: jest.fn() },
     scheduledSession: { findUnique: jest.fn() },

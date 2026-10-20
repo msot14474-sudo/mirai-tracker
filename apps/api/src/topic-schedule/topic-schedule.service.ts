@@ -1,3 +1,5 @@
+import { needsCalendarReview } from './calendar-review';
+import { recommendRecovery, RecoveryOption } from './recovery-recommendation';
 import {
   buildTimetableSessions,
   isoWeekday,
@@ -202,6 +204,7 @@ export class TopicScheduleService {
       include: {
         offering: {
           include: {
+            faculty: { where: { active: true } },
             batch: { include: { semester: { include: { campus: true } } } },
           },
         },
@@ -233,6 +236,85 @@ export class TopicScheduleService {
       throw new ConflictException(
         'This class was moved. Manage its replacement instead.',
       );
+    if (!input.cancelled) {
+      if (needsCalendarReview(session))
+        throw new ConflictException(
+          'Choose a replacement time or keep this class cancelled in the calendar review.',
+        );
+      const semester = await this.prisma.semester.findUniqueOrThrow({
+        where: { id: session.offering.batch.semester.id },
+        include: { calendarDays: true, campus: true },
+      });
+      const date = formatIsoDate(session.sessionDate);
+      const clock = (value: Date) =>
+        new Intl.DateTimeFormat('en-GB', {
+          timeZone: semester.campus.timezone,
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        }).format(value);
+      if (
+        session.sessionDate < semester.startDate ||
+        session.sessionDate > semester.endDate ||
+        !buildTimetableSessions({
+          offeringId: session.offeringId,
+          timezone: semester.campus.timezone,
+          semesterStart: date,
+          semesterEnd: date,
+          saturdayRule: semester.workingSaturdayRule,
+          overrides: semester.calendarDays.map((d) => ({
+            ...d,
+            date: formatIsoDate(d.date),
+          })),
+          entries: [
+            {
+              id: session.id,
+              weekday: isoWeekday(date),
+              startTime: clock(session.startsAt),
+              endTime: clock(session.endsAt),
+              effectiveFrom: date,
+              effectiveTo: date,
+              facultyAssignmentId: session.facultyAssignmentId,
+            },
+          ],
+        }).length
+      )
+        throw new ConflictException(
+          'This date is closed in the current semester calendar. Move the class to a teaching day.',
+        );
+      const conflicts = await this.prisma.scheduledSession.findFirst({
+        where: {
+          id: { not: session.id },
+          status: { notIn: ['CANCELLED', 'SKIPPED', 'MERGED'] },
+          startsAt: { lt: session.endsAt },
+          endsAt: { gt: session.startsAt },
+          OR: [
+            { offering: { batchId: session.offering.batchId } },
+            {
+              offering: {
+                faculty: {
+                  some: {
+                    active: true,
+                    staffProfileId: {
+                      in: session.offering.faculty.map((f) => f.staffProfileId),
+                    },
+                    startDate: { lte: session.sessionDate },
+                    OR: [
+                      { endDate: null },
+                      { endDate: { gte: session.sessionDate } },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+      if (conflicts)
+        throw new ConflictException(
+          'This time now overlaps another class. Choose another time.',
+        );
+    }
     const nextStatus = input.cancelled
       ? ScheduledSessionStatus.CANCELLED
       : ScheduledSessionStatus.SCHEDULED;
@@ -264,6 +346,14 @@ export class TopicScheduleService {
       });
     });
 
+    const plan = await this.prisma.lessonPlan.findFirst({
+      where: {
+        offeringId: session.offeringId,
+        status: { in: ['ACTIVE', 'DRAFT'] },
+      },
+      select: { id: true },
+    });
+    if (!plan) return { offeringId: session.offeringId };
     return this.calculate(
       session.offeringId,
       {
@@ -273,6 +363,166 @@ export class TopicScheduleService {
       },
       user,
     );
+  }
+
+  async recoveryOptions(sessionId: string, user: AuthenticatedUser) {
+    const session = await this.prisma.scheduledSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        _count: { select: { logs: true } },
+        offering: {
+          include: {
+            subject: true,
+            faculty: { where: { active: true } },
+            batch: {
+              include: {
+                semester: {
+                  include: {
+                    campus: true,
+                    calendarDays: true,
+                    examWindows: true,
+                  },
+                },
+              },
+            },
+            lessonPlans: {
+              where: { status: { in: ['ACTIVE', 'DRAFT'] } },
+              orderBy: { version: 'desc' },
+              include: {
+                units: {
+                  orderBy: { sequence: 'asc' },
+                  include: { topics: { orderBy: { sequence: 'asc' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Class not found.');
+    await this.access.assertCanManageOffering(user, session.offeringId);
+    if (!needsCalendarReview(session) || session._count.logs)
+      throw new ConflictException(
+        'This class no longer needs a calendar review. Refresh the page.',
+      );
+    const semester = session.offering.batch.semester;
+    const now = new Date();
+    const clock = (value: Date) =>
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: semester.campus.timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).format(value);
+    const startTime = clock(session.startsAt),
+      endTime = clock(session.endsAt);
+    const teacherIds = session.offering.faculty.map((f) => f.staffProfileId);
+    const conflicts = await this.prisma.scheduledSession.findMany({
+      where: {
+        id: { not: session.id },
+        status: { notIn: ['CANCELLED', 'SKIPPED', 'MERGED'] },
+        sessionDate: { gte: semester.startDate, lte: semester.endDate },
+        OR: [
+          { offering: { batchId: session.offering.batchId } },
+          {
+            offering: {
+              faculty: {
+                some: { active: true, staffProfileId: { in: teacherIds } },
+              },
+            },
+          },
+        ],
+      },
+      select: { startsAt: true, endsAt: true },
+    });
+    const options: RecoveryOption[] = [];
+    for (
+      let cursor = new Date(semester.startDate);
+      cursor <= semester.endDate && options.length < 5;
+      cursor.setUTCDate(cursor.getUTCDate() + 1)
+    ) {
+      const date = formatIsoDate(cursor);
+      if (cursor < session.sessionDate) continue;
+      if (
+        user.staffProfileId &&
+        !session.offering.faculty.some(
+          (f) =>
+            f.staffProfileId === user.staffProfileId &&
+            f.startDate <= cursor &&
+            (!f.endDate || f.endDate >= cursor),
+        )
+      )
+        continue;
+      const candidate = buildTimetableSessions({
+        offeringId: session.offeringId,
+        timezone: semester.campus.timezone,
+        semesterStart: date,
+        semesterEnd: date,
+        saturdayRule: semester.workingSaturdayRule,
+        overrides: semester.calendarDays.map((d) => ({
+          ...d,
+          date: formatIsoDate(d.date),
+        })),
+        entries: [
+          {
+            id: session.id,
+            weekday: isoWeekday(date),
+            startTime,
+            endTime,
+            effectiveFrom: date,
+            effectiveTo: date,
+            facultyAssignmentId: session.facultyAssignmentId,
+          },
+        ],
+      })[0];
+      if (
+        !candidate ||
+        candidate.startsAt <= now ||
+        conflicts.some(
+          (c) => c.startsAt < candidate.endsAt && c.endsAt > candidate.startsAt,
+        )
+      )
+        continue;
+      options.push({
+        id: date,
+        date,
+        startTime,
+        endTime,
+        afterTarget: cursor > session.offering.targetFinishDate,
+      });
+    }
+    const plan =
+      session.offering.lessonPlans.find((p) => p.status === 'ACTIVE') ??
+      session.offering.lessonPlans[0];
+    const topics =
+      plan?.units.flatMap((u) =>
+        u.topics
+          .filter(
+            (t) =>
+              t.status !== 'SKIPPED' &&
+              Number(t.currentCompletionPercentage) < 100,
+          )
+          .map((t) => ({
+            unit: u.title,
+            topic: t.title,
+            minutesRemaining: Math.ceil(
+              t.plannedMinutes *
+                (1 - Number(t.currentCompletionPercentage) / 100),
+            ),
+          })),
+      ) ?? [];
+    const recommendation = await recommendRecovery(options, {
+      subject: session.offering.subject.name,
+      originalDate: formatIsoDate(session.sessionDate),
+      topics: topics.slice(0, 40),
+      targetFinishDate: formatIsoDate(session.offering.targetFinishDate),
+      exams: semester.examWindows.map((e) => ({
+        name: e.name,
+        date: formatIsoDate(e.startDate),
+        syllabusDeadline: formatIsoDate(e.syllabusDeadline),
+      })),
+    });
+    return { options, ...recommendation, timezone: semester.campus.timezone };
   }
 
   async moveSession(
@@ -300,9 +550,12 @@ export class TopicScheduleService {
         });
         if (!session) throw new NotFoundException('Class not found.');
         await this.access.assertCanManageOffering(user, session.offeringId);
-        if (session.status !== 'SCHEDULED' || session._count.logs > 0)
+        if (
+          (session.status !== 'SCHEDULED' && !needsCalendarReview(session)) ||
+          session._count.logs > 0
+        )
           throw new ConflictException(
-            'Only an unlogged scheduled class can be moved.',
+            'Only an unlogged scheduled class or a calendar change awaiting review can be moved.',
           );
         const semester = session.offering.batch.semester;
         const date = parseIsoDate(input.date);
@@ -423,6 +676,19 @@ export class TopicScheduleService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    const plan = await this.prisma.lessonPlan.findFirst({
+      where: {
+        offeringId: result.offeringId,
+        status: { in: ['ACTIVE', 'DRAFT'] },
+      },
+      select: { id: true },
+    });
+    if (plan)
+      await this.calculate(
+        result.offeringId,
+        { reason: ScheduleCalculationReason.MANUAL_RECALCULATION },
+        user,
+      );
     return result;
   }
 
@@ -590,6 +856,7 @@ function serializeDetail(offering: PlanningOffering) {
       status: session.status,
       cancellationReason: session.cancellationReason,
       hasLogs: session._count.logs > 0,
+      needsCalendarReview: needsCalendarReview(session),
       isExtraSession: session.isExtraSession,
     })),
     forecast: plan

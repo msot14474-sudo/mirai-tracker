@@ -1,3 +1,4 @@
+import { CALENDAR_REVIEW_REASON } from '../topic-schedule/calendar-review';
 import {
   inheritSubjectTeacher,
   inheritSubjectTeachers,
@@ -338,6 +339,16 @@ export class AcademicCalendarService {
           where: offeringScope,
           select: {
             id: true,
+            _count: {
+              select: {
+                sessions: {
+                  where: {
+                    status: 'CANCELLED',
+                    cancellationReason: CALENDAR_REVIEW_REASON,
+                  },
+                },
+              },
+            },
             batch: {
               select: { name: true, semester: { select: { name: true } } },
             },

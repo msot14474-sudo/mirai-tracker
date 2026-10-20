@@ -20,6 +20,7 @@ const examTypeLabels: Record<ExamReadinessExam['type'], string> = {
 export function ExamReadinessView({ campusId }: { campusId?: string }) {
   const [asOfDate, setAsOfDate] = useState(today());
   const readiness = useQuery({
+    refetchInterval: 30000, refetchOnWindowFocus: 'always',
     queryKey: ['exam-readiness', asOfDate, campusId],
     queryFn: () => examReadinessApi.list(asOfDate, campusId),
   });

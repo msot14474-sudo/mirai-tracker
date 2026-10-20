@@ -19,6 +19,7 @@ const examTypeLabels: Record<StudentExam['type'], string> = {
 export function StudentOverview() {
   const asOfDate = today();
   const overview = useQuery({
+    refetchInterval: 30000, refetchOnWindowFocus: 'always',
     queryKey: ['student-overview', asOfDate],
     queryFn: () => studentViewApi.overview(asOfDate),
   });

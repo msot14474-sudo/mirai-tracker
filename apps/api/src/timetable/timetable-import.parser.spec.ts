@@ -60,3 +60,30 @@ it('validates times without guessing ambiguous values', () => {
   for (const v of ['9', '25:00', '0:00 PM', '9:70', 1])
     expect(() => importTime(v)).toThrow();
 });
+
+it('reads both orientations of a full timetable without losing subjects or breaks', async () => {
+  const byDay = await parse(
+    'Day,09:00-10:00,10:00-11:00\nMonday,DSA | asha@example.edu,WEB\nTuesday,Break,DSA',
+  );
+  expect(byDay.errors).toEqual([]);
+  expect(byDay.rows).toHaveLength(3);
+  expect(byDay.rows[0]).toMatchObject({
+    subject: 'DSA',
+    teacher: 'asha@example.edu',
+    weekday: 1,
+    startTime: '09:00',
+    endTime: '10:00',
+  });
+  const byTime = await parse(
+    'Time,Monday,Tuesday\n09:00–10:00,DSA,Break\n10:00–11:00,WEB,DSA',
+  );
+  expect(byTime.errors).toEqual([]);
+  expect(byTime.rows.map((r) => [r.subject, r.weekday, r.startTime])).toEqual(
+    byDay.rows.map((r) => [r.subject, r.weekday, r.startTime]),
+  );
+});
+it('rejects unclear period headings instead of guessing class hours', async () => {
+  const result = await parse('Day,Period 1,Period 2\nMonday,DSA,WEB');
+  expect(result.rows).toEqual([]);
+  expect(result.errors).toHaveLength(2);
+});

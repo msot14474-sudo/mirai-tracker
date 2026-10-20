@@ -9,6 +9,7 @@ export type TimetableEntry = {
   effectiveFrom: string;
   effectiveTo: string | null;
   active: boolean;
+  facultyName?: string | null;
 };
 
 export type OfferingListItem = {
@@ -60,6 +61,7 @@ export type OfferingTimetable = {
     endsAt: string;
     plannedMinutes: number;
     status: string;
+    hasLogs?: boolean;
   }>;
   summary: {
     weeklyPlannedMinutes: number;
@@ -81,9 +83,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await apiFetch(`${apiUrl}${path}`, {
     ...init,
     credentials: 'include',
-    headers: init?.body && !(init.body instanceof FormData)
-      ? { 'Content-Type': 'application/json', ...init.headers }
-      : init?.headers,
+    headers:
+      init?.body && !(init.body instanceof FormData)
+        ? { 'Content-Type': 'application/json', ...init.headers }
+        : init?.headers,
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
@@ -103,16 +106,31 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const timetableApi = {
+  moveSession: (
+    sessionId: string,
+    input: { date: string; startTime: string; endTime: string; reason: string },
+  ) =>
+    api(`/timetable/sessions/${sessionId}/move`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   offerings: (semesterId: string) =>
     api<SemesterOfferings>(`/timetable/semesters/${semesterId}/offerings`),
   offering: (offeringId: string) =>
     api<OfferingTimetable>(`/timetable/offerings/${offeringId}`),
   updateEntry: (entryId: string, input: TimetableEntryInput) =>
-    api(`/timetable/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    api(`/timetable/entries/${entryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
   batchTemplate: `${apiUrl}/timetable/batch-template`,
   importBatch: (batchId: string, file: File, commit = false) => {
-    const body = new FormData(); body.set('file', file);
-    return api<BatchTimetablePreview>(`/timetable/batches/${batchId}/${commit ? 'import' : 'preview'}`, {method:'POST', body});
+    const body = new FormData();
+    body.set('file', file);
+    return api<BatchTimetablePreview>(
+      `/timetable/batches/${batchId}/${commit ? 'import' : 'preview'}`,
+      { method: 'POST', body },
+    );
   },
   createEntry: (offeringId: string, input: TimetableEntryInput) =>
     api(`/timetable/offerings/${offeringId}/entries`, {
@@ -126,7 +144,17 @@ export const timetableApi = {
 };
 
 export type BatchTimetablePreview = {
-  batch: {id: string; name: string}; valid: boolean; added: number;
-  rows: Array<TimetableEntryInput & {source: string; subject: string; teacher: string; existing: boolean}>;
-  errors: Array<{source: string; message: string}>; warnings?: string[];
+  batch: { id: string; name: string };
+  valid: boolean;
+  added: number;
+  rows: Array<
+    TimetableEntryInput & {
+      source: string;
+      subject: string;
+      teacher: string;
+      existing: boolean;
+    }
+  >;
+  errors: Array<{ source: string; message: string }>;
+  warnings?: string[];
 };

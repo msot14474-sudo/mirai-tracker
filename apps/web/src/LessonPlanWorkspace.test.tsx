@@ -126,6 +126,19 @@ function installFetchMock(
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
     onRequest?.(url, init);
+    if (url.includes('/topic-schedules/offerings/'))
+      return json({
+        sessions: [
+          {
+            id: 'slot',
+            startsAt: '2030-01-01T09:00:00Z',
+            plannedMinutes: 360,
+            status: 'SCHEDULED',
+            hasLogs: false,
+          },
+        ],
+        preview: { allocations: [], summary: { shortfallMinutes: 0 } },
+      });
     if (url.endsWith('/lesson-plans/offerings')) return json(offerings);
     if (url.endsWith('/lesson-plans/offerings/offering-a')) return json(detail);
     if (url.endsWith('/preview')) {
@@ -151,6 +164,10 @@ describe('LessonPlanWorkspace', () => {
 
     expect(await screen.findByText('Data Structures')).toBeInTheDocument();
     expect(await screen.findByText('Planned teaching')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Assigned teaching time'),
+    ).toBeInTheDocument();
+    expect((await screen.findAllByText('6h')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('5h').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('Arrays')).toBeInTheDocument();
     expect(screen.getByText('Mid-term')).toBeInTheDocument();
@@ -161,6 +178,8 @@ describe('LessonPlanWorkspace', () => {
     const requests: string[] = [];
     installFetchMock((url) => requests.push(url));
     renderWorkspace();
+    await screen.findByText('Upload a new lesson-plan version');
+    fireEvent.click(screen.getByText('Upload a new lesson-plan version'));
     const input = await screen.findByLabelText('Lesson-plan file');
     const file = new File(['sample'], 'plan.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
@@ -216,11 +235,16 @@ describe('LessonPlanWorkspace', () => {
 });
 
 it('reuses a prefetched subject detail when selected without a second request', async () => {
-  const second = { ...offerings[0], id: 'offering-b', subject: { ...detail.subject, name: 'Web Development' } };
+  const second = {
+    ...offerings[0],
+    id: 'offering-b',
+    subject: { ...detail.subject, name: 'Web Development' },
+  };
   let detailRequests = 0;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
-    if (url.includes('/lesson-plans/offerings?')) return json([...offerings, second]);
+    if (url.includes('/lesson-plans/offerings?'))
+      return json([...offerings, second]);
     if (url.endsWith('/lesson-plans/offerings/offering-a')) return json(detail);
     if (url.endsWith('/lesson-plans/offerings/offering-b')) {
       detailRequests++;
@@ -228,11 +252,21 @@ it('reuses a prefetched subject detail when selected without a second request', 
     }
     throw new Error(`Unexpected request ${url}`);
   });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><LessonPlanWorkspace campusId="campus-a" /></QueryClientProvider>);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LessonPlanWorkspace campusId="campus-a" />
+    </QueryClientProvider>,
+  );
   const button = await screen.findByRole('button', { name: /Web Development/ });
   fireEvent.mouseEnter(button);
-  await waitFor(() => expect(client.getQueryData(['lesson-plans', 'offering', 'offering-b'])).toBeTruthy());
+  await waitFor(() =>
+    expect(
+      client.getQueryData(['lesson-plans', 'offering', 'offering-b']),
+    ).toBeTruthy(),
+  );
   fireEvent.click(button);
   await waitFor(() => expect(button.className).toContain('selected'));
   expect(detailRequests).toBe(1);

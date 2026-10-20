@@ -255,24 +255,17 @@ it('allows setup questions when the campus has no subjects yet', async () => {
   await waitFor(() => expect(requests).toHaveLength(1));
 });
 
-it('keeps the only download action inside the chat composer', async () => {
-  setup(true);
+it('does not offer a report download after a response', async () => {
+  const { requests } = setup(true);
   await screen.findByText('Data Structures');
   fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
     target: { value: 'What next?' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: 'Download report' }),
-    ).toBeEnabled(),
-  );
+  await waitFor(() => expect(requests).toHaveLength(1));
   expect(
-    screen.getAllByRole('button', { name: 'Download report' }),
-  ).toHaveLength(1);
-  expect(
-    screen.getByRole('button', { name: 'Download report' }).closest('form'),
-  ).not.toBeNull();
+    screen.queryByRole('button', { name: 'Download report' }),
+  ).not.toBeInTheDocument();
 });
 it('renders report headings and tables without exposing Markdown syntax or executing HTML', async () => {
   const html = await reportHtml({

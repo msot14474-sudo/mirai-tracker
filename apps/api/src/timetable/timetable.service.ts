@@ -1,3 +1,5 @@
+import { CALENDAR_REVIEW_REASON } from '../topic-schedule/calendar-review';
+import { buildAcademicCalendar } from '../academic-calendar/calendar-engine';
 import { parseBatchTimetable } from './timetable-import.parser';
 import { UploadedImportFile } from '../semester-import/semester-import.types';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
@@ -57,11 +59,30 @@ export class TimetableService {
       include: {
         subject: { select: { id: true, code: true, name: true } },
         batch: { select: { id: true, code: true, name: true } },
+        faculty: {
+          where: { active: true },
+          include: {
+            staffProfile: { include: { user: { select: { name: true } } } },
+          },
+        },
         timetableEntries: {
           where: { active: true },
+          include: {
+            facultyAssignment: {
+              select: {
+                staffProfile: { select: { user: { select: { name: true } } } },
+              },
+            },
+          },
           orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
         },
-        _count: { select: { sessions: true } },
+        _count: {
+          select: {
+            sessions: {
+              where: { status: { notIn: ['CANCELLED', 'SKIPPED', 'MERGED'] } },
+            },
+          },
+        },
       },
       orderBy: [{ batch: { code: 'asc' } }, { subject: { code: 'asc' } }],
     });
@@ -77,7 +98,20 @@ export class TimetableService {
         subject: offering.subject,
         batch: offering.batch,
         targetFinishDate: formatIsoDate(offering.targetFinishDate),
-        entries: offering.timetableEntries.map(serializeEntry),
+        entries: offering.timetableEntries.map((entry) => ({
+          ...serializeEntry(entry),
+          facultyName:
+            (entry.facultyAssignment?.staffProfile.user.name ??
+              (offering.faculty ?? [])
+                .filter(
+                  (f) =>
+                    f.startDate <= (entry.effectiveTo ?? semester.endDate) &&
+                    (!f.endDate || f.endDate >= entry.effectiveFrom),
+                )
+                .map((f) => f.staffProfile.user.name)
+                .join(', ')) ||
+            null,
+        })),
         weeklyPlannedMinutes: offering.timetableEntries.reduce(
           (total, entry) =>
             total +
@@ -97,6 +131,7 @@ export class TimetableService {
     this.access.assertCanManageCampus(user, offering.batch.semester.campusId);
     const sessions = await this.prisma.scheduledSession.findMany({
       where: { offeringId },
+      include: { _count: { select: { logs: true } } },
       orderBy: [{ startsAt: 'asc' }],
     });
     const activeEntries = offering.timetableEntries.filter(
@@ -136,6 +171,7 @@ export class TimetableService {
           (session.endsAt.getTime() - session.startsAt.getTime()) / 60_000,
         ),
         status: session.status,
+        hasLogs: (session._count?.logs ?? 0) > 0,
       })),
       summary: {
         weeklyPlannedMinutes: activeEntries.reduce(
@@ -147,10 +183,13 @@ export class TimetableService {
             ),
           0,
         ),
-        generatedSessions: sessions.length,
+        generatedSessions: sessions.filter(
+          (s) => !['CANCELLED', 'SKIPPED', 'MERGED'].includes(s.status),
+        ).length,
         semesterPlannedMinutes: sessions
           .filter(
-            (session) => session.status !== ScheduledSessionStatus.CANCELLED,
+            (session) =>
+              !['CANCELLED', 'SKIPPED', 'MERGED'].includes(session.status),
           )
           .reduce(
             (total, session) =>
@@ -163,6 +202,29 @@ export class TimetableService {
           ),
       },
     };
+  }
+
+  async moveSession(
+    sessionId: string,
+    input: { date: string; startTime: string; endTime: string; reason: string },
+    user: AuthenticatedUser,
+  ) {
+    const session = await this.prisma.scheduledSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        offering: {
+          select: {
+            batch: { select: { semester: { select: { campusId: true } } } },
+          },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Class not found.');
+    this.access.assertCanManageCampus(
+      user,
+      session.offering.batch.semester.campusId,
+    );
+    return this.schedules.moveSession(sessionId, input, user);
   }
 
   async createEntry(
@@ -550,13 +612,26 @@ export class TimetableService {
         })),
     });
     const existing = await this.prisma.scheduledSession.findMany({
-      where: { offeringId, timetableEntryId: { not: null } },
+      where: { offeringId },
       include: { _count: { select: { logs: true } } },
     });
     const existingByKey = new Map(
       existing.map((session) => [session.sourceKey, session]),
     );
     const desiredKeys = new Set(desired.map((session) => session.sourceKey));
+    const teachingDates = new Set(
+      buildAcademicCalendar({
+        semesterStart: formatIsoDate(semester.startDate),
+        semesterEnd: formatIsoDate(semester.endDate),
+        saturdayRule: semester.workingSaturdayRule,
+        overrides: semester.calendarDays.map((day) => ({
+          ...day,
+          date: formatIsoDate(day.date),
+        })),
+      })
+        .days.filter((day) => day.working)
+        .map((day) => day.date),
+    );
     let created = 0;
     let updated = 0;
     let preserved = 0;
@@ -607,12 +682,32 @@ export class TimetableService {
         const staleIds = existing
           .filter(
             (session) =>
-              !desiredKeys.has(session.sourceKey) &&
+              (session.timetableEntryId !== null
+                ? !desiredKeys.has(session.sourceKey)
+                : reason === ScheduleCalculationReason.CALENDAR_CHANGE &&
+                  !teachingDates.has(formatIsoDate(session.sessionDate))) &&
               session.status === ScheduledSessionStatus.SCHEDULED &&
               session._count.logs === 0,
           )
           .map((session) => session.id);
         if (!staleIds.length) return 0;
+        if (reason === ScheduleCalculationReason.CALENDAR_CHANGE) {
+          // Keep the original lecture so its teacher can decide how to recover it.
+          // Past classes and logs remain historical facts, even after a calendar correction.
+          await transaction.scheduledSession.updateMany({
+            where: {
+              id: { in: staleIds },
+              status: ScheduledSessionStatus.SCHEDULED,
+              startsAt: { gt: new Date() },
+              logs: { none: {} },
+            },
+            data: {
+              status: ScheduledSessionStatus.CANCELLED,
+              cancellationReason: CALENDAR_REVIEW_REASON,
+            },
+          });
+          return 0;
+        }
         const result = await transaction.scheduledSession.deleteMany({
           where: {
             id: { in: staleIds },

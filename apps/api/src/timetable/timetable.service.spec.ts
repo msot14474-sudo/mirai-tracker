@@ -307,6 +307,91 @@ describe('TimetableService', () => {
     );
   });
 
+  it('preserves future holiday classes for teacher review including one-off replacements', async () => {
+    const { service, prisma, transaction } = setup();
+    prisma.subjectOffering.findMany.mockResolvedValue([{ id: 'offering-a' }]);
+    const data = offering({ timetableEntries: [entry()] });
+    data.batch.semester.calendarDays = [
+      {
+        id: 'holiday',
+        date: date('2026-01-05'),
+        type: 'HOLIDAY',
+        title: 'Closure',
+        teachingAllowed: false,
+        notes: null,
+      },
+    ] as never;
+    prisma.subjectOffering.findUnique.mockResolvedValue(data);
+    prisma.scheduledSession.findMany.mockResolvedValue([
+      {
+        id: 'weekly',
+        sourceKey: 'timetable:entry-a:2026-01-05',
+        timetableEntryId: 'entry-a',
+        sessionDate: date('2026-01-05'),
+        status: 'SCHEDULED',
+        _count: { logs: 0 },
+      },
+      {
+        id: 'extra',
+        sourceKey: 'move:old',
+        timetableEntryId: null,
+        sessionDate: date('2026-01-05'),
+        status: 'SCHEDULED',
+        _count: { logs: 0 },
+      },
+      {
+        id: 'logged',
+        sourceKey: 'logged',
+        timetableEntryId: 'entry-a',
+        sessionDate: date('2026-01-05'),
+        status: 'COMPLETED',
+        _count: { logs: 1 },
+      },
+    ]);
+    prisma.$transaction.mockImplementation(async (fn) => fn(transaction));
+    await service.regenerateSemester('semester-a', manager);
+    expect(transaction.scheduledSession.deleteMany).not.toHaveBeenCalled();
+    expect(transaction.scheduledSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['weekly', 'extra'] },
+        status: 'SCHEDULED',
+        startsAt: { gt: expect.any(Date) },
+        logs: { none: {} },
+      },
+      data: {
+        status: 'CANCELLED',
+        cancellationReason: 'Calendar changed — teacher review required.',
+      },
+    });
+  });
+  it('shows inherited faculty on existing unassigned hours without rewriting the timetable', async () => {
+    const { service, prisma } = setup();
+    prisma.semester.findUnique.mockResolvedValue({
+      id: 'semester-a',
+      campusId: 'campus-a',
+      startDate: date('2026-01-01'),
+      endDate: date('2026-03-31'),
+    });
+    prisma.subjectOffering.findMany.mockResolvedValue([
+      {
+        ...offering({
+          faculty: [{ ...facultyAssignment(), startDate: date('2026-02-01') }],
+          timetableEntries: [entry()],
+        }),
+        targetFinishDate: date('2026-03-31'),
+        _count: { sessions: 13 },
+      },
+    ]);
+    const result = await service.listSemesterOfferings('semester-a', manager);
+    expect(result.offerings[0]?.entries[0]).toMatchObject({
+      facultyName: 'Faculty A',
+      facultyAssignmentId: null,
+      plannedMinutes: 60,
+    });
+    expect(result.offerings[0]?.weeklyPlannedMinutes).toBe(60);
+    expect(prisma.timetableEntry.update).not.toHaveBeenCalled();
+  });
+
   it('enforces campus timetable management permissions', async () => {
     const { service, prisma, access } = setup();
     prisma.subjectOffering.findUnique.mockResolvedValue(offering());
@@ -330,18 +415,17 @@ function setup() {
         .mockImplementation(async ({ data }) => ({ count: data.length })),
       update: jest.fn(),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   const prisma = {
     lessonPlan: { findFirst: jest.fn().mockResolvedValue(null) },
     batch: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'batch-a',
-          name: 'Batch A',
-          semester: offering().batch.semester,
-        }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'batch-a',
+        name: 'Batch A',
+        semester: offering().batch.semester,
+      }),
     },
     semester: { findUnique: jest.fn() },
     subjectOffering: { findUnique: jest.fn(), findMany: jest.fn() },

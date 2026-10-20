@@ -9,6 +9,7 @@ type AssignedSubject = {
   code: string;
   offerings: {
     id: string;
+    _count?: { sessions: number };
     batch: { name: string; semester: { name: string } };
   }[];
 };
@@ -19,7 +20,7 @@ export function FacultyOverview({
 }: {
   userId: string;
   name: string;
-  onOpen: (view: 'lesson-plans' | 'daily-logging') => void;
+  onOpen: (view: 'lesson-plans' | 'daily-logging', offeringId?: string) => void;
 }) {
   const subjects = useQuery({
     queryKey: ['faculty-subjects', userId],
@@ -60,40 +61,63 @@ export function FacultyOverview({
             to check your teacher assignment.
           </p>
         ) : (
-          <div className="faculty-subject-grid">{subjects.data.map((subject) => (
-            <article className="faculty-subject-card" key={subject.id}>
-              <h3>{subject.name}</h3>
-              <p>{subject.code}</p>
-              {subject.offerings.length ? (
-                <>
-                  {subject.offerings.map((o) => (
-                    <p key={o.id}>
-                      {o.batch.name} · {o.batch.semester.name}
-                    </p>
-                  ))}
-                  <div className="action-row"><button type="button" onClick={() => onOpen('lesson-plans')}>
-                    Open lesson plans
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => onOpen('daily-logging')}
-                  >
-                    Log a class
-                  </button></div>
-                </>
-              ) : (
-                <p>
-                  Assigned to you. Your admin/program manager still needs to link this
-                  subject to your batch and semester before you can upload its
-                  lesson plan or log classes.
-                </p>
-              )}
-            </article>
-          ))}</div>
+          <div className="faculty-subject-grid">
+            {subjects.data.map((subject) => (
+              <article className="faculty-subject-card" key={subject.id}>
+                <h3>{subject.name}</h3>
+                <p>{subject.code}</p>
+                {subject.offerings.some(
+                  (o) => (o._count?.sessions ?? 0) > 0,
+                ) && (
+                  <p className="inline-notice">
+                    {subject.offerings.reduce(
+                      (n, o) => n + (o._count?.sessions ?? 0),
+                      0,
+                    )}{' '}
+                    calendar changes need your review. Open Lesson plans to
+                    choose replacement times.
+                  </p>
+                )}
+                {subject.offerings.length ? (
+                  <>
+                    {subject.offerings.map((o) => (
+                      <p key={o.id}>
+                        {o.batch.name} · {o.batch.semester.name}
+                      </p>
+                    ))}
+                    <div className="action-row">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpen('lesson-plans', subject.offerings[0]?.id)
+                        }
+                      >
+                        Open lesson plans
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => onOpen('daily-logging')}
+                      >
+                        Log a class
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p>
+                    Assigned to you. Your admin/program manager still needs to
+                    link this subject to your batch and semester before you can
+                    upload its lesson plan or log classes.
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
         )}
       </section>
-      {subjects.data?.some(subject => subject.offerings.length > 0) && <ProgressDashboard scope="faculty" />}
+      {subjects.data?.some((subject) => subject.offerings.length > 0) && (
+        <ProgressDashboard scope="faculty" />
+      )}
     </>
   );
 }

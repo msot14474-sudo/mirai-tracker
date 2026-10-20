@@ -28,6 +28,7 @@ export function ProgressDashboard({
   const [asOfDate, setAsOfDate] = useState(today());
   const [search, setSearch] = useState('');
   const dashboard = useQuery({
+    refetchInterval: 30000, refetchOnWindowFocus: 'always',
     queryKey: ['progress-dashboard', asOfDate, campusId],
     queryFn: () => progressApi.dashboard(asOfDate, campusId),
   });

@@ -1056,6 +1056,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     : roleLabels.PROGRAM_MANAGER;
   const [selectedCampusId, setSelectedCampusId] = useState('');
   const [activeView, setActiveView] = useState<DashboardView>('overview');
+  const [facultyPlanOfferingId, setFacultyPlanOfferingId] = useState('');
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -1287,6 +1288,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     if (view === 'lesson-plans') void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
     if (view === 'planned-dates') void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
     setActiveView(view);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
   function renderActiveView() {
@@ -1372,6 +1374,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       case 'lesson-plans':
         return (
           <LessonPlanWorkspace
+            initialOfferingId={facultyPlanOfferingId}
             key={selectedCampusId}
             campusId={selectedCampusId || undefined}
           />
@@ -1419,7 +1422,14 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         return (
           <>
             {canLogSessions && progressScope === 'faculty' ? (
-              <FacultyOverview userId={user.id} name={user.name} onOpen={openView} />
+              <FacultyOverview
+                userId={user.id}
+                name={user.name}
+                onOpen={(view, offeringId) => {
+                  if (view === 'lesson-plans') setFacultyPlanOfferingId(offeringId || '');
+                  openView(view);
+                }}
+              />
             ) : canViewProgressDashboard ? (
               <CampusAnalytics
                 campusId={selectedCampusId || undefined}

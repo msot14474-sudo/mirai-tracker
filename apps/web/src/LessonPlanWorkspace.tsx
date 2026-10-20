@@ -1,3 +1,4 @@
+import { FacultyPlanSchedule } from './FacultyPlanSchedule';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
@@ -9,20 +10,32 @@ import {
 } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
-export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
+export function LessonPlanWorkspace({
+  campusId,
+  initialOfferingId = '',
+}: {
+  campusId?: string;
+  initialOfferingId?: string;
+}) {
   const queryClient = useQueryClient();
-  const [offeringId, setOfferingId] = useState('');
+  const [offeringId, setOfferingId] = useState(initialOfferingId);
   const offerings = useQuery({
     queryKey: ['lesson-plans', 'offerings', campusId],
     queryFn: () => lessonPlanApi.offerings(campusId),
-    staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always',
+    staleTime: 15000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   });
-  const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
+  const selectedOfferingId = offerings.data?.some((o) => o.id === offeringId)
+    ? offeringId
+    : offerings.data?.[0]?.id || '';
   const detail = useQuery({
     queryKey: ['lesson-plans', 'offering', selectedOfferingId],
     queryFn: () => lessonPlanApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
-    staleTime: 60_000,
+    staleTime: 15000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   });
   const selectionIsLoading = offerings.isLoading;
 
@@ -66,8 +79,20 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
               <button
                 key={offering.id}
                 className={offering.id === selectedOfferingId ? 'selected' : ''}
-                onMouseEnter={() => void queryClient.prefetchQuery({ queryKey: ['lesson-plans', 'offering', offering.id], queryFn: () => lessonPlanApi.offering(offering.id), staleTime: 60_000 })}
-                onFocus={() => void queryClient.prefetchQuery({ queryKey: ['lesson-plans', 'offering', offering.id], queryFn: () => lessonPlanApi.offering(offering.id), staleTime: 60_000 })}
+                onMouseEnter={() =>
+                  void queryClient.prefetchQuery({
+                    queryKey: ['lesson-plans', 'offering', offering.id],
+                    queryFn: () => lessonPlanApi.offering(offering.id),
+                    staleTime: 60_000,
+                  })
+                }
+                onFocus={() =>
+                  void queryClient.prefetchQuery({
+                    queryKey: ['lesson-plans', 'offering', offering.id],
+                    queryFn: () => lessonPlanApi.offering(offering.id),
+                    staleTime: 60_000,
+                  })
+                }
                 onClick={() => setOfferingId(offering.id)}
               >
                 <strong>{offering.subject.name}</strong>
@@ -84,7 +109,9 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
           )}
           {!selectionIsLoading && offerings.data?.length === 0 ? (
             <p className="empty-copy">
-              No semester batch is assigned for teaching yet. Ask the admin/program manager to link your subject to its semester batch, then ask the campus manager to confirm your teaching assignment.
+              No semester batch is assigned for teaching yet. Ask the
+              admin/program manager to link your subject to its semester batch,
+              then ask the campus manager to confirm your teaching assignment.
             </p>
           ) : null}
         </div>
@@ -97,7 +124,12 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
             <div className="empty-state">
               <span>01</span>
               <h3>No subject offerings</h3>
-              <p>No semester batch is assigned for teaching yet. Ask the admin/program manager to link your subject to its semester batch, then ask the campus manager to confirm your teaching assignment.</p>
+              <p>
+                No semester batch is assigned for teaching yet. Ask the
+                admin/program manager to link your subject to its semester
+                batch, then ask the campus manager to confirm your teaching
+                assignment.
+              </p>
             </div>
           ) : detail.isLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />
@@ -106,7 +138,7 @@ export function LessonPlanWorkspace({ campusId }: { campusId?: string }) {
               {detail.error.message}
             </p>
           ) : detail.data ? (
-            <LessonPlanDetailView detail={detail.data} />
+            <LessonPlanDetailView key={detail.data.id} detail={detail.data} />
           ) : null}
         </div>
       </div>
@@ -123,7 +155,15 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
     await queryClient.invalidateQueries({
       queryKey: ['lesson-plans', 'offerings'],
     });
-    await Promise.all(['topic-schedules', 'session-logs', 'progress-dashboard', 'exam-readiness', 'student-overview'].map(key => queryClient.invalidateQueries({queryKey: [key]})));
+    await Promise.all(
+      [
+        'topic-schedules',
+        'session-logs',
+        'progress-dashboard',
+        'exam-readiness',
+        'student-overview',
+      ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
   };
   const activate = useMutation({
     mutationFn: () => lessonPlanApi.activate(detail.plan!.id),
@@ -132,7 +172,18 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
 
   return (
     <>
-      <PlanUpload offeringId={detail.id} onImported={refresh} />
+      <FacultyPlanSchedule detail={detail} />
+      <details
+        className="plan-upload-disclosure"
+        open={!detail.plan || undefined}
+      >
+        <summary>
+          {detail.plan
+            ? 'Upload a new lesson-plan version'
+            : 'Upload your lesson plan'}
+        </summary>
+        <PlanUpload offeringId={detail.id} onImported={refresh} />
+      </details>
       {detail.plan ? (
         <>
           <div className="plan-summary">
@@ -310,6 +361,42 @@ function UnitEditor({
     onSuccess: onSaved,
   });
 
+  if (!editable)
+    return (
+      <article className="plan-unit plan-unit-readonly">
+        <header>
+          <span className="unit-number">
+            {String(unit.sequence).padStart(2, '0')}
+          </span>
+          <div>
+            <h3>{unit.title}</h3>
+            {unit.description && <p>{unit.description}</p>}
+          </div>
+          <span>
+            {formatTeachingTime(
+              unit.topics.reduce((n, t) => n + t.plannedMinutes, 0),
+            )}
+          </span>
+        </header>
+        {unit.topics.map((topic) => (
+          <div className="plan-topic-readonly" key={topic.id}>
+            <span>{topic.sequence}</span>
+            <div>
+              <strong>{topic.title}</strong>
+              {topic.description && <p>{topic.description}</p>}
+              <small>
+                {topic.examScopes.map((e) => e.name).join(' · ') ||
+                  'No exam scope assigned'}
+              </small>
+            </div>
+            <span>{formatTeachingTime(topic.plannedMinutes)}</span>
+            <span>
+              {Math.round(topic.currentCompletionPercentage)}% covered
+            </span>
+          </div>
+        ))}
+      </article>
+    );
   return (
     <article className="plan-unit">
       <form
@@ -465,7 +552,8 @@ function ExamScopeEditor({
       ))}
       {!detail.examWindows.length ? (
         <p className="empty-copy">
-          Create exam windows in M04 before assigning scope.
+          Ask your program manager to add exam dates in Semester setup before
+          assigning syllabus scope.
         </p>
       ) : null}
     </section>

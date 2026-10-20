@@ -126,3 +126,9 @@ it.each([
   } as unknown as ExecutionContext;
   expect(guard.canActivate(context)).toBe(allowed);
 });
+
+it('requires faculty access for AI recovery recommendations', () => {
+  expect(roles(TopicScheduleController.prototype.recoveryOptions)).toEqual([
+    'FACULTY',
+  ]);
+});

@@ -11,7 +11,13 @@ type Subject = {
   name: string;
   batch: string;
   campus: { name: string };
-  monitoring?: {status: string; remainingHours: number; availableHours: number; bufferRatio: number | null; paceVsPlanHours: number} | null;
+  monitoring?: {
+    status: string;
+    remainingHours: number;
+    availableHours: number;
+    bufferRatio: number | null;
+    paceVsPlanHours: number;
+  } | null;
   completion: number | null;
   plan: { version: number; status: string } | null;
   teachers: string[];
@@ -412,35 +418,6 @@ export function AiInsights({
                   )}
                   <button
                     type="button"
-                    disabled={
-                      report.isPending ||
-                      (!report.data &&
-                        !history.data?.messages.some(
-                          (m) => m.role === 'assistant',
-                        ))
-                    }
-                    onClick={() => {
-                      const last = history.data?.messages
-                        .filter((m) => m.role === 'assistant')
-                        .at(-1);
-                      const latest =
-                        report.data ??
-                        (last && {
-                          mode: 'ai' as const,
-                          text: cleanReply(last.content),
-                          generatedAt: last.createdAt,
-                          incomplete: last.content.startsWith(
-                            '[Incomplete response]',
-                          ),
-                          snapshot: data,
-                        });
-                      if (latest) downloadReport(latest);
-                    }}
-                  >
-                    Download report
-                  </button>
-                  <button
-                    type="button"
                     disabled={report.isPending || (data.ai.ready && chatBusy)}
                     onClick={() => report.mutate({ useAi: data.ai.ready })}
                   >
@@ -501,7 +478,14 @@ export function AiInsights({
                           : `${subject.completion}% covered`}
                       </strong>
                     </header>
-                    {subject.monitoring && <p>{subject.monitoring.status.replaceAll('_', ' ')} · {subject.monitoring.remainingHours}h remaining · {subject.monitoring.availableHours}h available · Pace {subject.monitoring.paceVsPlanHours}h</p>}
+                    {subject.monitoring && (
+                      <p>
+                        {subject.monitoring.status.replaceAll('_', ' ')} ·{' '}
+                        {subject.monitoring.remainingHours}h remaining ·{' '}
+                        {subject.monitoring.availableHours}h available · Pace{' '}
+                        {subject.monitoring.paceVsPlanHours}h
+                      </p>
+                    )}
                     {subject.issues.length ? (
                       <ul>
                         {subject.issues.map((issue) => (
@@ -648,14 +632,4 @@ export async function reportHtml(report: Report) {
     </Markdown>,
   );
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mirai Academic Report</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#162a50;max-width:850px;margin:48px auto;padding:24px}header{border-bottom:3px solid #245bd7;padding-bottom:20px;margin-bottom:28px}h1{font-size:28px}article{overflow-wrap:anywhere}table{border-collapse:collapse;width:100%}td,th{border:1px solid #dce4f1;padding:8px;text-align:left}pre{overflow:auto;white-space:pre-wrap}@media print{body{margin:0;padding:10px;font-size:11pt}}</style></head><body><header><p>MIRAI TRACKER</p><h1>Academic report</h1><p>${escape(report.mode === 'ai' ? 'AI analysis — review suggestions before acting' : 'Data report')}${report.incomplete ? ' · INCOMPLETE RESPONSE' : ''}</p><p>${escape(report.generatedAt)}</p></header><article>${rendered}</article><footer><p>${escape(report.snapshot.coverage.note)}</p></footer></body></html>`;
-}
-async function downloadReport(report: Report) {
-  const url = URL.createObjectURL(
-    new Blob([await reportHtml(report)], { type: 'text/html;charset=utf-8' }),
-  );
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `mirai-academic-report-${report.generatedAt.slice(0, 10)}.html`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

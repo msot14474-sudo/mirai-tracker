@@ -1,3 +1,4 @@
+import { CalendarChangeReview } from './CalendarChangeReview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
@@ -16,14 +17,18 @@ export function TopicScheduleWorkspace({
   const offerings = useQuery({
     queryKey: ['topic-schedules', 'offerings', campusId],
     queryFn: () => topicScheduleApi.offerings(campusId),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   });
   const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
   const detail = useQuery({
     queryKey: ['topic-schedules', 'offering', selectedOfferingId],
     queryFn: () => topicScheduleApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   });
   const selectionIsLoading = offerings.isLoading;
 
@@ -154,6 +159,12 @@ function ScheduleDetail({
       <div className="empty-state compact-empty">
         <span>02</span>
         <h3>Lesson plan required</h3>
+        {canManageSessions && (
+          <CalendarChangeReview
+            sessions={detail.sessions}
+            onChanged={refresh}
+          />
+        )}
         <p>
           Upload your units, topics and planned hours in Lesson plans.
           {detail.sessions.length
@@ -174,6 +185,9 @@ function ScheduleDetail({
 
   return (
     <div className="schedule-detail">
+      {canManageSessions && (
+        <CalendarChangeReview sessions={detail.sessions} onChanged={refresh} />
+      )}
       <div className="schedule-version-bar">
         <div>
           <span className="status-pill active">
@@ -503,7 +517,9 @@ function SessionCapacityRow({
       <button
         className="text-button"
         type="submit"
-        disabled={session.hasLogs || mutation.isPending}
+        disabled={
+          session.hasLogs || mutation.isPending || session.needsCalendarReview
+        }
       >
         {mutation.isPending
           ? 'Updating…'

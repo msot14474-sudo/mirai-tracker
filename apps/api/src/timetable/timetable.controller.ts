@@ -17,7 +17,10 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
+import {
+  isoDateSchema,
+  uuidSchema,
+} from '../academic-calendar/academic-calendar.schemas';
 import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import {
@@ -112,6 +115,28 @@ export class TimetableController {
     return this.timetable.updateEntry(
       id(entryId),
       parse(updateTimetableEntrySchema, body),
+      user,
+    );
+  }
+
+  @Post('sessions/:sessionId/move')
+  @Roles(UserRole.CAMPUS_MANAGER)
+  moveSession(
+    @Param('sessionId') sessionId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.timetable.moveSession(
+      id(sessionId),
+      parse(
+        z.object({
+          date: isoDateSchema,
+          startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+          endTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+          reason: z.string().trim().min(1).max(1000),
+        }),
+        body,
+      ),
       user,
     );
   }

@@ -67,6 +67,15 @@ export class TopicScheduleController {
     );
   }
 
+  @Post('sessions/:sessionId/recovery-options')
+  @Roles(UserRole.FACULTY)
+  recoveryOptions(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.schedules.recoveryOptions(id(sessionId), user);
+  }
+
   @Post('sessions/:sessionId/move')
   @Roles(UserRole.FACULTY)
   move(
