@@ -1670,3 +1670,179 @@
     padding: 20px;
   }
 }
+
+/* Campus team: compact member directory with a clear campus boundary. */
+.campus-team-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.campus-team-heading h3 {
+  margin: 6px 0;
+  font-size: 22px;
+}
+.campus-team-heading p {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+  font-size: 14px;
+}
+.campus-team-counts {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.campus-team-counts > span {
+  display: grid;
+  gap: 4px;
+  padding: 12px 18px;
+  background: #f4f7fb;
+  border: 1px solid #e7edf4;
+  border-radius: 12px;
+  color: #62718a;
+  font-size: 12px;
+}
+.campus-team-counts strong {
+  color: #1b2d50;
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+}
+.campus-team-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 630px;
+  font-size: 14px;
+}
+.campus-team-table th {
+  padding: 12px 16px;
+  background: #f6f8fb;
+  text-align: left;
+  color: #66768e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.campus-team-table td {
+  padding: 18px 16px;
+  border-bottom: 1px solid #e8edf4;
+  vertical-align: middle;
+}
+.campus-team-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.team-member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 190px;
+}
+.team-member > div {
+  display: grid;
+  gap: 4px;
+}
+.team-member small {
+  font-size: 12px;
+  color: #64748b;
+}
+.team-avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  background: #edf2fa;
+  color: #315484;
+  border: 1px solid #dbe5f3;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.team-role {
+  display: inline-flex;
+  border-radius: 6px;
+  padding: 5px 9px;
+  background: #f1f4f8;
+  color: #50627a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.team-role.manager {
+  background: #edf2ff;
+  color: #35558d;
+}
+.team-assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.team-assignment {
+  color: #32465f;
+  font-size: 13px;
+}
+.team-assignment.pending,
+.team-scope {
+  color: #6c7c90;
+  font-size: 13px;
+}
+.plan-import-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.plan-import-choices > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #dce4ef;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.plan-import-choices > label.selected {
+  background: #f3f6fe;
+  border-color: #8ba5df;
+}
+.plan-import-choices input {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  flex: 0 0 16px;
+  margin-top: 3px;
+}
+.plan-import-choices span {
+  display: grid;
+  gap: 6px;
+}
+.plan-import-choices strong {
+  font-size: 14px;
+}
+.plan-import-choices small,
+.plan-upload-hint {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #65748c;
+  font-weight: 400;
+}
+.plan-preview {
+  max-height: 320px;
+  overflow: auto;
+}
+@media (max-width: 700px) {
+  .campus-team-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .campus-team-counts > span {
+    flex: 1;
+  }
+  .plan-import-choices {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campus-team-panel,
+.campus-assignment-panel {
+  margin-bottom: 20px;
+}

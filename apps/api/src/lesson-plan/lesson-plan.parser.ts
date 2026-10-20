@@ -24,6 +24,7 @@ type RawRow = { rowNumber: number; values: Record<string, string> };
 
 export async function parseLessonPlanFile(
   file: UploadedImportFile,
+  allowPartial = false,
 ): Promise<LessonPlanPreview> {
   const fileIssue = validateFile(file);
   if (fileIssue) return emptyPreview(file.originalname, [fileIssue]);
@@ -91,7 +92,7 @@ export async function parseLessonPlanFile(
     });
   }
 
-  validateStructure(rows, issues);
+  validateStructure(rows, issues, allowPartial);
   return {
     valid: rows.length > 0 && issues.length === 0,
     fileName: file.originalname,
@@ -115,7 +116,9 @@ function validateFile(file: UploadedImportFile) {
 async function excelRows(buffer: Buffer) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
-  const sheet = workbook.getWorksheet('Lesson Plan');
+  const sheet =
+    workbook.getWorksheet('Lesson Plan') ??
+    (workbook.worksheets.length === 1 ? workbook.worksheets[0] : undefined);
   if (!sheet)
     throw new Error('The workbook must contain a "Lesson Plan" sheet.');
   const rows: string[][] = [];
@@ -155,7 +158,9 @@ function mapRows(sourceRows: string[][]) {
     }
     seen.add(header);
   }
-  for (const column of lessonPlanColumns) {
+  for (const column of lessonPlanColumns.filter(
+    (c) => !['unit_description', 'topic_description', 'exam_names'].includes(c),
+  )) {
     if (!headers.includes(column)) {
       issues.push(
         issue(1, column, null, `Required column "${column}" is missing.`),
@@ -177,7 +182,11 @@ function mapRows(sourceRows: string[][]) {
   return { rows, issues };
 }
 
-function validateStructure(rows: LessonPlanRow[], issues: ImportIssue[]) {
+function validateStructure(
+  rows: LessonPlanRow[],
+  issues: ImportIssue[],
+  allowPartial: boolean,
+) {
   const units = new Map<number, { signature: string; rowNumber: number }>();
   const topics = new Set<string>();
   for (const row of rows) {
@@ -208,6 +217,7 @@ function validateStructure(rows: LessonPlanRow[], issues: ImportIssue[]) {
     }
     topics.add(topicKey);
   }
+  if (allowPartial) return;
   validateSequence(
     [...units.keys()],
     'unit_sequence',

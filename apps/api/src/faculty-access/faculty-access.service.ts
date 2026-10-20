@@ -255,6 +255,10 @@ export class FacultyAccessService {
           'Ask another administrator to change your role.',
         );
       }
+      if (input.role === UserRole.CAMPUS_MANAGER && !input.campusId)
+        throw new BadRequestException(
+          'Choose the campus this manager will be assigned to.',
+        );
       const globalRole =
         input.role === UserRole.ADMIN ||
         input.role === UserRole.PROGRAM_MANAGER;

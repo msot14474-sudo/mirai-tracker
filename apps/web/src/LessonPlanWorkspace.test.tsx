@@ -176,20 +176,29 @@ describe('LessonPlanWorkspace', () => {
 
   it('previews a valid file before importing a new version', async () => {
     const requests: string[] = [];
-    installFetchMock((url) => requests.push(url));
+    const uploads: FormData[] = [];
+    installFetchMock((url, init) => {
+      requests.push(url);
+      if (init?.body instanceof FormData) uploads.push(init.body);
+    });
     renderWorkspace();
-    await screen.findByText('Upload a new lesson-plan version');
-    fireEvent.click(screen.getByText('Upload a new lesson-plan version'));
+    await screen.findByText('Add topics or upload a lesson plan');
+    fireEvent.click(screen.getByText('Add topics or upload a lesson plan'));
     const input = await screen.findByLabelText('Lesson-plan file');
     const file = new File(['sample'], 'plan.csv', { type: 'text/csv' });
     fireEvent.change(input, { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
 
     expect(await screen.findByText('Ready to import')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Import new version' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add topics' }));
     await waitFor(() =>
       expect(requests.some((url) => url.endsWith('/import'))).toBe(true),
     );
+    expect(uploads).toHaveLength(2);
+    for (const upload of uploads) {
+      expect(upload.get('mode')).toBe('APPEND');
+      expect(upload.get('basePlanId')).toBe('plan-a');
+    }
   });
 
   it('submits topic duration edits and a changed exam scope', async () => {

@@ -409,6 +409,24 @@ describe('FacultyAccessService', () => {
     );
   });
 
+  it('requires an explicit campus when assigning a campus manager, even if the account had a campus', async () => {
+    userFindUnique.mockResolvedValue({
+      id: 'other-user',
+      name: 'Other',
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.FACULTY, campusId }],
+    });
+    access.isGlobalManager.mockReturnValue(true);
+    await expect(
+      service().updateAccount(
+        'other-user',
+        { role: UserRole.CAMPUS_MANAGER },
+        programManager,
+      ),
+    ).rejects.toThrow('Choose the campus');
+    expect(userUpdate).not.toHaveBeenCalled();
+  });
+
   it('replaces global access with a campus role and blocks campus-manager promotions', async () => {
     const target = {
       id: 'other-user',

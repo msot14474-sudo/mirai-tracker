@@ -179,10 +179,14 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
       >
         <summary>
           {detail.plan
-            ? 'Upload a new lesson-plan version'
+            ? 'Add topics or upload a lesson plan'
             : 'Upload your lesson plan'}
         </summary>
-        <PlanUpload offeringId={detail.id} onImported={refresh} />
+        <PlanUpload
+          offeringId={detail.id}
+          currentPlanId={detail.plan?.id}
+          onImported={refresh}
+        />
       </details>
       {detail.plan ? (
         <>
@@ -258,21 +262,34 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
 
 function PlanUpload({
   offeringId,
+  currentPlanId,
   onImported,
 }: {
   offeringId: string;
+  currentPlanId?: string;
   onImported: () => Promise<void>;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<'APPEND' | 'REPLACE'>('APPEND');
+  const [inputKey, setInputKey] = useState(0);
   const [preview, setPreview] = useState<LessonPlanPreview | null>(null);
   const previewMutation = useMutation({
-    mutationFn: () => lessonPlanApi.preview(offeringId, file!),
+    mutationFn: () =>
+      lessonPlanApi.preview(offeringId, file!, {
+        mode,
+        basePlanId: currentPlanId,
+      }),
     onSuccess: setPreview,
   });
   const importMutation = useMutation({
-    mutationFn: () => lessonPlanApi.import(offeringId, file!),
+    mutationFn: () =>
+      lessonPlanApi.import(offeringId, file!, {
+        mode,
+        basePlanId: preview?.basePlanId ?? currentPlanId,
+      }),
     onSuccess: async () => {
       setFile(null);
+      setInputKey((key) => key + 1);
       setPreview(null);
       await onImported();
     },
@@ -282,18 +299,77 @@ function PlanUpload({
     <div className="plan-upload-card">
       <div>
         <h3>Upload lesson plan</h3>
-        <p>CSV or Excel · planned time in whole minutes</p>
+        <p>
+          Upload the whole semester or add a few topics at a time. Teaching
+          dates follow your assigned timetable.
+        </p>
       </div>
+      <div
+        className="plan-import-choices"
+        role="group"
+        aria-label="Lesson-plan upload mode"
+      >
+        <label className={mode === 'APPEND' ? 'selected' : ''}>
+          <input
+            type="radio"
+            name="planImportMode"
+            value="APPEND"
+            checked={mode === 'APPEND'}
+            disabled={previewMutation.isPending || importMutation.isPending}
+            onChange={() => {
+              setMode('APPEND');
+              setPreview(null);
+              previewMutation.reset();
+              importMutation.reset();
+            }}
+          />
+          <span>
+            <strong>Add topics to existing plan</strong>
+            <small>
+              Start with a partial file and add more later. Existing topics,
+              progress and logs stay in place.
+            </small>
+          </span>
+        </label>
+        <label className={mode === 'REPLACE' ? 'selected' : ''}>
+          <input
+            type="radio"
+            name="planImportMode"
+            value="REPLACE"
+            checked={mode === 'REPLACE'}
+            disabled={previewMutation.isPending || importMutation.isPending}
+            onChange={() => {
+              setMode('REPLACE');
+              setPreview(null);
+              previewMutation.reset();
+              importMutation.reset();
+            }}
+          />
+          <span>
+            <strong>New full-plan version</strong>
+            <small>Create a replacement draft before teaching starts.</small>
+          </span>
+        </label>
+      </div>
+      <p className="plan-upload-hint">
+        For additions, keep the original unit and topic numbers. New topics can
+        continue from any number; identical rows are skipped. Planned time is in
+        whole minutes.
+      </p>
       <label className="file-picker compact-picker">
         <span className="file-picker-label">Lesson-plan file</span>
         <span className="file-picker-control">
           <input
             type="file"
+            key={inputKey}
+            disabled={previewMutation.isPending || importMutation.isPending}
             aria-label="Lesson-plan file"
             accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(event) => {
               setFile(event.target.files?.[0] ?? null);
               setPreview(null);
+              previewMutation.reset();
+              importMutation.reset();
             }}
           />
           <span className="file-picker-button" aria-hidden="true">
@@ -307,17 +383,28 @@ function PlanUpload({
       <div className="upload-actions">
         <button
           className="secondary-button"
-          disabled={!file || previewMutation.isPending}
+          disabled={
+            !file || previewMutation.isPending || importMutation.isPending
+          }
           onClick={() => previewMutation.mutate()}
         >
           {previewMutation.isPending ? 'Checking…' : 'Preview'}
         </button>
         <button
           className="primary-button"
-          disabled={!file || !preview?.valid || importMutation.isPending}
+          disabled={
+            !file ||
+            !preview?.valid ||
+            previewMutation.isPending ||
+            importMutation.isPending
+          }
           onClick={() => importMutation.mutate()}
         >
-          {importMutation.isPending ? 'Importing…' : 'Import new version'}
+          {importMutation.isPending
+            ? 'Saving…'
+            : mode === 'APPEND'
+              ? 'Add topics'
+              : 'Import new version'}
         </button>
       </div>
       {preview ? (
@@ -329,7 +416,13 @@ function PlanUpload({
             {preview.counts.units} units · {preview.counts.topics} topics ·{' '}
             {formatTeachingTime(preview.counts.totalPlannedMinutes)}
           </span>
-          {preview.issues.slice(0, 5).map((issue, index) => (
+          {preview.changes && (
+            <span>
+              {preview.changes.added} new topics · {preview.changes.unchanged}{' '}
+              already saved
+            </span>
+          )}
+          {preview.issues.map((issue, index) => (
             <small key={`${issue.rowNumber}-${issue.columnName}-${index}`}>
               Row {issue.rowNumber || 'file'} · {issue.columnName ?? 'file'}:{' '}
               {issue.errorMessage}
@@ -337,6 +430,18 @@ function PlanUpload({
           ))}
         </div>
       ) : null}
+      {importMutation.isSuccess && (
+        <p className="form-success" role="status">
+          {importMutation.data.added !== undefined
+            ? `${importMutation.data.added} topics added. ${importMutation.data.unchanged ?? 0} existing topics preserved.`
+            : 'Lesson plan saved. Activate the draft when you are ready.'}
+        </p>
+      )}
+      {importMutation.data?.warnings?.map((warning) => (
+        <p className="inline-notice" role="status" key={warning}>
+          {warning}
+        </p>
+      ))}
       {previewMutation.error || importMutation.error ? (
         <p className="form-error" role="alert">
           {previewMutation.error?.message ?? importMutation.error?.message}

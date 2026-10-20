@@ -205,10 +205,13 @@ function setup() {
   const transaction = {
     lessonPlan: {
       aggregate: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    topic: { count: jest.fn().mockResolvedValue(0), create: jest.fn() },
+    unit: { create: jest.fn() },
     examScope: { createMany: jest.fn(), deleteMany: jest.fn() },
     importJob: { create: jest.fn() },
     subjectOffering: { update: jest.fn() },
@@ -342,4 +345,136 @@ it('intersects the selected campus with faculty permissions', async () => {
       },
     }),
   );
+});
+
+function activePlan() {
+  return {
+    id: 'plan-existing',
+    version: 1,
+    status: 'ACTIVE',
+    units: [
+      {
+        id: 'unit-existing',
+        sequence: 1,
+        title: 'Unit one',
+        description: null,
+        topics: [
+          {
+            id: 'topic-existing',
+            sequence: 1,
+            title: 'Arrays',
+            description: null,
+            plannedMinutes: 60,
+            currentCompletionPercentage: 75,
+            examScopes: [{ examWindow: { name: 'Sample Mid-term 2026' } }],
+          },
+        ],
+      },
+    ],
+  };
+}
+function partialFile(rows = '1,Unit one,7,Trees,90') {
+  const buffer = Buffer.from(
+    'unit_sequence,unit_title,topic_sequence,topic_title,planned_minutes\n' +
+      rows,
+  );
+  return {
+    originalname: 'partial.csv',
+    mimetype: 'text/csv',
+    size: buffer.length,
+    buffer,
+  };
+}
+function appendSetup() {
+  const context = setup();
+  const current = activePlan();
+  context.prisma.subjectOffering.findUnique.mockResolvedValue({
+    ...offering(),
+    lessonPlans: [current],
+  });
+  context.transaction.lessonPlan.findFirst.mockResolvedValue(current);
+  context.transaction.topic.create.mockResolvedValue({ id: 'topic-new' });
+  context.prisma.$transaction.mockImplementation(
+    async (callback: (client: unknown) => unknown) =>
+      callback(context.transaction),
+  );
+  return { ...context, current };
+}
+it('adds a later partial upload to an active plan without replacing existing progress or topic IDs', async () => {
+  const { service, transaction, current } = appendSetup();
+  const result = await service.import('offering-a', partialFile(), faculty, {
+    mode: 'APPEND',
+    basePlanId: current.id,
+  });
+  expect(result).toMatchObject({
+    planId: current.id,
+    version: 1,
+    added: 1,
+    unchanged: 0,
+  });
+  expect(transaction.topic.create).toHaveBeenCalledWith({
+    data: {
+      unitId: 'unit-existing',
+      sequence: 7,
+      title: 'Trees',
+      description: null,
+      plannedMinutes: 90,
+    },
+  });
+  expect(transaction.lessonPlan.create).not.toHaveBeenCalled();
+  expect(current.units[0]!.topics[0]).toMatchObject({
+    id: 'topic-existing',
+    currentCompletionPercentage: 75,
+  });
+});
+it('skips identical existing topics when a partial file is uploaded again', async () => {
+  const { service, transaction } = appendSetup();
+  const result = await service.import(
+    'offering-a',
+    partialFile('1,Unit one,1,Arrays,60'),
+    faculty,
+    { mode: 'APPEND' },
+  );
+  expect(result).toMatchObject({ added: 0, unchanged: 1 });
+  expect(transaction.topic.create).not.toHaveBeenCalled();
+  expect(transaction.importJob.create).not.toHaveBeenCalled();
+});
+it('rejects conflicting partial rows before writing any topics', async () => {
+  const { service, transaction } = appendSetup();
+  await expect(
+    service.import(
+      'offering-a',
+      partialFile('1,Unit one,7,Trees,90\n1,Unit one,1,Changed,60'),
+      faculty,
+      { mode: 'APPEND' },
+    ),
+  ).rejects.toThrow('Some rows conflict');
+  expect(transaction.topic.create).not.toHaveBeenCalled();
+});
+it('rejects a stale preview when another plan became current', async () => {
+  const { service, transaction } = appendSetup();
+  transaction.lessonPlan.findFirst.mockResolvedValue({
+    ...activePlan(),
+    id: 'newer-plan',
+  });
+  await expect(
+    service.import('offering-a', partialFile(), faculty, {
+      mode: 'APPEND',
+      basePlanId: 'plan-existing',
+    }),
+  ).rejects.toThrow('The lesson plan changed');
+  expect(transaction.topic.create).not.toHaveBeenCalled();
+});
+it('blocks replacement and activation that would hide recorded teaching progress', async () => {
+  const { service, prisma, transaction } = appendSetup();
+  prisma.topic.count.mockResolvedValue(1);
+  await expect(
+    service.import('offering-a', csv(''), faculty, { mode: 'REPLACE' }),
+  ).rejects.toThrow('recorded teaching progress');
+  prisma.lessonPlan.findUnique.mockResolvedValue(plan());
+  transaction.topic.count.mockResolvedValue(1);
+  await expect(service.activate('plan-a', faculty)).rejects.toThrow(
+    'recorded teaching progress',
+  );
+  expect(transaction.lessonPlan.updateMany).not.toHaveBeenCalled();
 });

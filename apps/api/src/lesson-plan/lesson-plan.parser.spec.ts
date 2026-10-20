@@ -110,3 +110,29 @@ it('reads more than 1,000 topics without truncating the plan', async () => {
   expect(preview.rows).toHaveLength(1001);
   expect(preview.rows[1000]?.topicTitle).toBe('Topic 1001');
 });
+
+it('accepts partial uploads with original later topic numbers and no optional columns', async () => {
+  const preview = await parseLessonPlanFile(
+    file(
+      'partial.csv',
+      'unit_sequence,unit_title,topic_sequence,topic_title,planned_minutes\n3,Advanced,7,Trees,90\n3,Advanced,9,Graphs,120',
+    ),
+    true,
+  );
+  expect(preview.valid).toBe(true);
+  expect(preview.rows.map((r) => r.topicSequence)).toEqual([7, 9]);
+  expect(preview.rows[0]?.examNames).toEqual([]);
+});
+it('still rejects repeated topic numbers in partial mode', async () => {
+  const preview = await parseLessonPlanFile(
+    file(
+      'partial.csv',
+      `${header()}\n3,Advanced,,7,Trees,,90,\n3,Advanced,,7,Graphs,,120,`,
+    ),
+    true,
+  );
+  expect(preview.valid).toBe(false);
+  expect(preview.issues.some((i) => i.errorMessage.includes('unique'))).toBe(
+    true,
+  );
+});

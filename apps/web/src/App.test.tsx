@@ -515,7 +515,7 @@ describe('App authentication', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'User access' }));
-    expect(await screen.findByRole('heading', {name: 'Campus team and subject assignments'})).toBeInTheDocument();
+    expect(await screen.findByRole('heading', {name: 'User access'})).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Add new'})).not.toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Timetable'})).not.toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Lesson plans'})).not.toBeInTheDocument();

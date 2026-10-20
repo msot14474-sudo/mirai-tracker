@@ -87,3 +87,44 @@ it('rejects unclear period headings instead of guessing class hours', async () =
   expect(result.rows).toEqual([]);
   expect(result.errors).toHaveLength(2);
 });
+
+it('ignores Read Me and instruction tabs while importing all timetable sheets', async () => {
+  const book = new ExcelJS.Workbook();
+  for (const name of ['Read Me', 'README', '01_Read-Me', 'Instructions']) {
+    const help = book.addWorksheet(name);
+    help.addRow(['How to upload this file']);
+    help.getCell('B2').value = { formula: '1+1' }; // Not evaluated as timetable data.
+  }
+  for (const day of ['Monday', 'Thursday']) {
+    book.addWorksheet(day).addRows([
+      ['Subject', 'Day', 'Start time', 'End time'],
+      ['DSA', day, '09:00', '10:00'],
+    ]);
+  }
+  const result = await parseBatchTimetable(
+    {
+      originalname: 'weekly.xlsx',
+      buffer: Buffer.from(await book.xlsx.writeBuffer()),
+    } as never,
+    '2026-08-08',
+    '2026-12-08',
+  );
+  expect(result.errors).toEqual([]);
+  expect(result.rows.map((r) => r.weekday)).toEqual([1, 4]);
+});
+it('reports no classes when a workbook contains only a Read Me tab', async () => {
+  const book = new ExcelJS.Workbook();
+  book.addWorksheet('Read Me').addRow(['Upload a weekly timetable']);
+  const result = await parseBatchTimetable(
+    {
+      originalname: 'weekly.xlsx',
+      buffer: Buffer.from(await book.xlsx.writeBuffer()),
+    } as never,
+    '2026-08-08',
+    '2026-12-08',
+  );
+  expect(result.rows).toEqual([]);
+  expect(result.errors).toEqual([
+    { source: 'File', message: 'No weekly classes found in this file.' },
+  ]);
+});

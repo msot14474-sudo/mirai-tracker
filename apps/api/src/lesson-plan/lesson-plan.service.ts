@@ -1,3 +1,4 @@
+import { additionsFor } from './lesson-plan.merge';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
 import {
   AuditAction,
@@ -20,6 +21,7 @@ import { PrismaService } from '../database/prisma.service';
 import { parseLessonPlanFile } from './lesson-plan.parser';
 import {
   ExamScopeInput,
+  LessonPlanImportOptions,
   UpdateTopicInput,
   UpdateUnitInput,
 } from './lesson-plan.schemas';
@@ -115,23 +117,35 @@ export class LessonPlanService {
     offeringId: string,
     file: UploadedImportFile,
     user: AuthenticatedUser,
+    options: LessonPlanImportOptions = { mode: 'REPLACE' },
   ) {
     await this.access.assertCanManageOffering(user, offeringId);
     const offering = await this.requireOffering(offeringId);
-    const preview = await parseLessonPlanFile(file);
-    this.validateExamNames(preview, offering.batch.semester.examWindows);
-    return publicPreview(preview);
+    const preview = await this.readUpload(offering, file, options);
+    const base = offering.lessonPlans.find(
+      (p) => p.status === 'ACTIVE' || p.status === 'DRAFT',
+    );
+    const changes =
+      options.mode === 'APPEND' ? additionsFor(preview, base) : null;
+    return {
+      ...publicPreview(preview),
+      mode: options.mode,
+      basePlanId: base?.id,
+      changes: changes
+        ? { added: changes.added, unchanged: changes.unchanged }
+        : undefined,
+    };
   }
 
   async import(
     offeringId: string,
     file: UploadedImportFile,
     user: AuthenticatedUser,
+    options: LessonPlanImportOptions = { mode: 'REPLACE' },
   ) {
     await this.access.assertCanManageOffering(user, offeringId);
     const offering = await this.requireOffering(offeringId);
-    const preview = await parseLessonPlanFile(file);
-    this.validateExamNames(preview, offering.batch.semester.examWindows);
+    const preview = await this.readUpload(offering, file, options);
     if (!preview.valid) {
       throw new BadRequestException({
         message: 'Fix the lesson-plan file before importing it.',
@@ -139,101 +153,127 @@ export class LessonPlanService {
       });
     }
 
-    const created = await this.prisma.$transaction(
-      async (transaction) => {
-        const latest = await transaction.lessonPlan.aggregate({
-          where: { offeringId },
-          _max: { version: true },
-        });
-        const plan = await transaction.lessonPlan.create({
-          data: {
-            offeringId,
-            version: (latest._max.version ?? 0) + 1,
-            status: LessonPlanStatus.DRAFT,
-            uploadedById: user.id,
-            fileName: file.originalname.slice(0, 255),
-            units: {
-              create: groupUnits(preview.rows).map((unit) => ({
-                sequence: unit.sequence,
-                title: unit.title,
-                description: unit.description,
-                topics: {
-                  create: unit.topics.map((topic) => ({
-                    sequence: topic.topicSequence,
-                    title: topic.topicTitle,
-                    description: topic.topicDescription,
-                    plannedMinutes: topic.plannedMinutes,
-                  })),
-                },
-              })),
-            },
-          },
-          include: { units: { include: { topics: true } } },
-        });
-        const examIds = new Map(
-          offering.batch.semester.examWindows.map((exam) => [
-            exam.name.toLocaleLowerCase('en-US'),
-            exam.id,
-          ]),
-        );
-        const topicIds = new Map(
-          plan.units.flatMap((unit) =>
-            unit.topics.map(
-              (topic) =>
-                [`${unit.sequence}:${topic.sequence}`, topic.id] as const,
-            ),
-          ),
-        );
-        const scopes = preview.rows.flatMap((row) =>
-          row.examNames.map((name) => ({
-            examWindowId: requiredMapValue(
-              examIds,
-              name.toLocaleLowerCase('en-US'),
-            ),
-            topicId: requiredMapValue(
-              topicIds,
-              `${row.unitSequence}:${row.topicSequence}`,
-            ),
-          })),
-        );
-        if (scopes.length) {
-          await transaction.examScope.createMany({
-            data: scopes,
-            skipDuplicates: true,
+    if (
+      options.mode === 'APPEND' &&
+      offering.lessonPlans.some(
+        (p) => p.status === 'ACTIVE' || p.status === 'DRAFT',
+      )
+    ) {
+      return this.append(offering, preview, file, user, options);
+    }
+
+    const created = await this.prisma
+      .$transaction(
+        async (transaction) => {
+          if (offering.lessonPlans.length)
+            await this.assertReplacementSafe(offeringId, transaction);
+          const latest = await transaction.lessonPlan.aggregate({
+            where: { offeringId },
+            _max: { version: true },
           });
-        }
-        const job = await transaction.importJob.create({
-          data: {
-            type: ImportType.LESSON_PLANS,
-            status: JobStatus.COMPLETED,
-            uploadedById: user.id,
-            fileName: file.originalname.slice(0, 255),
-            totalRows: preview.counts.rows,
-            successfulRows: preview.counts.rows,
-            failedRows: 0,
-            startedAt: new Date(),
-            completedAt: new Date(),
-          },
-        });
-        await transaction.auditEvent.create({
-          data: {
-            actorId: user.id,
-            campusId: offering.batch.semester.campus.id,
-            action: AuditAction.IMPORT,
-            entityType: 'LessonPlan',
-            entityId: plan.id,
-            after: preview.counts,
-            metadata: {
+          const plan = await transaction.lessonPlan.create({
+            data: {
               offeringId,
-              importJobId: job.id,
-              fileName: file.originalname,
+              version: (latest._max.version ?? 0) + 1,
+              status: LessonPlanStatus.DRAFT,
+              uploadedById: user.id,
+              fileName: file.originalname.slice(0, 255),
+              units: {
+                create: groupUnits(preview.rows).map((unit) => ({
+                  sequence: unit.sequence,
+                  title: unit.title,
+                  description: unit.description,
+                  topics: {
+                    create: unit.topics.map((topic) => ({
+                      sequence: topic.topicSequence,
+                      title: topic.topicTitle,
+                      description: topic.topicDescription,
+                      plannedMinutes: topic.plannedMinutes,
+                    })),
+                  },
+                })),
+              },
             },
-          },
-        });
-        return plan;
-      },
-      { maxWait: 10_000, timeout: 30_000 },
-    );
+            include: { units: { include: { topics: true } } },
+          });
+          const examIds = new Map(
+            offering.batch.semester.examWindows.map((exam) => [
+              exam.name.toLocaleLowerCase('en-US'),
+              exam.id,
+            ]),
+          );
+          const topicIds = new Map(
+            plan.units.flatMap((unit) =>
+              unit.topics.map(
+                (topic) =>
+                  [`${unit.sequence}:${topic.sequence}`, topic.id] as const,
+              ),
+            ),
+          );
+          const scopes = preview.rows.flatMap((row) =>
+            row.examNames.map((name) => ({
+              examWindowId: requiredMapValue(
+                examIds,
+                name.toLocaleLowerCase('en-US'),
+              ),
+              topicId: requiredMapValue(
+                topicIds,
+                `${row.unitSequence}:${row.topicSequence}`,
+              ),
+            })),
+          );
+          if (scopes.length) {
+            await transaction.examScope.createMany({
+              data: scopes,
+              skipDuplicates: true,
+            });
+          }
+          const job = await transaction.importJob.create({
+            data: {
+              type: ImportType.LESSON_PLANS,
+              status: JobStatus.COMPLETED,
+              uploadedById: user.id,
+              fileName: file.originalname.slice(0, 255),
+              totalRows: preview.counts.rows,
+              successfulRows: preview.counts.rows,
+              failedRows: 0,
+              startedAt: new Date(),
+              completedAt: new Date(),
+            },
+          });
+          await transaction.auditEvent.create({
+            data: {
+              actorId: user.id,
+              campusId: offering.batch.semester.campus.id,
+              action: AuditAction.IMPORT,
+              entityType: 'LessonPlan',
+              entityId: plan.id,
+              after: preview.counts,
+              metadata: {
+                offeringId,
+                importJobId: job.id,
+                fileName: file.originalname,
+              },
+            },
+          });
+          return plan;
+        },
+        {
+          maxWait: 10_000,
+          timeout: 30_000,
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        },
+      )
+      .catch((error: unknown) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          ['P2002', 'P2034'].includes(error.code)
+        )
+          throw new ConflictException(
+            'The lesson plan changed during this upload. Refresh and preview your file again.',
+          );
+        throw error;
+      });
 
     return {
       planId: created.id,
@@ -357,43 +397,249 @@ export class LessonPlanService {
     if (plan.status === LessonPlanStatus.ACTIVE)
       return { id: plan.id, status: plan.status };
     assertDraft(plan.status);
-    const updated = await this.prisma.$transaction(async (transaction) => {
-      await transaction.lessonPlan.updateMany({
-        where: {
-          offeringId: plan.offeringId,
-          status: LessonPlanStatus.ACTIVE,
-          id: { not: plan.id },
-        },
-        data: { status: LessonPlanStatus.SUPERSEDED },
-      });
-      const active = await transaction.lessonPlan.update({
-        where: { id: plan.id },
-        data: {
-          status: LessonPlanStatus.ACTIVE,
-          approvedById: user.id,
-          approvedAt: new Date(),
-        },
-      });
-      await transaction.subjectOffering.update({
-        where: { id: plan.offeringId },
-        data: { status: SubjectOfferingStatus.ACTIVE },
-      });
-      await transaction.auditEvent.create({
-        data: {
-          actorId: user.id,
-          campusId: plan.offering.batch.semester.campusId,
-          action: AuditAction.UPDATE,
-          entityType: 'LessonPlan',
-          entityId: plan.id,
-          before: { status: plan.status },
-          after: { status: LessonPlanStatus.ACTIVE },
-          metadata: { offeringId: plan.offeringId, version: plan.version },
-        },
-      });
-      return active;
-    });
+    const updated = await this.prisma.$transaction(
+      async (transaction) => {
+        await this.assertReplacementSafe(plan.offeringId, transaction, plan.id);
+        await transaction.lessonPlan.updateMany({
+          where: {
+            offeringId: plan.offeringId,
+            status: LessonPlanStatus.ACTIVE,
+            id: { not: plan.id },
+          },
+          data: { status: LessonPlanStatus.SUPERSEDED },
+        });
+        const active = await transaction.lessonPlan.update({
+          where: { id: plan.id },
+          data: {
+            status: LessonPlanStatus.ACTIVE,
+            approvedById: user.id,
+            approvedAt: new Date(),
+          },
+        });
+        await transaction.subjectOffering.update({
+          where: { id: plan.offeringId },
+          data: { status: SubjectOfferingStatus.ACTIVE },
+        });
+        await transaction.auditEvent.create({
+          data: {
+            actorId: user.id,
+            campusId: plan.offering.batch.semester.campusId,
+            action: AuditAction.UPDATE,
+            entityType: 'LessonPlan',
+            entityId: plan.id,
+            before: { status: plan.status },
+            after: { status: LessonPlanStatus.ACTIVE },
+            metadata: { offeringId: plan.offeringId, version: plan.version },
+          },
+        });
+        return active;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     await this.schedules.calculate(plan.offeringId, {}, user);
     return { id: updated.id, status: updated.status };
+  }
+
+  private async assertReplacementSafe(
+    offeringId: string,
+    db: Prisma.TransactionClient | PrismaService,
+    exceptPlanId?: string,
+  ) {
+    const recorded = await db.topic.count({
+      where: {
+        unit: {
+          lessonPlan: {
+            offeringId,
+            status: 'ACTIVE',
+            ...(exceptPlanId ? { id: { not: exceptPlanId } } : {}),
+          },
+        },
+        OR: [
+          { currentCompletionPercentage: { gt: 0 } },
+          { status: { not: 'NOT_STARTED' } },
+          { sessionUpdates: { some: {} } },
+          { carryForwardLogs: { some: {} } },
+        ],
+      },
+    });
+    if (recorded)
+      throw new ConflictException(
+        'This subject already has recorded teaching progress. Choose “Add topics to existing plan” to preserve its topics, exam scope and class logs.',
+      );
+  }
+
+  private async readUpload(
+    offering: Awaited<ReturnType<LessonPlanService['requireOffering']>>,
+    file: UploadedImportFile,
+    options: LessonPlanImportOptions,
+  ) {
+    const preview = await parseLessonPlanFile(file, options.mode === 'APPEND');
+    this.validateExamNames(preview, offering.batch.semester.examWindows);
+    const base = offering.lessonPlans.find(
+      (p) => p.status === 'ACTIVE' || p.status === 'DRAFT',
+    );
+    if (options.basePlanId && options.basePlanId !== base?.id)
+      throw new ConflictException(
+        'The lesson plan changed since this preview. Refresh and preview your file again.',
+      );
+    if (options.mode === 'REPLACE' && offering.lessonPlans.length)
+      await this.assertReplacementSafe(offering.id, this.prisma);
+    return preview;
+  }
+
+  private async append(
+    offering: Awaited<ReturnType<LessonPlanService['requireOffering']>>,
+    preview: LessonPlanPreview,
+    file: UploadedImportFile,
+    user: AuthenticatedUser,
+    options: LessonPlanImportOptions,
+  ) {
+    const base = offering.lessonPlans.find(
+      (p) => p.status === 'ACTIVE' || p.status === 'DRAFT',
+    )!;
+    let result;
+    try {
+      result = await this.prisma.$transaction(
+        async (tx) => {
+          const current = await tx.lessonPlan.findFirst({
+            where: {
+              offeringId: offering.id,
+              status: { in: ['ACTIVE', 'DRAFT'] },
+            },
+            orderBy: { version: 'desc' },
+            include: {
+              units: {
+                include: {
+                  topics: {
+                    include: {
+                      examScopes: {
+                        include: { examWindow: { select: { name: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+          if (!current || current.id !== (options.basePlanId ?? base.id))
+            throw new ConflictException(
+              'The lesson plan changed. Preview your file again before adding topics.',
+            );
+          const checked = { ...preview, issues: [...preview.issues] };
+          const changes = additionsFor(checked, current);
+          if (!checked.valid)
+            throw new BadRequestException({
+              message:
+                'Some rows conflict with the current lesson plan. Preview the file again.',
+              preview: publicPreview(checked),
+            });
+          for (const group of groupUnits(changes.rows)) {
+            const existing = current.units.find(
+              (u) => u.sequence === group.sequence,
+            );
+            const unit =
+              existing ??
+              (await tx.unit.create({
+                data: {
+                  lessonPlanId: current.id,
+                  sequence: group.sequence,
+                  title: group.title,
+                  description: group.description,
+                },
+              }));
+            for (const row of group.topics) {
+              const topic = await tx.topic.create({
+                data: {
+                  unitId: unit.id,
+                  sequence: row.topicSequence,
+                  title: row.topicTitle,
+                  description: row.topicDescription,
+                  plannedMinutes: row.plannedMinutes,
+                },
+              });
+              if (row.examNames.length)
+                await tx.examScope.createMany({
+                  data: row.examNames.map((name) => ({
+                    topicId: topic.id,
+                    examWindowId: offering.batch.semester.examWindows.find(
+                      (e) => e.name.toLowerCase() === name.toLowerCase(),
+                    )!.id,
+                  })),
+                  skipDuplicates: true,
+                });
+            }
+          }
+          if (changes.added) {
+            await tx.lessonPlan.update({
+              where: { id: current.id },
+              data: { updatedAt: new Date() },
+            });
+            await tx.importJob.create({
+              data: {
+                type: ImportType.LESSON_PLANS,
+                status: JobStatus.COMPLETED,
+                uploadedById: user.id,
+                fileName: file.originalname.slice(0, 255),
+                totalRows: preview.counts.rows,
+                successfulRows: preview.counts.rows,
+                failedRows: 0,
+                startedAt: new Date(),
+                completedAt: new Date(),
+              },
+            });
+            await tx.auditEvent.create({
+              data: {
+                actorId: user.id,
+                campusId: offering.batch.semester.campus.id,
+                action: AuditAction.IMPORT,
+                entityType: 'LessonPlan',
+                entityId: current.id,
+                after: {
+                  addedTopics: changes.added,
+                  unchangedTopics: changes.unchanged,
+                },
+                metadata: {
+                  mode: 'APPEND',
+                  fileName: file.originalname,
+                  offeringId: offering.id,
+                },
+              },
+            });
+          }
+          return {
+            planId: current.id,
+            version: current.version,
+            added: changes.added,
+            unchanged: changes.unchanged,
+          };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10000,
+          timeout: 30000,
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P2002', 'P2034'].includes(error.code)
+      )
+        throw new ConflictException(
+          'The plan was updated by another upload. Preview your file again; already saved topics will be skipped.',
+        );
+      throw error;
+    }
+    const warnings: string[] = [];
+    if (result.added) {
+      try {
+        await this.schedules.calculate(offering.id, {}, user);
+      } catch {
+        warnings.push(
+          'Topics were saved. Teaching dates could not be recalculated yet; use Recalculate dates in Planned dates.',
+        );
+      }
+    }
+    return { ...result, preview: publicPreview(preview), warnings };
   }
 
   private offeringScope(

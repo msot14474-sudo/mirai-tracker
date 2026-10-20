@@ -20,6 +20,7 @@ import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import {
   examScopeSchema,
+  lessonPlanImportOptionsSchema,
   updateTopicSchema,
   updateUnitSchema,
 } from './lesson-plan.schemas';
@@ -89,8 +90,14 @@ export class LessonPlanController {
     @Param('offeringId') offeringId: string,
     @UploadedFile() file: UploadedImportFile | undefined,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
   ) {
-    return this.plans.preview(id(offeringId), requiredFile(file), user);
+    return this.plans.preview(
+      id(offeringId),
+      requiredFile(file),
+      user,
+      parse(lessonPlanImportOptionsSchema, body ?? {}),
+    );
   }
 
   @Post('offerings/:offeringId/import')
@@ -100,8 +107,14 @@ export class LessonPlanController {
     @Param('offeringId') offeringId: string,
     @UploadedFile() file: UploadedImportFile | undefined,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
   ) {
-    return this.plans.import(id(offeringId), requiredFile(file), user);
+    return this.plans.import(
+      id(offeringId),
+      requiredFile(file),
+      user,
+      parse(lessonPlanImportOptionsSchema, body ?? {}),
+    );
   }
 
   @Patch('units/:unitId')

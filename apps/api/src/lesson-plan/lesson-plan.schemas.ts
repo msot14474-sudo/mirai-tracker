@@ -37,3 +37,11 @@ export const examScopeSchema = z.object({
 export type UpdateUnitInput = z.infer<typeof updateUnitSchema>;
 export type UpdateTopicInput = z.infer<typeof updateTopicSchema>;
 export type ExamScopeInput = z.infer<typeof examScopeSchema>;
+
+export const lessonPlanImportOptionsSchema = z.object({
+  mode: z.enum(['APPEND', 'REPLACE']).default('REPLACE'),
+  basePlanId: z.string().uuid().optional(),
+});
+export type LessonPlanImportOptions = z.infer<
+  typeof lessonPlanImportOptionsSchema
+>;

@@ -189,6 +189,15 @@ export async function parseBatchTimetable(
   const rows: TimetableImportRow[] = [];
   const errors: { source: string; message: string }[] = [];
   for (const sheet of workbook.worksheets) {
+    // Workbook guidance is not a timetable. Skip before looking at any cells.
+    const sheetName = normalize(sheet.name).replace(/^\d+/, '');
+    if (
+      /^readme/.test(sheetName) ||
+      ['instruction', 'instructions', 'userguide', 'howtouse'].includes(
+        sheetName,
+      )
+    )
+      continue;
     if (!sheet.actualRowCount) continue;
     let header = 0;
     let columns: Record<string, number> = {};

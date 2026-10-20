@@ -24,6 +24,9 @@ export type LessonPlanOffering = {
 
 export type LessonPlanPreview = {
   valid: boolean;
+  mode?: 'APPEND' | 'REPLACE';
+  basePlanId?: string;
+  changes?: { added: number; unchanged: number };
   fileName: string;
   counts: {
     rows: number;
@@ -129,9 +132,21 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function upload<T>(path: string, file: File) {
+export type PlanImportOptions = {
+  mode: 'APPEND' | 'REPLACE';
+  basePlanId?: string;
+};
+async function upload<T>(
+  path: string,
+  file: File,
+  options?: PlanImportOptions,
+) {
   const body = new FormData();
   body.append('file', file);
+  if (options) {
+    body.append('mode', options.mode);
+    if (options.basePlanId) body.append('basePlanId', options.basePlanId);
+  }
   return api<T>(path, { method: 'POST', body });
 }
 
@@ -142,13 +157,18 @@ export const lessonPlanApi = {
     ),
   offering: (offeringId: string) =>
     api<LessonPlanDetail>(`/lesson-plans/offerings/${offeringId}`),
-  preview: (offeringId: string, file: File) =>
+  preview: (offeringId: string, file: File, options?: PlanImportOptions) =>
     upload<LessonPlanPreview>(
       `/lesson-plans/offerings/${offeringId}/preview`,
       file,
+      options,
     ),
-  import: (offeringId: string, file: File) =>
-    upload(`/lesson-plans/offerings/${offeringId}/import`, file),
+  import: (offeringId: string, file: File, options?: PlanImportOptions) =>
+    upload<{ added?: number; unchanged?: number; warnings?: string[] }>(
+      `/lesson-plans/offerings/${offeringId}/import`,
+      file,
+      options,
+    ),
   updateUnit: (
     unitId: string,
     input: { title: string; description: string | null },

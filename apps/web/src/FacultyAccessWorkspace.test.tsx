@@ -43,7 +43,31 @@ describe('FacultyAccessWorkspace', () => {
     const requests: Array<{ url: string; body?: string }> = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith('/faculty-access/network')) return response([{id:'campus-a', name:'HI-Tech', managerCount:1, facultyCount:1, people:[{id:'connected-teacher',name:'Connected teacher',role:'FACULTY',status:'ACTIVE',subjects:[{offeringId:'connected-subject',subject:'Connected subject',batch:'Batch A',semester:'Semester 1'}]}]}]);
+      if (url.endsWith('/faculty-access/network'))
+        return response([
+          {
+            id: 'campus-a',
+            name: 'HI-Tech',
+            managerCount: 1,
+            facultyCount: 1,
+            people: [
+              {
+                id: 'connected-teacher',
+                name: 'Connected teacher',
+                role: 'FACULTY',
+                status: 'ACTIVE',
+                subjects: [
+                  {
+                    offeringId: 'connected-subject',
+                    subject: 'Connected subject',
+                    batch: 'Batch A',
+                    semester: 'Semester 1',
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
       requests.push({ url, body: init?.body?.toString() });
       if (url.endsWith('/academic/campuses')) {
         return response([
@@ -86,7 +110,9 @@ describe('FacultyAccessWorkspace', () => {
 
     renderWorkspace();
     expect(await screen.findByText('Connected teacher')).toBeInTheDocument();
-    expect(screen.getByText('Connected subject · Batch A · Semester 1')).toBeInTheDocument();
+    expect(
+      screen.getByText('Connected subject · Batch A · Semester 1'),
+    ).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: 'User access' }),
     ).toBeInTheDocument();
@@ -135,7 +161,31 @@ describe('FacultyAccessWorkspace', () => {
     }> = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith('/faculty-access/network')) return response([{id:'campus-a', name:'HI-Tech', managerCount:1, facultyCount:1, people:[{id:'connected-teacher',name:'Connected teacher',role:'FACULTY',status:'ACTIVE',subjects:[{offeringId:'connected-subject',subject:'Connected subject',batch:'Batch A',semester:'Semester 1'}]}]}]);
+      if (url.endsWith('/faculty-access/network'))
+        return response([
+          {
+            id: 'campus-a',
+            name: 'HI-Tech',
+            managerCount: 1,
+            facultyCount: 1,
+            people: [
+              {
+                id: 'connected-teacher',
+                name: 'Connected teacher',
+                role: 'FACULTY',
+                status: 'ACTIVE',
+                subjects: [
+                  {
+                    offeringId: 'connected-subject',
+                    subject: 'Connected subject',
+                    batch: 'Batch A',
+                    semester: 'Semester 1',
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
       requests.push({
         url,
         method: init?.method,
@@ -147,6 +197,12 @@ describe('FacultyAccessWorkspace', () => {
             id: 'campus-a',
             code: 'HI-TECH',
             name: 'HI-Tech',
+            timezone: 'Asia/Kolkata',
+          },
+          {
+            id: 'campus-b',
+            code: 'SECOND',
+            name: 'Second Campus',
             timezone: 'Asia/Kolkata',
           },
         ]);
@@ -185,6 +241,12 @@ describe('FacultyAccessWorkspace', () => {
     fireEvent.change(screen.getByLabelText(/Account password/), {
       target: { value: 'a-strong-temporary-password' },
     });
+    expect(
+      screen.getByRole('button', { name: 'Create campus manager' }),
+    ).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Assigned campus'), {
+      target: { value: 'campus-b' },
+    });
     fireEvent.click(
       screen.getByRole('button', { name: 'Create campus manager' }),
     );
@@ -212,7 +274,7 @@ describe('FacultyAccessWorkspace', () => {
     await waitFor(() => {
       const posts = requests.filter((request) => request.method === 'POST');
       expect(posts).toHaveLength(2);
-      expect(posts[0]?.url).toContain('/campuses/campus-a/managers');
+      expect(posts[0]?.url).toContain('/campuses/campus-b/managers');
       expect(posts[1]?.url).toContain('/faculty-access/administrators');
       expect(JSON.parse(posts[0]!.body!)).toMatchObject({
         name: 'New Campus Manager',
@@ -229,7 +291,31 @@ describe('FacultyAccessWorkspace', () => {
     const requests: Array<{ url: string; method?: string; body?: string }> = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith('/faculty-access/network')) return response([{id:'campus-a', name:'HI-Tech', managerCount:1, facultyCount:1, people:[{id:'connected-teacher',name:'Connected teacher',role:'FACULTY',status:'ACTIVE',subjects:[{offeringId:'connected-subject',subject:'Connected subject',batch:'Batch A',semester:'Semester 1'}]}]}]);
+      if (url.endsWith('/faculty-access/network'))
+        return response([
+          {
+            id: 'campus-a',
+            name: 'HI-Tech',
+            managerCount: 1,
+            facultyCount: 1,
+            people: [
+              {
+                id: 'connected-teacher',
+                name: 'Connected teacher',
+                role: 'FACULTY',
+                status: 'ACTIVE',
+                subjects: [
+                  {
+                    offeringId: 'connected-subject',
+                    subject: 'Connected subject',
+                    batch: 'Batch A',
+                    semester: 'Semester 1',
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
       requests.push({
         url,
         method: init?.method,
@@ -335,7 +421,31 @@ describe('FacultyAccessWorkspace', () => {
       const patches: unknown[] = [];
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-      if (url.endsWith('/faculty-access/network')) return response([{id:'campus-a', name:'HI-Tech', managerCount:1, facultyCount:1, people:[{id:'connected-teacher',name:'Connected teacher',role:'FACULTY',status:'ACTIVE',subjects:[{offeringId:'connected-subject',subject:'Connected subject',batch:'Batch A',semester:'Semester 1'}]}]}]);
+        if (url.endsWith('/faculty-access/network'))
+          return response([
+            {
+              id: 'campus-a',
+              name: 'HI-Tech',
+              managerCount: 1,
+              facultyCount: 1,
+              people: [
+                {
+                  id: 'connected-teacher',
+                  name: 'Connected teacher',
+                  role: 'FACULTY',
+                  status: 'ACTIVE',
+                  subjects: [
+                    {
+                      offeringId: 'connected-subject',
+                      subject: 'Connected subject',
+                      batch: 'Batch A',
+                      semester: 'Semester 1',
+                    },
+                  ],
+                },
+              ],
+            },
+          ]);
         if (init?.method === 'PATCH') {
           patches.push(JSON.parse(String(init.body)));
           status = 'SUSPENDED';
