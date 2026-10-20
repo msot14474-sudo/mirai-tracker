@@ -688,7 +688,7 @@ export function ReportsWorkspace({
         <button
           className="rp-primary"
           type="button"
-          disabled={!data || query.isFetching || dateError || exporting}
+          disabled={!data || query.isPlaceholderData || dateError || exporting}
           onClick={() => void exportDocument()}
         >
           {exporting ? 'Preparing analysis…' : 'Generate analysis report'}

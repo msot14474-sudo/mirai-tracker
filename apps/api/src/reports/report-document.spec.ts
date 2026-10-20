@@ -1,5 +1,6 @@
 import {
   ReportDocumentService,
+  reportRecommendations,
   renderReportDocument,
 } from './report-document.service';
 import { reportQuerySchema } from './reports.schemas';
@@ -8,6 +9,7 @@ const data: any = {
   facultyOnly: true,
   subjects: [
     {
+      id: 'web-a',
       subject: { name: 'Web <script>alert(1)</script>', code: 'WEB' },
       campus: { name: 'Own campus' },
       semester: { name: 'Autumn' },
@@ -19,6 +21,8 @@ const data: any = {
       metrics: null,
       deadline: '2026-12-31',
       nextTopic: null,
+      unlogged: 3,
+      reviewChanges: 0,
     },
   ],
   summary: {
@@ -53,6 +57,77 @@ it('renders escaped readable text, unknown metrics and charts without exposing c
   expect(html).not.toContain('Private aggregate');
   expect(html).not.toContain('## Findings');
   expect(html).not.toContain('**Check**');
+});
+it('uses AI only to prioritize verified recommendations, preserving all candidates and unknown coverage', async () => {
+  const service = new ReportDocumentService(
+    { read: jest.fn().mockResolvedValue(data) } as any,
+    {
+      configuration: () => ({ ready: true }),
+      generate: jest.fn().mockResolvedValue({
+        text: JSON.stringify({
+          priorities: ['web-a:logs'],
+          sections: [
+            {
+              title: 'Invented finding',
+              paragraphs: ['No teaching happened.'],
+            },
+          ],
+        }),
+      }),
+    } as any,
+  );
+  const result = await service.generate(
+    { name: 'Teacher' } as any,
+    reportQuerySchema.parse({}),
+  );
+  const html = result.content.toString();
+  expect(html).toContain('AI prioritized');
+  expect(html).toContain('3 scheduled classes await logs');
+  expect(html).toContain('Complete planning data');
+  expect(html).toContain('Not available');
+  expect(html).not.toContain('No teaching happened');
+  expect(html).not.toContain('Invented finding');
+  expect(html.indexOf('Confirm teaching records')).toBeLessThan(
+    html.indexOf('Complete planning data'),
+  );
+});
+it.each([['invented'], ['web-a:logs', 'web-a:logs']])(
+  'rejects unknown or duplicate AI priorities: %j',
+  async (...priorities) => {
+    const service = new ReportDocumentService(
+      { read: jest.fn().mockResolvedValue(data) } as any,
+      {
+        configuration: () => ({ ready: true }),
+        generate: jest
+          .fn()
+          .mockResolvedValue({ text: JSON.stringify({ priorities }) }),
+      } as any,
+    );
+    const result = await service.generate(
+      { name: 'Teacher' } as any,
+      reportQuerySchema.parse({}),
+    );
+    expect(result.content.toString()).toContain('AI analysis was unavailable');
+  },
+);
+it('computes capacity recommendations from recorded hours without inventing unknown values', () => {
+  const snapshot = {
+    ...data,
+    subjects: [
+      data.subjects[0],
+      {
+        ...data.subjects[0],
+        id: 'math-a',
+        status: 'DANGER',
+        metrics: { remainingHours: 18, availableHours: 13 },
+      },
+    ],
+  };
+  const recommendations = reportRecommendations(snapshot as any);
+  expect(recommendations.some((r) => r.id === 'web-a:capacity')).toBe(false);
+  expect(
+    recommendations.find((r) => r.id === 'math-a:capacity')?.paragraphs[0],
+  ).toContain('5-hour gap');
 });
 it('labels unavailable AI honestly and uses authorization before invoking AI', async () => {
   const read = jest.fn().mockResolvedValue(data),
