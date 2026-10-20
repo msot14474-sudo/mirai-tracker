@@ -43,6 +43,7 @@ describe('ProgressService', () => {
             {
               OR: [
                 {
+                  batch: { semester: { campusId: { in: ['campus-a'] } } },
                   faculty: {
                     some: { staffProfileId: 'staff-a', active: true },
                   },
@@ -142,8 +143,8 @@ describe('ProgressService', () => {
     ]);
     expect(result.tracks).toEqual([
       expect.objectContaining({
-        id: 'track-a',
-        name: 'Mirai Track',
+        id: 'MIRAI',
+        name: 'Mirai',
         subjectCount: 2,
         status: ProgressStatus.DANGER,
       }),
@@ -341,6 +342,7 @@ function offering(overrides: Record<string, unknown> = {}) {
       code: 'CS-DSA',
       name: 'Data Structures',
     },
+    academicTrack: 'MIRAI',
     batch: {
       id: 'batch-a',
       code: 'A',

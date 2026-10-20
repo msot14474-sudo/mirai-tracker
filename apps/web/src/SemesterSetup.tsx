@@ -1,3 +1,6 @@
+import { ExamCalendarEditor } from './ExamCalendarEditor';
+import { academicTrackIdentity } from './tracks';
+import { TrackSelect } from './TrackSelect';
 import { SemesterSubjects } from './SemesterSubjects';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -312,8 +315,8 @@ export function SemesterSetup({
                     semesterId={semesterId}
                     onSaved={refreshCalendar}
                   />
-                  <ExamWindowForm
-                    semesterId={semesterId}
+                  <ExamCalendarEditor
+                    calendar={calendar.data}
                     onSaved={refreshCalendar}
                   />
                 </div>
@@ -342,27 +345,30 @@ export function SemesterSetup({
   );
 }
 
-function SubjectSetup({
+export function SubjectSetup({
   campusId,
   canAssignTeachers,
   showCreate,
   onCreated,
+  canDelete = true,
+  initialSemesterId = '',
 }: {
   campusId: string;
   canAssignTeachers: boolean;
   showCreate: boolean;
   onCreated: () => void;
+  canDelete?: boolean;
+  initialSemesterId?: string;
 }) {
   const queryClient = useQueryClient();
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [savedSubject, setSavedSubject] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState(initialSemesterId);
   const [batchId, setBatchId] = useState('');
   const [batchName, setBatchName] = useState('');
   const [batchCode, setBatchCode] = useState('');
-  const [trackName, setTrackName] = useState('');
   const [trackCode, setTrackCode] = useState('');
   const [linkSubjectId, setLinkSubjectId] = useState('');
   const semesters = useQuery({
@@ -403,9 +409,9 @@ function SubjectSetup({
         code,
         name,
         semesterId,
-        ...(batchId
-          ? { batchId }
-          : { batchName, batchCode, trackName, trackCode }),
+        ...(batchId ? { batchId } : { batchName, batchCode }),
+        trackCode,
+        trackName: academicTrackIdentity(trackCode).name,
         description: description.trim() || null,
       }),
     onMutate: () => queryClient.cancelQueries({ queryKey: subjectQueryKey }),
@@ -502,27 +508,13 @@ function SubjectSetup({
                   onChange={(e) => setBatchCode(e.target.value)}
                 />
               </label>
-              <label>
-                Track name
-                <input
-                  required
-                  maxLength={160}
-                  value={trackName}
-                  onChange={(e) => setTrackName(e.target.value)}
-                />
-              </label>
-              <label>
-                Track code
-                <input
-                  required
-                  maxLength={32}
-                  value={trackCode}
-                  onChange={(e) => setTrackCode(e.target.value)}
-                />
-              </label>
             </div>
           )}
 
+          <TrackSelect value={trackCode} onChange={setTrackCode} />
+          <p className="schedule-help">
+            Each batch can contain both Mirai and University subjects.
+          </p>
           <label>
             Subject code
             <input
@@ -609,26 +601,37 @@ function SubjectSetup({
                   <h4>{subject.name}</h4>
                   {subject.description ? <p>{subject.description}</p> : null}
                 </div>
-                <button
-                  type="button"
-                  className="academic-delete"
-                  disabled={deletion.isPending}
-                  aria-label={`Delete subject ${subject.name}`}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`,
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="academic-delete"
+                    disabled={deletion.isPending}
+                    aria-label={`Delete subject ${subject.name}`}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Permanently delete “${subject.name}” from the subject catalog? Subjects assigned to a batch cannot be deleted.`,
+                        )
                       )
-                    )
-                      deletion.mutate(subject.id);
-                  }}
-                >
-                  Delete
-                </button>
+                        deletion.mutate(subject.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
               </header>
               <SubjectTeacherAssignment
                 readOnly={!canAssignTeachers}
-                subject={subject}
+                subject={
+                  initialSemesterId
+                    ? {
+                        ...subject,
+                        offerings: subject.offerings?.filter(
+                          (o) => o.batch.semester.id === initialSemesterId,
+                        ),
+                      }
+                    : subject
+                }
                 campusId={campusId}
               />
               <div className="subject-card-link">
@@ -771,7 +774,7 @@ function CreateSemesterForm({
   );
 }
 
-function CalendarDayForm({
+export function CalendarDayForm({
   semesterId,
   calendar,
   onSaved,
@@ -876,102 +879,6 @@ function CalendarDayForm({
           {mutation.isPending ? 'Updating…' : 'Update date'}
         </button>
       </fieldset>
-    </form>
-  );
-}
-
-function ExamWindowForm({
-  semesterId,
-  onSaved,
-}: {
-  semesterId: string;
-  onSaved: () => Promise<void>;
-}) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<
-    'SESSIONAL' | 'MID_TERM' | 'PUT' | 'END_TERM' | 'OTHER'
-  >('MID_TERM');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [syllabusDeadline, setSyllabusDeadline] = useState('');
-  const mutation = useMutation({
-    mutationFn: () =>
-      academicApi.createExamWindow(semesterId, {
-        name,
-        type,
-        startDate,
-        endDate,
-        syllabusDeadline,
-      }),
-    onSuccess: async () => {
-      setName('');
-      await onSaved();
-    },
-  });
-
-  return (
-    <form
-      className="setup-card compact"
-      onSubmit={(event) => {
-        event.preventDefault();
-        mutation.mutate();
-      }}
-    >
-      <h3>Add exam window</h3>
-      <label>
-        Name
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
-      </label>
-      <label>
-        Type
-        <select
-          value={type}
-          onChange={(event) => setType(event.target.value as typeof type)}
-        >
-          <option value="SESSIONAL">Sessional</option>
-          <option value="MID_TERM">Mid-term</option>
-          <option value="PUT">PUT</option>
-          <option value="END_TERM">End-term</option>
-          <option value="OTHER">Other</option>
-        </select>
-      </label>
-      <div className="field-pair">
-        <label>
-          Starts
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Ends
-          <input
-            type="date"
-            value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
-            required
-          />
-        </label>
-      </div>
-      <label>
-        Syllabus deadline
-        <input
-          type="date"
-          value={syllabusDeadline}
-          onChange={(event) => setSyllabusDeadline(event.target.value)}
-          required
-        />
-      </label>
-      {mutation.error ? (
-        <p className="form-error">{mutation.error.message}</p>
-      ) : null}
-      <button disabled={mutation.isPending}>Add exam</button>
     </form>
   );
 }

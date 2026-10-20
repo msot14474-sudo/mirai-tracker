@@ -1,5 +1,7 @@
+import { ExamCalendarEditor } from './ExamCalendarEditor';
+import { CalendarDayForm, SubjectSetup } from './SemesterSetup';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicApi } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
@@ -16,8 +18,13 @@ const dateLabel = (value: string) =>
     timeZone: 'UTC',
   }).format(new Date(value));
 
-/** Read-only view of the same campus records maintained by the program manager. */
+/** Shared campus records with scoped subject and calendar management. */
 export function CampusAcademicOverview() {
+  const queryClient = useQueryClient();
+  const refreshCalendar = async () => {
+    await queryClient.invalidateQueries();
+  };
+  const [showSubjectCreate, setShowSubjectCreate] = useState(false);
   const [chosenCampus, setCampus] = useState('');
   const [chosenSemester, setSemester] = useState('');
   const refresh = {
@@ -60,11 +67,6 @@ export function CampusAcademicOverview() {
     enabled: !!semesterId,
     ...refresh,
   });
-  const linkedOfferings = new Set(
-    batches.data?.flatMap((batch) =>
-      batch.subjectOfferings.map((offering) => offering.id),
-    ),
-  );
   const loading =
     campuses.isPending || semesters.isLoading || subjects.isLoading;
   return (
@@ -73,12 +75,9 @@ export function CampusAcademicOverview() {
         <div>
           <p className="workspace-kicker">Campus academics</p>
           <h2>Campus semesters and subjects</h2>
-          <p>
-            Shared semester dates, calendar and subjects maintained by your
-            program manager.
-          </p>
+          <p>View the semester calendar and manage subjects for your campus.</p>
         </div>
-        <span className="academic-readonly">View only</span>
+        <span className="academic-readonly">Campus calendar access</span>
       </header>
       <div className="form-grid campus-academic-filters">
         <label>
@@ -144,96 +143,29 @@ export function CampusAcademicOverview() {
               <p>No semesters have been created for this campus yet.</p>
             </div>
           )}
-          {subjects.isSuccess && (
-            <section
-              className="campus-academic-section"
-              aria-labelledby="campus-subjects-heading"
-            >
-              <div className="subheading-row">
-                <h3 id="campus-subjects-heading">
-                  Campus subjects{' '}
-                  <span className="academic-count">{subjects.data.length}</span>
-                </h3>
-                <span className="academic-meta">
-                  {batches.data
-                    ? `${batches.data.length} ${batches.data.length === 1 ? 'batch' : 'batches'} in this semester`
-                    : 'Shared campus catalog'}
-                </span>
-              </div>
-              {!subjects.data.length ? (
-                <p className="empty-copy">
-                  No subjects have been created for this campus yet.
-                </p>
-              ) : (
-                <div className="campus-subject-grid">
-                  {subjects.data.map((subject) => {
-                    const offerings =
-                      subject.offerings?.filter((o) =>
-                        linkedOfferings.has(o.id),
-                      ) || [];
-                    const defaultTeachers =
-                      subject.teachers
-                        ?.filter(
-                          (t) =>
-                            t.staffProfile.active &&
-                            t.staffProfile.user.status === 'ACTIVE',
-                        )
-                        .map((t) => t.staffProfile.user.name) || [];
-                    return (
-                      <article className="campus-subject-card" key={subject.id}>
-                        <header>
-                          <span className="subject-code">{subject.code}</span>
-                          <h4>{subject.name}</h4>
-                        </header>
-                        {batches.isLoading ? (
-                          <p className="academic-meta">
-                            Loading batch assignments…
-                          </p>
-                        ) : offerings.length ? (
-                          <div className="campus-assignment-list">
-                            {offerings.map((o) => (
-                              <dl className="campus-assignment" key={o.id}>
-                                <div>
-                                  <dt>Batch</dt>
-                                  <dd>{o.batch.name}</dd>
-                                </div>
-                                <div>
-                                  <dt>Assigned teacher</dt>
-                                  <dd
-                                    className={
-                                      !o.faculty.length
-                                        ? 'subject-unassigned'
-                                        : undefined
-                                    }
-                                  >
-                                    {o.faculty
-                                      .map((f) => f.staffProfile.user.name)
-                                      .join(', ') ||
-                                      'Not assigned to this batch'}
-                                  </dd>
-                                </div>
-                              </dl>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="empty-copy">
-                            {subject.offerings?.length
-                              ? 'Not linked to the selected semester.'
-                              : 'Created in the campus catalog. The program manager must link it to a semester batch before you can schedule classes.'}
-                          </p>
-                        )}
-                        {defaultTeachers.length > 0 && !offerings.length && (
-                          <p className="academic-meta">
-                            Campus teacher: {defaultTeachers.join(', ')}
-                          </p>
-                        )}
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          )}
+          <section className="campus-academic-section">
+            <div className="subheading-row">
+              <h3>Campus subjects</h3>
+              <button
+                className="primary-button"
+                disabled={!campusId}
+                onClick={() => setShowSubjectCreate(!showSubjectCreate)}
+              >
+                {showSubjectCreate ? 'Cancel' : 'Add subject'}
+              </button>
+            </div>
+            {campusId && (
+              <SubjectSetup
+                key={`${campusId}:${semesterId}`}
+                campusId={campusId}
+                initialSemesterId={semesterId}
+                canAssignTeachers
+                canDelete={false}
+                showCreate={showSubjectCreate}
+                onCreated={() => setShowSubjectCreate(false)}
+              />
+            )}
+          </section>
         </>
       )}
       {calendar.isLoading ? (
@@ -313,6 +245,20 @@ export function CampusAcademicOverview() {
             </div>
           </section>
         )
+      )}
+      {calendar.data && (
+        <div className="setup-forms">
+          <CalendarDayForm
+            key={semesterId}
+            semesterId={semesterId}
+            calendar={calendar.data}
+            onSaved={refreshCalendar}
+          />
+          <ExamCalendarEditor
+            calendar={calendar.data}
+            onSaved={refreshCalendar}
+          />
+        </div>
       )}
       {calendar.data && (
         <section

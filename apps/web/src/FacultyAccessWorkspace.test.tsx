@@ -120,6 +120,9 @@ describe('FacultyAccessWorkspace', () => {
       screen.queryByRole('heading', { name: 'Add faculty' }),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add new' }));
+    fireEvent.change(screen.getByLabelText('Faculty campus'), {
+      target: { value: 'campus-a' },
+    });
     const offering = await screen.findByLabelText(/CS-DSA/);
     fireEvent.change(screen.getByLabelText('Full name'), {
       target: { value: 'Dr Asha' },

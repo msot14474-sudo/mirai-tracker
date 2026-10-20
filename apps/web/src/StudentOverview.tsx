@@ -19,7 +19,8 @@ const examTypeLabels: Record<StudentExam['type'], string> = {
 export function StudentOverview() {
   const asOfDate = today();
   const overview = useQuery({
-    refetchInterval: 30000, refetchOnWindowFocus: 'always',
+    refetchInterval: 30000,
+    refetchOnWindowFocus: 'always',
     queryKey: ['student-overview', asOfDate],
     queryFn: () => studentViewApi.overview(asOfDate),
   });
@@ -62,8 +63,11 @@ export function StudentOverview() {
             </div>
             <dl>
               <div>
-                <dt>Track</dt>
-                <dd>{overview.data.batch.track.name}</dd>
+                <dt>Tracks in your batch</dt>
+                <dd>
+                  {overview.data.batch.tracks?.map((t) => t.name).join(', ') ||
+                    'Mirai · University'}
+                </dd>
               </div>
               <div>
                 <dt>Campus</dt>
@@ -129,7 +133,10 @@ function StudentSubjectCard({ subject }: { subject: StudentSubject }) {
     <article className="student-subject-card">
       <header>
         <div>
-          <small>{subject.subject.code}</small>
+          <small>
+            {subject.subject.code}
+            {subject.track ? ` · ${subject.track.name} track` : ''}
+          </small>
           <h4>{subject.subject.name}</h4>
         </div>
         <strong>

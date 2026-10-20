@@ -52,10 +52,7 @@ export function AcademicOverview({
     );
   const scope =
     campusName ||
-    data?.groups
-      .filter((g) => g.kind === 'campus')
-      .map((g) => g.name)
-      .join(', ') ||
+    [...new Set(data?.subjects.map((s) => s.campus.name))].join(', ') ||
     (faculty ? 'Your assigned subjects' : 'Your campuses');
   return (
     <section className="academic-overview" aria-label="Academic overview">
@@ -164,7 +161,7 @@ export function AcademicOverview({
               a class was missed.
             </p>
           </div>
-          {data.groups.some((g) => g.kind === 'track') ? (
+          {!faculty && data.groups.some((g) => g.kind === 'track') ? (
             <div className="ov-tracks" aria-label="Track status">
               {data.groups
                 .filter((g) => g.kind === 'track')
@@ -243,7 +240,8 @@ export function AcademicOverview({
                     <div>
                       <h3>{r.subject.name}</h3>
                       <p>
-                        {r.subject.code} · {r.batch.name} · {r.track.name}
+                        {r.subject.code} · Batch: {r.batch.name} · Track:{' '}
+                        {r.track.name}
                       </p>
                       <p>
                         {r.teachers.map((t) => t.name).join(', ') ||

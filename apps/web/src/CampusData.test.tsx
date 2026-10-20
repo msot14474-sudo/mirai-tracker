@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { academicApi } from './academic';
-import { FullSemesterImport } from './FullSemesterImport';
+import { FullSemesterExport } from './FullSemesterExport';
 import { VisitingFacultyWorkspace } from './VisitingFacultyWorkspace';
 import * as api from './campusData';
 const semester = {
@@ -41,69 +41,34 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-it('requires a valid preview, imports exactly its fingerprint, and clears it on semester change', async () => {
+it('downloads the selected semester and exposes no import controls', async () => {
   const client = setup();
-  let valid = false;
-  const request = vi
-    .spyOn(api, 'campusRequest')
-    .mockImplementation(async (path, init) => {
-      if (path.endsWith('/imports')) return [] as any;
-      if (path.endsWith('/import')) {
-        expect((init!.body as FormData).get('fingerprint')).toBe(
-          'validated-hash',
-        );
-        return { ...base, valid: true, importId: 'saved' } as any;
-      }
-      return {
-        ...base,
-        valid,
-        issues: valid ? [] : [{ location: 'row 2', message: 'Wrong date' }],
-      } as any;
-    });
-  const base = {
-    fingerprint: 'validated-hash',
-    alreadyImported: false,
-    counts: { Calendar: 1 },
-    warnings: [],
-    skippedSheets: [],
-    rows: [
-      {
-        dataset: 'Calendar',
-        location: 'row 2',
-        values: { date: '2025-01-01' },
-      },
-    ],
-    issues: [],
-  };
+  const download = vi.spyOn(api, 'campusDownload').mockResolvedValue(undefined);
   render(
     <QueryClientProvider client={client}>
-      <FullSemesterImport />
+      <FullSemesterExport />
     </QueryClientProvider>,
   );
-  const file = await screen.findByLabelText('Excel or CSV files');
-  fireEvent.change(file, {
-    target: { files: [new File(['date,title'], 'Calendar.csv')] },
-  });
-  fireEvent.click(screen.getByText('Preview import'));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Wrong date');
-  expect(screen.getByText('Confirm semester import')).toBeDisabled();
-  valid = true;
-  fireEvent.click(screen.getByText('Preview import'));
-  await waitFor(() =>
-    expect(screen.getByText('Confirm semester import')).toBeEnabled(),
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Download Excel' }),
   );
-  fireEvent.click(screen.getByText('Confirm semester import'));
-  await screen.findByText(/Semester data imported/);
-  expect(
-    request.mock.calls.some(([path]) => path === '/semesters/s1/import'),
-  ).toBe(true);
+  await waitFor(() =>
+    expect(download).toHaveBeenCalledWith(
+      '/semesters/s1/export?format=xlsx',
+      expect.stringContaining('.xlsx'),
+    ),
+  );
   fireEvent.change(screen.getByLabelText('Semester'), {
     target: { value: 's2' },
   });
+  fireEvent.click(await screen.findByRole('button', { name: 'Download CSV' }));
   await waitFor(() =>
-    expect(screen.queryByText('3. Review your import')).not.toBeInTheDocument(),
+    expect(download).toHaveBeenCalledWith(
+      '/semesters/s2/export?format=csv',
+      expect.stringContaining('.csv'),
+    ),
   );
-  expect(screen.getByText('Preview import')).toBeDisabled();
+  expect(document.querySelector('input[type=file]')).toBeNull();
 });
 it('shows incomplete financial totals and saves a per-class effective rate to the selected semester', async () => {
   const client = setup();

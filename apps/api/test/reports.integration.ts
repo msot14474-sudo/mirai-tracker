@@ -98,6 +98,7 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
         await db.subjectOffering.create({
           data: {
             subjectId: subject.id,
+            academicTrack: i === 1 ? 'UNIVERSITY' : 'MIRAI',
             batchId: batches[index]!.id,
             targetFinishDate: semesters[index]!.endDate,
             status: 'ACTIVE',
@@ -273,7 +274,7 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
       bufferRatio: 1,
       scopeMode: 'Assessed',
     });
-    expect(data.groups.filter((g) => g.kind === 'track')).toHaveLength(2); // Same track, distinct campuses.
+    expect(data.groups.filter((g) => g.kind === 'track')).toHaveLength(3); // Two tracks share Campus A's batch; Mirai also exists in Campus B.
     expect(
       data.groups.find((g) => g.kind === 'campus' && g.id === campuses[0]!.id)
         ?.status,
@@ -285,10 +286,39 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
     });
     expect((await service.read(manager, q)).subjects).toHaveLength(2);
     expect((await service.read(otherManager, q)).subjects).toHaveLength(1);
+    await db.facultyAssignment.create({
+      data: {
+        offeringId: privateSubject.id,
+        staffProfileId: faculty.staffProfileId!,
+        startDate: semesters[1]!.startDate,
+      },
+    });
     const own = await service.read(faculty, q);
     expect(own.subjects.map((s) => s.id)).toEqual([web.id]);
     expect(own.options.map((s) => s.id)).toEqual([web.id]);
     expect(own.faculty.map((f) => f.id)).toEqual([faculty.id]);
+    expect(own.groups).toEqual([]);
+    expect(own.activeCampusId).toBe(campuses[0]!.id);
+    expect(data.subjects.find((s) => s.id === dsa.id)?.track.name).toBe(
+      'University',
+    );
+    expect(data.subjects.find((s) => s.id === web.id)?.batch.id).toBe(
+      data.subjects.find((s) => s.id === dsa.id)?.batch.id,
+    );
+    expect(
+      (
+        await service.read(manager, { ...q, trackId: 'UNIVERSITY' })
+      ).subjects.map((s) => s.id),
+    ).toEqual([dsa.id]);
+    await expect(
+      service.csv(faculty, { ...q, campusId: campuses[1]!.id }),
+    ).rejects.toThrow('assigned campus');
+    await expect(service.csv(faculty, { ...q, tab: 'campus' })).rejects.toThrow(
+      'Campus-wide',
+    );
+    expect((await service.csv(faculty, q)).content.toString()).not.toContain(
+      'Private campus',
+    );
     expect((await service.read(unassigned, q)).subjects).toEqual([]);
     await expect(service.read(student, q)).rejects.toThrow();
     const forbiddenFilters = {
@@ -338,6 +368,81 @@ it('keeps reports, selectors and exports inside campus/subject access and calcul
       data: { active: false },
     });
     expect((await service.read(faculty, q)).options).toEqual([]);
+  } finally {
+    await db.$disconnect();
+  }
+}, 120000);
+
+it('migrates the approved track without replacing batches, offerings or their history', async () => {
+  const url = new URL(process.env.DATABASE_URL!);
+  if (
+    !['localhost', '127.0.0.1'].includes(url.hostname) ||
+    !url.pathname.includes('reports_test')
+  )
+    throw new Error('Dedicated local reports_test database required');
+  const db = new PrismaService();
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(
+    'prisma/migrations/20261020170000_subject_tracks/migration.sql',
+    'utf8',
+  );
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('CREATE SCHEMA track_migration_test');
+      await tx.$executeRawUnsafe(
+        'SET LOCAL search_path TO track_migration_test',
+      );
+      await tx.$executeRawUnsafe(
+        'CREATE TABLE "Track" (id TEXT PRIMARY KEY, code TEXT, name TEXT)',
+      );
+      await tx.$executeRawUnsafe(
+        'CREATE TABLE "Batch" (id TEXT PRIMARY KEY, name TEXT, "trackId" TEXT)',
+      );
+      await tx.$executeRawUnsafe(
+        'CREATE TABLE "SubjectOffering" (id TEXT PRIMARY KEY, "batchId" TEXT)',
+      );
+      await tx.$executeRawUnsafe(
+        'CREATE TABLE "History" ("offeringId" TEXT REFERENCES "SubjectOffering"(id), notes TEXT)',
+      );
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "Track" VALUES ('cs','CS','Computer Science'),('uni','UNIVERSITY','University'),('unknown','OTHER','Other')`,
+      );
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "Batch" VALUES ('a','First Year A','cs'),('b','First Year B','uni'),('c','Legacy','unknown')`,
+      );
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "SubjectOffering" VALUES ('web','a'),('dsa','a'),('uni-subject','b'),('unknown-subject','c')`,
+      );
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "History" VALUES ('web','Saved lecture and lesson plan')`,
+      );
+      for (const statement of sql
+        .replace(/--[^\n]*/g, '')
+        .split(';')
+        .filter((s) => s.trim()))
+        await tx.$executeRawUnsafe(statement);
+      const rows = await tx.$queryRawUnsafe<any[]>(
+        'SELECT * FROM "SubjectOffering" ORDER BY id',
+      );
+      expect(rows.find((o) => o.id === 'web')).toMatchObject({
+        batchId: 'a',
+        academicTrack: 'MIRAI',
+      });
+      expect(rows.find((o) => o.id === 'dsa')?.academicTrack).toBe('MIRAI');
+      expect(rows.find((o) => o.id === 'uni-subject')?.academicTrack).toBe(
+        'UNIVERSITY',
+      );
+      expect(
+        rows.find((o) => o.id === 'unknown-subject')?.academicTrack,
+      ).toBeNull();
+      expect(await tx.$queryRawUnsafe('SELECT * FROM "History"')).toEqual([
+        { offeringId: 'web', notes: 'Saved lecture and lesson plan' },
+      ]);
+      expect(
+        await tx.$queryRawUnsafe(`SELECT name FROM "Batch" WHERE id = 'a'`),
+      ).toEqual([{ name: 'First Year A' }]);
+      await tx.$executeRawUnsafe('DROP SCHEMA track_migration_test CASCADE');
+    });
   } finally {
     await db.$disconnect();
   }

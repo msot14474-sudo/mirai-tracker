@@ -92,10 +92,7 @@ export function CampusDataScope({
       ) : (
         <div className="campus-data-empty">
           <h3>No semester yet</h3>
-          <p>
-            Create a semester in Semester setup before importing its records or
-            tracking visiting faculty.
-          </p>
+          <p>Create a semester in Semester setup to use this workspace.</p>
         </div>
       )}
     </section>

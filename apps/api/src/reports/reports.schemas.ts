@@ -11,7 +11,7 @@ export const reportTabs = [
 export const reportQuerySchema = z
   .object({
     campusId: z.string().uuid().optional(),
-    trackId: z.string().uuid().optional(),
+    trackId: z.enum(['MIRAI', 'UNIVERSITY']).optional(),
     semesterId: z.string().uuid().optional(),
     batchId: z.string().uuid().optional(),
     subjectId: z.string().uuid().optional(),

@@ -1,3 +1,4 @@
+import { TrackSelect } from './TrackSelect';
 import { useState, FormEvent } from 'react';
 import { academicApi, dateOnly, SaturdayRule } from './academic';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -400,18 +401,13 @@ export function CourseProgressImport({ campusId }: { campusId?: string }) {
                       }}
                     />
                   </label>
-                  <label>
-                    Program name
-                    <input
-                      value={programName}
-                      maxLength={160}
-                      required
-                      onChange={(event) => {
-                        setProgramName(event.target.value);
-                        reset();
-                      }}
-                    />
-                  </label>
+                  <TrackSelect
+                    value={programName}
+                    onChange={(value) => {
+                      setProgramName(value);
+                      reset();
+                    }}
+                  />
                   <p className="schedule-help">
                     These records are created only when you confirm the import.
                     Existing matching records are reused; existing lesson plans

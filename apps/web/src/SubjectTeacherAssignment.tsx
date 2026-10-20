@@ -84,9 +84,8 @@ export function SubjectTeacherAssignment({
       </div>
       {!subject.offerings?.length && (
         <p role="status">
-          Pending semester link. The admin/program manager must link this
-          subject to a semester batch in Semester setup before teaching can
-          start.
+          Pending semester link. Link this subject to a semester and batch
+          before assigning its teaching timetable.
         </p>
       )}
       {!readOnly && !!subject.offerings?.length && (

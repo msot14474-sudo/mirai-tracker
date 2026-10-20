@@ -111,6 +111,9 @@ describe('SemesterSetup subjects', () => {
     fireEvent.change(screen.getByLabelText('Batch'), {
       target: { value: 'batch' },
     });
+    fireEvent.change(screen.getByLabelText('Subject track'), {
+      target: { value: 'MIRAI' },
+    });
     fireEvent.change(screen.getByLabelText('Subject code'), {
       target: { value: 'cs-dsa' },
     });
@@ -127,6 +130,8 @@ describe('SemesterSetup subjects', () => {
         campusId: 'campus-a',
         semesterId: 'term',
         batchId: 'batch',
+        trackCode: 'MIRAI',
+        trackName: 'Mirai',
         code: 'cs-dsa',
         name: 'Data Structures and Algorithms',
         description: 'Core subject',

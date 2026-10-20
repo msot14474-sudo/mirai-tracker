@@ -48,12 +48,15 @@ it('links the selected campus subject to an existing semester batch without crea
   fireEvent.change(screen.getByLabelText('Batch'), {
     target: { value: 'batch' },
   });
+  fireEvent.change(screen.getByLabelText('Subject track'), { target: { value: 'MIRAI' } });
   fireEvent.click(
     screen.getByRole('button', { name: 'Save batch and subjects' }),
   );
   await waitFor(() =>
     expect(save).toHaveBeenCalledWith('semester', {
       batchId: 'batch',
+      trackCode: 'MIRAI',
+      trackName: 'Mirai',
       subjectIds: ['subject'],
     }),
   );

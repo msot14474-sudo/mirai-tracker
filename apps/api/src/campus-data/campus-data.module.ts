@@ -1,3 +1,5 @@
+import { ReportsModule } from '../reports/reports.module';
+import { SemesterExportService } from './semester-export.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
@@ -14,8 +16,13 @@ import { VisitingFacultyService } from './visiting-faculty.service';
     TimetableModule,
     TopicScheduleModule,
     ProgressModule,
+    ReportsModule,
   ],
   controllers: [CampusDataController],
-  providers: [SemesterBundleService, VisitingFacultyService],
+  providers: [
+    SemesterBundleService,
+    VisitingFacultyService,
+    SemesterExportService,
+  ],
 })
 export class CampusDataModule {}

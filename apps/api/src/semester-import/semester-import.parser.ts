@@ -1,3 +1,4 @@
+import { parseAcademicTrack } from '@mirai/calculations';
 import { CalendarDayType, WorkingSaturdayRule } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
@@ -138,6 +139,18 @@ export async function parseAndValidateSemesterImport(
       continue;
     }
     const value = result.data;
+    const track = parseAcademicTrack(value.track_code);
+    if (!track || parseAcademicTrack(value.track_name)?.code !== track.code) {
+      issues.push({
+        sheet: 'Semester Setup',
+        rowNumber: row.rowNumber,
+        columnName: 'track_code',
+        submittedValue: value.track_code,
+        errorMessage:
+          'Choose matching Mirai / MIRAI or University / UNIVERSITY track values.',
+      });
+      continue;
+    }
     setupRows.push({
       rowNumber: row.rowNumber,
       campusCode: value.campus_code,
@@ -149,8 +162,8 @@ export async function parseAndValidateSemesterImport(
       workingSaturdayRule: value.working_saturday_rule,
       onTrackThreshold: value.on_track_threshold,
       tightThreshold: value.tight_threshold,
-      trackCode: value.track_code,
-      trackName: value.track_name,
+      trackCode: track.code,
+      trackName: track.name,
       batchCode: value.batch_code,
       batchName: value.batch_name,
       subjectCode: value.subject_code,
@@ -409,9 +422,9 @@ function validateRelationships(
   validateConsistent(
     setupRows,
     (row) => `${row.campusCode}\u0000${row.semesterName}\u0000${row.batchCode}`,
-    (row) => `${row.batchName}\u0000${row.trackCode}`,
+    (row) => row.batchName,
     'batch_code',
-    'Batch code is repeated with a different name or track.',
+    'Batch code is repeated with a different name.',
     issues,
   );
   validateConsistent(

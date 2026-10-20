@@ -398,7 +398,13 @@ model Subject {
   @@index([campusId])
 }
 
+enum AcademicTrack {
+  MIRAI
+  UNIVERSITY
+}
+
 model SubjectOffering {
+  academicTrack     AcademicTrack?          @default(MIRAI)
   id                String                 @id @default(uuid()) @db.Uuid
   batchId           String                 @db.Uuid
   subjectId         String                 @db.Uuid
@@ -417,6 +423,7 @@ model SubjectOffering {
   scheduleVersions  TopicScheduleVersion[]
   progressSnapshots ProgressSnapshot[]
 
+  @@index([academicTrack, batchId])
   @@unique([batchId, subjectId])
   @@index([batchId, status])
   @@index([targetFinishDate])

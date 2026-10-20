@@ -288,15 +288,15 @@ describe('FacultyAccessService', () => {
     expect(userCreate).not.toHaveBeenCalled();
   });
 
-  it('rejects student account editing by a campus manager', async () => {
+  it('permits managing student access within the assigned campus', async () => {
     userFindUnique.mockResolvedValue({
       id: 'student-user-a',
       roleAssignments: [{ role: UserRole.STUDENT, campusId }],
     });
     await expect(
       service().updateAccount('student-user-a', { name: 'Changed' }, actor),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(userUpdate).not.toHaveBeenCalled();
+    ).resolves.toHaveProperty('account');
+    expect(userUpdate).toHaveBeenCalled();
   });
 
   it('prevents a campus manager from changing an elevated account', async () => {
@@ -501,7 +501,7 @@ describe('FacultyAccessService', () => {
           roleAssignments: {
             some: {
               campusId,
-              role: UserRole.FACULTY,
+              role: { in: [UserRole.FACULTY, UserRole.STUDENT] },
             },
           },
         },

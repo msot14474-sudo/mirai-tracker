@@ -1,3 +1,4 @@
+import { weeklyEmailContent } from './weekly-email-format';
 import { Injectable } from '@nestjs/common';
 import { createTransport, Transporter } from 'nodemailer';
 
@@ -40,10 +41,11 @@ export class EmailNotificationService {
       to: message.recipientEmail,
       messageId: `<weekly-${message.id}@mirai-tracker.app>`,
       subject: message.title,
-      text:
-        message.text +
-        '\n\nOpen Mirai Tracker → AI insights → Weekly summaries to review this summary.\n' +
-        (process.env.WEB_ORIGIN ?? 'https://mirai-tracker.vercel.app'),
+      ...weeklyEmailContent(
+        message.title,
+        message.text,
+        process.env.WEB_ORIGIN ?? 'https://mirai-tracker.vercel.app',
+      ),
     });
   }
 

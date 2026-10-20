@@ -54,21 +54,37 @@ export class AcademicCalendarController {
 
   @Get('semesters/:semesterId/subjects')
   @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER, UserRole.CAMPUS_MANAGER)
-  semesterCourses(@Param('semesterId') semesterId: string, @CurrentUser() user: AuthenticatedUser) {
+  semesterCourses(
+    @Param('semesterId') semesterId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.calendar.semesterCourses(id(semesterId), user);
   }
 
   @Post('semesters/:semesterId/subjects')
-  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER)
-  connectSubjects(@Param('semesterId') semesterId: string, @Body() body: unknown, @CurrentUser() user: AuthenticatedUser) {
-    return this.calendar.connectSemesterSubjects(id(semesterId), parse(z.object({
-      batchId: z.string().uuid().optional(),
-      batchName: z.string().trim().min(1).max(160).optional(),
-      batchCode: z.string().trim().min(1).max(64).optional(),
-      trackName: z.string().trim().min(1).max(160).optional(),
-      trackCode: z.string().trim().min(1).max(32).optional(),
-      subjectIds: z.array(z.string().uuid()).min(1).max(200),
-    }).strict(), body), user);
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER, UserRole.CAMPUS_MANAGER)
+  connectSubjects(
+    @Param('semesterId') semesterId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.calendar.connectSemesterSubjects(
+      id(semesterId),
+      parse(
+        z
+          .object({
+            batchId: z.string().uuid().optional(),
+            batchName: z.string().trim().min(1).max(160).optional(),
+            batchCode: z.string().trim().min(1).max(64).optional(),
+            trackName: z.string().trim().min(1).max(160).optional(),
+            trackCode: z.string().trim().min(1).max(32).optional(),
+            subjectIds: z.array(z.string().uuid()).min(1).max(200),
+          })
+          .strict(),
+        body,
+      ),
+      user,
+    );
   }
 
   @Get('my-subjects')
@@ -118,6 +134,7 @@ export class AcademicCalendarController {
   }
 
   @Post('subjects')
+  @Roles(UserRole.ADMIN, UserRole.PROGRAM_MANAGER, UserRole.CAMPUS_MANAGER)
   createSubject(@Body() body: unknown, @CurrentUser() user: AuthenticatedUser) {
     return this.calendar.createSubject(parse(createSubjectSchema, body), user);
   }

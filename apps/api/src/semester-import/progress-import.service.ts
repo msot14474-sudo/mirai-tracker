@@ -1,3 +1,7 @@
+import {
+  trackCodeSchema,
+  requireAcademicTrack,
+} from '../academic-calendar/academic-tracks';
 import { inheritSubjectTeacher } from '../academic-calendar/subject-teacher';
 import { randomUUID } from 'node:crypto';
 import {
@@ -33,7 +37,7 @@ export const progressDestinationSchema = z.object({
   semesterId: z.string().uuid(),
   subjectName: z.string().trim().min(1).max(200),
   batchName: z.string().trim().min(1).max(160),
-  programName: z.string().trim().min(1).max(160),
+  programName: trackCodeSchema,
 });
 type Destination = z.infer<typeof progressDestinationSchema>;
 type Mapping = z.infer<typeof mappingSchema>;
@@ -710,12 +714,10 @@ export class ProgressImportService {
             semester.endDate.toISOString().slice(0, 10),
           );
           if (!rechecked.valid) throw new BadRequestException(rechecked.issues);
+          const selectedTrack = requireAcademicTrack(destination.programName);
           const program = await tx.track.upsert({
-            where: { name: destination.programName },
-            create: {
-              name: destination.programName,
-              code: 'IMP-' + randomUUID().slice(0, 24),
-            },
+            where: { code: selectedTrack.code },
+            create: { code: selectedTrack.code, name: selectedTrack.name },
             update: {},
           });
           if (!program.active)
@@ -725,9 +727,9 @@ export class ProgressImportService {
           let batch = await tx.batch.findFirst({
             where: { semesterId: semester.id, name: destination.batchName },
           });
-          if (batch && (!batch.active || batch.trackId !== program.id))
+          if (batch && !batch.active)
             throw new BadRequestException(
-              'This batch belongs to another program or is inactive. Check the batch and program names.',
+              'This batch is inactive. Choose an active batch.',
             );
           if (!batch)
             batch = await tx.batch.create({
@@ -761,11 +763,16 @@ export class ProgressImportService {
             create: {
               batchId: batch.id,
               subjectId: subject.id,
+              academicTrack: selectedTrack.code,
               targetFinishDate: semester.endDate,
               status: 'ACTIVE',
             },
             update: {},
           });
+          if (offering.academicTrack !== selectedTrack.code)
+            throw new ConflictException(
+              'This subject is already linked to another track in this batch. Correct its track in Semester setup first.',
+            );
           await inheritSubjectTeacher(tx, offering.id);
           offeringId = offering.id;
         }

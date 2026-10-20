@@ -1,3 +1,4 @@
+import { requireAcademicTrack } from '../academic-calendar/academic-tracks';
 import { inheritSubjectTeacher } from '../academic-calendar/subject-teacher';
 import { TimetableService } from '../timetable/timetable.service';
 import {
@@ -366,12 +367,16 @@ export class SemesterImportService {
         create: {
           batchId,
           subjectId,
+          academicTrack: requireAcademicTrack(row.trackCode, row.trackName)
+            .code,
           targetFinishDate: parseIsoDate(row.targetFinishDate),
           onTrackThreshold: row.onTrackThreshold,
           tightThreshold: row.tightThreshold,
           status: SubjectOfferingStatus.DRAFT,
         },
         update: {
+          academicTrack: requireAcademicTrack(row.trackCode, row.trackName)
+            .code,
           targetFinishDate: parseIsoDate(row.targetFinishDate),
           onTrackThreshold: row.onTrackThreshold,
           tightThreshold: row.tightThreshold,

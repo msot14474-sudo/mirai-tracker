@@ -1,3 +1,4 @@
+import { academicTracks } from './tracks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -83,7 +84,7 @@ function SubjectCell({ row }: { row: ReportBase }) {
       <small>
         {row.subject.code} · {row.campus.name}
       </small>
-      <small>{row.track.name}</small>
+      <small>Track: {row.track.name}</small>
     </div>
   );
 }
@@ -552,7 +553,11 @@ export function ReportsWorkspace({
   campusId,
   initialTab = 'course',
   initialSubjectId,
+  mode = 'reports',
+  facultyOnly: facultyRole = false,
 }: {
+  facultyOnly?: boolean;
+  mode?: 'reports' | 'progress';
   campusId?: string;
   initialTab?: ReportTab;
   initialSubjectId?: string;
@@ -560,12 +565,15 @@ export function ReportsWorkspace({
   const [filters, setFilters] = useState<ReportFilters>({
     campusId,
     subjectId: initialSubjectId,
-    tab: initialTab,
+    tab:
+      mode === 'progress' || (facultyRole && initialTab === 'campus')
+        ? 'course'
+        : initialTab,
     deliveryStatus: 'TAUGHT',
   });
   const [exporting, setExporting] = useState(false),
     [exportError, setExportError] = useState('');
-  const tab = filters.tab ?? 'course';
+  const selectedTab = filters.tab ?? 'course';
   const dateError = Boolean(
     filters.from && filters.to && filters.from > filters.to,
   );
@@ -579,18 +587,23 @@ export function ReportsWorkspace({
     refetchInterval: 60_000,
   });
   const data = query.data;
+  const facultyOnly = facultyRole || Boolean(data?.facultyOnly);
+  const tab = facultyOnly && selectedTab === 'campus' ? 'course' : selectedTab;
   const options = data?.options ?? [];
   function update(key: keyof ReportFilters, value: string) {
     setFilters((f) => ({
       ...f,
       [key]: value || undefined,
-      ...(['campusId', 'trackId', 'semesterId'].includes(key)
+      ...(['campusId', 'semesterId'].includes(key)
         ? { batchId: undefined, subjectId: undefined, facultyId: undefined }
         : {}),
       ...(key === 'campusId'
         ? { trackId: undefined, semesterId: undefined }
         : {}),
-      ...(key === 'batchId'
+      ...(['batchId', 'semesterId'].includes(key)
+        ? { trackId: undefined }
+        : {}),
+      ...(['batchId', 'trackId'].includes(key)
         ? { subjectId: undefined, facultyId: undefined }
         : {}),
     }));
@@ -599,21 +612,30 @@ export function ReportsWorkspace({
   function values(
     key: 'campus' | 'track' | 'semester' | 'batch' | 'subject' | 'teachers',
   ) {
+    if (key === 'campus' && data?.availableCampuses)
+      return data.availableCampuses;
+    if (key === 'track') return academicTracks;
+    const activeCampus =
+      filters.campusId ?? (facultyOnly ? data?.activeCampusId : undefined);
+    const level = [
+      'campus',
+      'semester',
+      'batch',
+      'track',
+      'subject',
+      'teachers',
+    ].indexOf(key);
     const filtered = options.filter(
       (o) =>
-        (key === 'campus' ||
-          !filters.campusId ||
-          o.campus.id === filters.campusId) &&
-        (key === 'campus' ||
-          key === 'track' ||
-          !filters.trackId ||
-          o.track.id === filters.trackId) &&
-        (['campus', 'track', 'semester'].includes(key) ||
+        (level <= 0 || !activeCampus || o.campus.id === activeCampus) &&
+        (level <= 1 ||
           !filters.semesterId ||
           o.semester.id === filters.semesterId) &&
-        (['campus', 'track', 'semester', 'batch'].includes(key) ||
-          !filters.batchId ||
-          o.batch.id === filters.batchId),
+        (level <= 2 || !filters.batchId || o.batch.id === filters.batchId) &&
+        (level <= 3 || !filters.trackId || o.track.id === filters.trackId) &&
+        (level <= 4 ||
+          !filters.subjectId ||
+          o.subject.id === filters.subjectId),
     );
     return [
       ...new Map(
@@ -625,11 +647,20 @@ export function ReportsWorkspace({
       .filter((v) => key !== 'teachers' || !data?.facultyOnly)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
-  async function exportCsv() {
+  async function exportDocument() {
     setExporting(true);
     setExportError('');
     try {
-      const file = await reportsApi.csv(filters);
+      const file = await reportsApi.document({
+        ...filters,
+        tab,
+        ...(facultyOnly
+          ? {
+              campusId: data?.activeCampusId ?? filters.campusId,
+              facultyId: undefined,
+            }
+          : {}),
+      });
       saveDownload(file.blob, file.filename);
     } catch (e) {
       setExportError(
@@ -640,46 +671,61 @@ export function ReportsWorkspace({
     }
   }
   return (
-    <section className="reports-workspace" aria-label="Reports">
+    <section
+      className={`reports-workspace ${mode === 'progress' ? 'progress-workspace' : ''}`}
+      aria-label={mode === 'progress' ? 'Progress' : 'Reports'}
+    >
       <header className="rp-header">
         <div>
           <p className="rp-eyebrow">Academic intelligence</p>
-          <h1>Reports</h1>
+          <h1>{mode === 'progress' ? 'Campus progress' : 'Reports'}</h1>
           <p>
-            Course progress, teaching records and exam readiness in one place.
+            {mode === 'progress'
+              ? `${values('campus').find((c) => c.id === filters.campusId)?.name ?? 'Your permitted campuses'} · Compare syllabus coverage, teaching hours and subjects that need attention.`
+              : 'Course progress, teaching records and exam readiness in one place.'}
           </p>
         </div>
         <button
           className="rp-primary"
           type="button"
           disabled={!data || query.isFetching || dateError || exporting}
-          onClick={() => void exportCsv()}
+          onClick={() => void exportDocument()}
         >
-          {exporting ? 'Preparing CSV…' : 'Export CSV'}
+          {exporting ? 'Preparing analysis…' : 'Generate analysis report'}
         </button>
       </header>
-      <div className="rp-tabbar" role="tablist" aria-label="Report categories">
-        {reportTabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`report-tab-${t.id}`}
-            aria-controls="report-panel"
-            aria-selected={tab === t.id}
-            onClick={() => update('tab', t.id)}
-          >
-            {data?.facultyOnly && t.id === 'faculty' ? 'My Activity' : t.label}
-          </button>
-        ))}
-      </div>
+      {mode === 'reports' && (
+        <div
+          className="rp-tabbar"
+          role="tablist"
+          aria-label="Report categories"
+        >
+          {reportTabs
+            .filter((t) => !facultyOnly || t.id !== 'campus')
+            .map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`report-tab-${t.id}`}
+                aria-controls="report-panel"
+                aria-selected={tab === t.id}
+                onClick={() => update('tab', t.id)}
+              >
+                {facultyOnly && t.id === 'faculty' ? 'My Activity' : t.label}
+              </button>
+            ))}
+        </div>
+      )}
       <section className="rp-filters" aria-label="Report filters">
         <div className="rp-section-heading">
           <div>
-            <h2>Report filters</h2>
+            <h2>
+              {mode === 'progress' ? 'Choose what to review' : 'Report filters'}
+            </h2>
             <p>
-              {data?.facultyOnly
-                ? 'Only your assigned subjects are available.'
+              {facultyOnly
+                ? 'Your assigned subjects in your campus only. Downloads use the same access.'
                 : 'Only records within your account’s campus access are available.'}
             </p>
           </div>
@@ -687,7 +733,13 @@ export function ReportsWorkspace({
             type="button"
             className="rp-text-button"
             onClick={() => {
-              setFilters({ tab, campusId, deliveryStatus: 'TAUGHT' });
+              setFilters({
+                tab,
+                campusId: facultyOnly
+                  ? (data?.activeCampusId ?? undefined)
+                  : campusId,
+                deliveryStatus: 'TAUGHT',
+              });
               setExportError('');
             }}
           >
@@ -695,14 +747,24 @@ export function ReportsWorkspace({
           </button>
         </div>
         <div className="rp-filter-grid">
+          {facultyOnly && values('campus').length <= 1 ? (
+            <div className="rp-fixed-field">
+              <span>Your campus</span>
+              <strong>
+                {values('campus')[0]?.name ?? 'Your assigned campus'}
+              </strong>
+            </div>
+          ) : null}
           {(
             [
-              ['campusId', 'Campus', 'campus', 'All permitted campuses'],
-              ['trackId', 'Track', 'track', 'All tracks'],
+              ...(!facultyOnly || values('campus').length > 1
+                ? [['campusId', 'Campus', 'campus', 'All permitted campuses']]
+                : []),
               ['semesterId', 'Semester', 'semester', 'All semesters'],
               ['batchId', 'Batch', 'batch', 'All batches'],
+              ['trackId', 'Track', 'track', 'All tracks'],
               ['subjectId', 'Subject', 'subject', 'All subjects'],
-              ...(!data?.facultyOnly
+              ...(!facultyOnly
                 ? [['facultyId', 'Faculty', 'teachers', 'All faculty']]
                 : []),
             ] as const
@@ -711,12 +773,22 @@ export function ReportsWorkspace({
               {label}
               <select
                 aria-label={label}
-                value={filters[field as keyof ReportFilters] ?? ''}
+                value={
+                  (field === 'campusId' && facultyOnly
+                    ? data?.activeCampusId
+                    : filters[field as keyof ReportFilters]) ?? ''
+                }
                 onChange={(e) =>
                   update(field as keyof ReportFilters, e.target.value)
                 }
               >
-                <option value="">{all}</option>
+                {!(field === 'campusId' && facultyOnly) && (
+                  <option value="">
+                    {field === 'subjectId' && facultyOnly
+                      ? 'All my subjects'
+                      : all}
+                  </option>
+                )}
                 {values(key as 'campus').map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.name}
@@ -725,30 +797,34 @@ export function ReportsWorkspace({
               </select>
             </label>
           ))}
-          <label>
-            From date
-            <input
-              aria-label="From date"
-              type="date"
-              value={filters.from ?? ''}
-              onChange={(e) => update('from', e.target.value)}
-            />
-          </label>
-          <label>
-            To date
-            <input
-              aria-label="To date"
-              type="date"
-              value={filters.to ?? ''}
-              min={filters.from}
-              onChange={(e) => update('to', e.target.value)}
-            />
-          </label>
+          {mode === 'reports' && (
+            <>
+              <label>
+                From date
+                <input
+                  aria-label="From date"
+                  type="date"
+                  value={filters.from ?? ''}
+                  onChange={(e) => update('from', e.target.value)}
+                />
+              </label>
+              <label>
+                To date
+                <input
+                  aria-label="To date"
+                  type="date"
+                  value={filters.to ?? ''}
+                  min={filters.from}
+                  onChange={(e) => update('to', e.target.value)}
+                />
+              </label>
+            </>
+          )}
         </div>
         <p className="rp-filter-note">
-          Dates filter class dates, faculty log/upload dates and exam windows.
-          Course and campus progress show the current saved position; teaching
-          capacity is calculated after today.
+          {mode === 'progress'
+            ? 'Mirai and University are tracks within each batch. Coverage uses saved lesson plans and logs; teaching hours left use future class dates.'
+            : 'Dates filter class dates, faculty log/upload dates and exam windows. Course progress shows the current saved position; teaching capacity is calculated after today.'}
         </p>
         {dateError ? (
           <p role="alert" className="form-error">
@@ -756,6 +832,12 @@ export function ReportsWorkspace({
           </p>
         ) : null}
       </section>
+      {exporting && (
+        <p role="status" className="rp-filter-note">
+          Preparing your report with charts, saved records and AI analysis. The
+          downloaded document opens in your browser and can be printed to PDF.
+        </p>
+      )}
       {exportError ? (
         <p role="alert" className="form-error">
           {exportError}
@@ -772,11 +854,50 @@ export function ReportsWorkspace({
         <LoadingSkeleton variant="cards" label="Loading report records" />
       ) : data && !dateError ? (
         <div
+          className="rp-panel"
           id="report-panel"
-          role="tabpanel"
-          aria-labelledby={`report-tab-${tab}`}
+          role={mode === 'reports' ? 'tabpanel' : 'region'}
+          aria-label={
+            mode === 'progress' ? 'Current campus progress' : undefined
+          }
+          aria-labelledby={mode === 'reports' ? `report-tab-${tab}` : undefined}
         >
           <ReportKpis items={metricsFor(tab, data)} />
+          {mode === 'progress' && (
+            <div className="progress-scope-summary">
+              <div>
+                <span>Overall status</span>
+                <ReportBadge status={data.summary.status} />
+                <p>
+                  {data.summary.worstSubject
+                    ? `Priority subject: ${data.summary.worstSubject}`
+                    : 'Add lesson plans and class logs to assess progress.'}
+                </p>
+              </div>
+              <div>
+                <span>Teaching record</span>
+                <strong>
+                  {data.summary.logged} logged · {data.summary.unlogged}{' '}
+                  awaiting logs
+                </strong>
+                <p>
+                  {data.summary.upcoming} upcoming classes in this selection.
+                </p>
+              </div>
+              <div>
+                <span>Next exam</span>
+                <strong>
+                  {data.summary.nextExam?.name ?? 'No upcoming exam'}
+                </strong>
+                <p>
+                  {data.summary.nextExam
+                    ? `${reportDate(data.summary.nextExam.date)} · ${data.summary.nextExam.campus}`
+                    : 'Exam dates appear after the semester calendar is set.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <section className="rp-results">
             <div className="rp-section-heading">
               <div>

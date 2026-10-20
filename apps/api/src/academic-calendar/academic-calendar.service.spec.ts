@@ -67,6 +67,7 @@ describe('AcademicCalendarService', () => {
     isGlobalManager: jest.fn().mockReturnValue(true),
     assertGlobalManager: jest.fn(),
     assertCanViewCampus: jest.fn(),
+    assertCanManageCampus: jest.fn(),
   };
   const timetable = {
     regenerateSemester: jest.fn().mockResolvedValue(undefined),
@@ -89,16 +90,31 @@ describe('AcademicCalendarService', () => {
     await service.deleteSemester('semester-a', programManager);
     await service.deleteSubject('subject-a', programManager);
     expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
-    expect(prisma.semester.delete).toHaveBeenCalledWith({ where: { id: 'semester-a' } });
-    expect(prisma.subject.delete).toHaveBeenCalledWith({ where: { id: 'subject-a' } });
-    const error = new Prisma.PrismaClientKnownRequestError('Linked', { code: 'P2003', clientVersion: '6' });
+    expect(prisma.semester.delete).toHaveBeenCalledWith({
+      where: { id: 'semester-a' },
+    });
+    expect(prisma.subject.delete).toHaveBeenCalledWith({
+      where: { id: 'subject-a' },
+    });
+    const error = new Prisma.PrismaClientKnownRequestError('Linked', {
+      code: 'P2003',
+      clientVersion: '6',
+    });
     prisma.semester.delete.mockRejectedValueOnce(error);
     prisma.subject.delete.mockRejectedValueOnce(error);
-    await expect(service.deleteSemester('semester-a', programManager)).rejects.toThrow('linked batches');
-    await expect(service.deleteSubject('subject-a', programManager)).rejects.toThrow('assigned to a batch');
-    access.assertGlobalManager.mockImplementationOnce(() => { throw new ForbiddenException(); });
+    await expect(
+      service.deleteSemester('semester-a', programManager),
+    ).rejects.toThrow('linked batches');
+    await expect(
+      service.deleteSubject('subject-a', programManager),
+    ).rejects.toThrow('assigned to a batch');
+    access.assertGlobalManager.mockImplementationOnce(() => {
+      throw new ForbiddenException();
+    });
     prisma.semester.delete.mockClear();
-    await expect(service.deleteSemester('semester-a', programManager)).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.deleteSemester('semester-a', programManager),
+    ).rejects.toThrow(ForbiddenException);
     expect(prisma.semester.delete).not.toHaveBeenCalled();
   });
 
@@ -291,8 +307,8 @@ describe('AcademicCalendarService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('propagates the global-manager permission boundary', async () => {
-    access.assertGlobalManager.mockImplementationOnce(() => {
+  it('propagates the campus-manager permission boundary', async () => {
+    access.assertCanManageCampus.mockImplementationOnce(() => {
       throw new ForbiddenException();
     });
 
@@ -308,6 +324,6 @@ describe('AcademicCalendarService', () => {
         programManager,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(prisma.semester.findUnique).not.toHaveBeenCalled();
+    expect(prisma.calendarDayOverride.create).not.toHaveBeenCalled();
   });
 });

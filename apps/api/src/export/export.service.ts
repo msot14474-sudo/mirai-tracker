@@ -1,3 +1,4 @@
+import { academicTrackIdentity } from '@mirai/calculations';
 import {
   AuditAction,
   ExportType,
@@ -225,7 +226,7 @@ export class ExportService {
         month,
         campusCode: session.offering.batch.semester.campus.code,
         campusName: session.offering.batch.semester.campus.name,
-        trackCode: session.offering.batch.track.code,
+        trackCode: academicTrackIdentity(session.offering.academicTrack).code,
         batchCode: session.offering.batch.code,
         subjectCode: session.offering.subject.code,
         subjectName: session.offering.subject.name,

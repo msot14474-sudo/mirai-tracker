@@ -307,7 +307,10 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
-      if (url.includes('/reports?')) return new Response(JSON.stringify(reportFixture()), { headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/reports?'))
+        return new Response(JSON.stringify(reportFixture()), {
+          headers: { 'Content-Type': 'application/json' },
+        });
       if (url.includes('/ai-insights'))
         return new Response(
           JSON.stringify({
@@ -501,26 +504,43 @@ describe('App authentication', () => {
       screen.queryByRole('heading', { name: 'Semester import' }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Semester import' }));
-    expect(screen.queryByRole('button', { name: 'Import course data' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Semester setup template' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar import' }));
+    expect(
+      screen.queryByRole('button', { name: 'Import course data' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Semester setup template' }),
+    ).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: 'Update calendar from file' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Semester calendar' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Download Excel template' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('2. Upload calendar')).toHaveAttribute('accept', '.pdf,.xlsx,.csv');
+    expect(
+      screen.queryByRole('link', { name: 'Download Excel template' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('2. Upload calendar')).toHaveAttribute(
+      'accept',
+      '.pdf,.xlsx,.csv',
+    );
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'User access' }));
-    expect(await screen.findByRole('heading', {name: 'User access'})).toBeInTheDocument();
-    expect(screen.queryByRole('button', {name: 'Add new'})).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', {name: 'Timetable'})).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', {name: 'Lesson plans'})).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'User access' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add new' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Timetable' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Lesson plans' }),
+    ).not.toBeInTheDocument();
   });
 
   it('asks administrators to choose a campus before opening the full workspace', async () => {
@@ -553,7 +573,25 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/academic/subjects?campusId=campus-a')) {
-        return new Response(JSON.stringify([{ id: 'subject', name: 'DSA', code: 'CS-DSA', active: true, description: null, offerings: [{ id: 'offering', batch: { name: 'Section A', semester: { name: 'Sem 1' } }, faculty: [] }] }]), { headers: { 'Content-Type': 'application/json' } });
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'subject',
+              name: 'DSA',
+              code: 'CS-DSA',
+              active: true,
+              description: null,
+              offerings: [
+                {
+                  id: 'offering',
+                  batch: { name: 'Section A', semester: { name: 'Sem 1' } },
+                  faculty: [],
+                },
+              ],
+            },
+          ]),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
       }
       if (url.includes('/faculty-access/campuses/')) {
         return facultyAccessResponse();
@@ -599,8 +637,12 @@ describe('App authentication', () => {
       await screen.findByRole('heading', { name: 'Semester calendar' }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText('Campus')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Subjects' }));
-    expect(await screen.findByRole('button', { name: 'Assign teacher' })).toBeInTheDocument();
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Subjects' }).at(-1)!,
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Assign teacher' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Section A')).toBeInTheDocument();
     expect(screen.getByText('Sem 1')).toBeInTheDocument();
   });
@@ -655,9 +697,15 @@ describe('App authentication', () => {
     expect(
       screen.getByRole('button', { name: 'Timetable' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Lesson plans' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Planned dates' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Campus semesters' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Lesson plans' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Planned dates' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Campus semesters' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Log today’s classes' }),
     ).not.toBeInTheDocument();

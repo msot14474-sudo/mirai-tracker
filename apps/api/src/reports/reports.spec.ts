@@ -34,3 +34,29 @@ describe('report permissions and filters', () => {
     ).toThrow();
   });
 });
+
+it('requires the faculty campus as well as an active subject assignment', () => {
+  expect(
+    reportScope({
+      staffProfileId: 'teacher',
+      roles: [{ role: 'FACULTY', campusId: 'own-campus' }],
+    } as any),
+  ).toEqual({
+    OR: [
+      {
+        batch: { semester: { campusId: { in: ['own-campus'] } } },
+        faculty: { some: { staffProfileId: 'teacher', active: true } },
+      },
+    ],
+  });
+  expect(() =>
+    reportScope({
+      staffProfileId: 'teacher',
+      roles: [{ role: 'FACULTY', campusId: null }],
+    } as any),
+  ).toThrow();
+  expect(reportQuerySchema.safeParse({ trackId: 'CS' }).success).toBe(false);
+  expect(reportQuerySchema.parse({ trackId: 'UNIVERSITY' }).trackId).toBe(
+    'UNIVERSITY',
+  );
+});

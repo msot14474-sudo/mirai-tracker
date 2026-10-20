@@ -27,7 +27,7 @@ describe('M13 student overview', () => {
 
     expect(await screen.findByText('Mirai Sample Batch A')).toBeInTheDocument();
     expect(screen.getByText('HI-Tech Campus')).toBeInTheDocument();
-    expect(screen.getByText('Mirai Track')).toBeInTheDocument();
+    expect(screen.getByText('Mirai')).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: 'Lecture feedback' }),
     ).toBeInTheDocument();
@@ -119,7 +119,7 @@ const data: StudentOverviewData = {
     id: 'batch-a',
     code: 'MIRAI-A',
     name: 'Mirai Sample Batch A',
-    track: { id: 'track-a', code: 'MIRAI', name: 'Mirai Track' },
+    tracks: [{ id: 'MIRAI', code: 'MIRAI', name: 'Mirai' }],
     semester: {
       id: 'semester-a',
       name: 'Sample Semester 2026',

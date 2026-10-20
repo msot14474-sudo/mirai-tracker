@@ -1981,3 +1981,23 @@
 .weekly-summary-dialog header button {width:auto;padding:8px 16px;background:white;border:1px solid #d2def0;border-radius:8px;color:#315aa5;}
 .weekly-summary-content {overflow:auto;padding:22px;}
 @media(max-width:720px){.notification-heading{align-items:flex-start;flex-direction:column;}.notification-card{padding:16px;gap:10px;grid-template-columns:30px minmax(0,1fr);}.weekly-summary-overlay{padding:12px;}.weekly-summary-content{padding:16px;}}
+
+.exam-editor-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.student-access-import {
+  margin: 20px 0;
+}
+.student-import-preview {
+  margin-top: 22px;
+  display: grid;
+  gap: 18px;
+}
+.student-import-preview .table-scroll {
+  max-height: 360px;
+}

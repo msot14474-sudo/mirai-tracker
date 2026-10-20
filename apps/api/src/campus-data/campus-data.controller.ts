@@ -8,24 +8,21 @@ import {
   Post,
   Query,
   StreamableFile,
-  UploadedFiles,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { Roles, CurrentUser } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { uuidSchema } from '../academic-calendar/academic-calendar.schemas';
-import { UploadedImportFile } from '../semester-import/semester-import.types';
 import {
   VisitingFacultyService,
   visitingRateSchema,
   visitingLedgerSchema,
 } from './visiting-faculty.service';
 import { SemesterBundleService } from './semester-bundle.service';
-import { bundleTemplate, BundleRow } from './semester-bundle.parser';
+import { BundleRow } from './semester-bundle.parser';
 import { buildCsv, csvBuffer } from '../export/export-csv';
+import { SemesterExportService } from './semester-export.service';
 import { ProgressService } from '../progress/progress.service';
 
 function parse<T extends z.ZodTypeAny>(schema: T, value: unknown): z.output<T> {
@@ -46,7 +43,7 @@ function download(data: Buffer, name: string, ext: 'csv' | 'xlsx') {
     disposition: `attachment; filename="${name}.${ext}"`,
   });
 }
-async function reportFile(
+export async function reportFile(
   sheets: Record<string, Record<string, unknown>[]>,
   ext: 'csv' | 'xlsx',
 ) {
@@ -80,7 +77,7 @@ async function reportFile(
         ),
       );
     sheet.getRow(1).font = { bold: true };
-    sheet.columns.forEach((c) => {
+    sheet.columns?.forEach((c) => {
       c.width = 24;
     });
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
@@ -95,50 +92,17 @@ export class CampusDataController {
     private readonly visiting: VisitingFacultyService,
     private readonly bundle: SemesterBundleService,
     private readonly progress: ProgressService,
+    private readonly semesterExport: SemesterExportService,
   ) {}
-  @Get('template')
-  async template(@Query('format') value?: string) {
+  @Get('semesters/:id/export')
+  async exportSemester(
+    @Param('id') id: string,
+    @Query('format') value: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     const ext = format(value);
-    return download(
-      await bundleTemplate(ext),
-      'mirai-full-semester-template',
-      ext,
-    );
-  }
-
-  @Post('semesters/:id/preview')
-  @UseInterceptors(FilesInterceptor('files'))
-  preview(
-    @Param('id') id: string,
-    @UploadedFiles() files: UploadedImportFile[],
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    if (!files?.length)
-      throw new BadRequestException('Choose at least one Excel or CSV file.');
-    return this.bundle.inspect(parse(uuidSchema, id), files, user);
-  }
-  @Post('semesters/:id/import')
-  @UseInterceptors(FilesInterceptor('files'))
-  execute(
-    @Param('id') id: string,
-    @UploadedFiles() files: UploadedImportFile[],
-    @Body('fingerprint') fingerprint: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    if (!files?.length)
-      throw new BadRequestException('Choose at least one Excel or CSV file.');
-    return this.bundle.inspect(
-      parse(uuidSchema, id),
-      files,
-      user,
-      true,
-      parse(
-        z
-          .string()
-          .regex(/^[a-f0-9]{64}$/, 'Preview these files before importing.'),
-        fingerprint,
-      ),
-    );
+    const sheets = await this.semesterExport.read(parse(uuidSchema, id), user);
+    return download(await reportFile(sheets, ext), 'mirai-full-semester', ext);
   }
   @Get('semesters/:id/imports')
   history(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {

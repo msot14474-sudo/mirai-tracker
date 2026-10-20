@@ -1,3 +1,4 @@
+import { parseAcademicTrack } from '@mirai/calculations';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { parseCsv } from '../semester-import/semester-import.parser';
@@ -377,6 +378,20 @@ export async function readBundle(
             if (!/^[A-Z0-9._/-]{1,64}$/.test(values[key]!))
               fail(`${key}: use a valid code up to 64 characters.`);
           }
+        if (dataset === 'Subjects') {
+          const track = parseAcademicTrack(values.track_code);
+          if (
+            !track ||
+            parseAcademicTrack(values.track_name)?.code !== track.code
+          )
+            fail(
+              'Choose matching Mirai / MIRAI or University / UNIVERSITY track values.',
+            );
+          else {
+            values.track_code = track.code;
+            values.track_name = track.name;
+          }
+        }
         if (values.faculty_email) {
           values.faculty_email = values.faculty_email.toLowerCase();
           if (!z.string().email().safeParse(values.faculty_email).success)

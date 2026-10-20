@@ -1,3 +1,4 @@
+import { academicTrackIdentity } from '@mirai/calculations';
 import { CALENDAR_REVIEW_REASON } from '../topic-schedule/calendar-review';
 import {
   calculateExamReadiness,
@@ -170,8 +171,12 @@ export function reportScope(
     .map((r) => r.campusId!);
   if (campusIds.length)
     scopes.push({ batch: { semester: { campusId: { in: campusIds } } } });
-  if (user.roles.some((r) => r.role === 'FACULTY') && user.staffProfileId)
+  const facultyCampuses = user.roles
+    .filter((r) => r.role === 'FACULTY' && r.campusId)
+    .map((r) => r.campusId!);
+  if (facultyCampuses.length && user.staffProfileId)
     scopes.push({
+      batch: { semester: { campusId: { in: facultyCampuses } } },
       faculty: { some: { staffProfileId: user.staffProfileId, active: true } },
     });
   if (!scopes.length)
@@ -187,7 +192,7 @@ function rowIdentity(o: MetaOffering): RowIdentity {
     campus: o.batch.semester.campus,
     semester: { id: o.batch.semester.id, name: o.batch.semester.name },
     batch: { id: o.batch.id, name: o.batch.name, code: o.batch.code },
-    track: o.batch.track,
+    track: academicTrackIdentity(o.academicTrack),
     teachers: unique(
       o.faculty.filter((f) => f.active).map((f) => f.staffProfile.user),
     ),
@@ -323,6 +328,45 @@ export class ReportsService {
     const facultyOnly = !user.roles.some((r) =>
       ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(r.role),
     );
+    if (facultyOnly && q.tab === 'campus')
+      throw new ForbiddenException(
+        'Campus-wide reports are available to campus and program managers.',
+      );
+    if (
+      facultyOnly &&
+      q.campusId &&
+      !user.roles.some((r) => r.role === 'FACULTY' && r.campusId === q.campusId)
+    )
+      throw new ForbiddenException(
+        'You can only report on your assigned campus and subjects.',
+      );
+    const activeCampusId = facultyOnly
+      ? (q.campusId ??
+        user.roles.find((r) => r.role === 'FACULTY' && r.campusId)?.campusId)
+      : q.campusId;
+    const global = user.roles.some((r) =>
+      ['ADMIN', 'PROGRAM_MANAGER'].includes(r.role),
+    );
+    const availableCampuses = await this.db.campus.findMany({
+      where: {
+        active: true,
+        ...(global
+          ? {}
+          : {
+              id: {
+                in: user.roles
+                  .filter((r) =>
+                    facultyOnly
+                      ? r.role === 'FACULTY'
+                      : r.role === 'CAMPUS_MANAGER',
+                  )
+                  .flatMap((r) => (r.campusId ? [r.campusId] : [])),
+              },
+            }),
+      },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: 'asc' },
+    });
     const permitted = await this.db.subjectOffering.findMany({
       where: {
         AND: [scope, { status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } }],
@@ -337,8 +381,8 @@ export class ReportsService {
     // Select from authorized records first. Client-supplied IDs can only narrow this set.
     const filtered = permitted.filter(
       (o) =>
-        (!q.campusId || o.batch.semester.campusId === q.campusId) &&
-        (!q.trackId || o.batch.trackId === q.trackId) &&
+        (!activeCampusId || o.batch.semester.campusId === activeCampusId) &&
+        (!q.trackId || o.academicTrack === q.trackId) &&
         (!q.semesterId || o.batch.semesterId === q.semesterId) &&
         (!q.batchId || o.batchId === q.batchId) &&
         (!q.subjectId || o.subjectId === q.subjectId) &&
@@ -619,15 +663,22 @@ export class ReportsService {
     return {
       generatedAt: now.toISOString(),
       facultyOnly,
+      activeCampusId,
+      availableCampuses,
       options,
       subjects,
       exams: examRows,
       delivery,
       faculty,
-      groups: [
-        ...groupRows(subjects, 'campus'),
-        ...groupRows(subjects, 'track'),
-      ],
+      groups: facultyOnly
+        ? []
+        : [
+            ...groupRows(subjects, 'campus'),
+            ...groupRows(
+              subjects.filter((s) => s.track.id !== 'UNASSIGNED'),
+              'track',
+            ),
+          ],
       summary: {
         status: worst?.status ?? 'NEEDS_DATA',
         worstSubject: worst

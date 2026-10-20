@@ -476,16 +476,16 @@ it('previews and imports directly into a selected semester, creating its course 
     },
     subjectOffering: {
       findUnique: jest.fn().mockResolvedValue(null),
-      upsert: jest.fn().mockResolvedValue({ id: 'offering' }),
+      upsert: jest
+        .fn()
+        .mockResolvedValue({ id: 'offering', academicTrack: 'MIRAI' }),
     },
     lessonPlan: {
       count: jest.fn().mockResolvedValue(0),
-      create: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'plan',
-          units: [{ topics: [{ id: 'topic' }] }],
-        }),
+      create: jest.fn().mockResolvedValue({
+        id: 'plan',
+        units: [{ topics: [{ id: 'topic' }] }],
+      }),
     },
     topicScheduleVersion: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -516,7 +516,7 @@ it('previews and imports directly into a selected semester, creating its course 
     semesterId: 'term',
     subjectName: 'Web',
     batchName: 'Alpha',
-    programName: 'Technology',
+    programName: 'MIRAI' as const,
   };
   const user = { id: 'actor' } as AuthenticatedUser;
   const preview = await service.preview(
@@ -567,14 +567,12 @@ it('rejects an existing subject from a different selected semester', async () =>
   const service = new ProgressImportService(
     {
       subjectOffering: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            lessonPlans: [],
-            batch: {
-              semester: { id: 'other', campusId: 'campus', status: 'ACTIVE' },
-            },
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          lessonPlans: [],
+          batch: {
+            semester: { id: 'other', campusId: 'campus', status: 'ACTIVE' },
+          },
+        }),
       },
     } as unknown as PrismaService,
     { assertGlobalManager: jest.fn() } as unknown as AccessPolicyService,

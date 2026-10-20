@@ -1,3 +1,4 @@
+import { requireAcademicTrack } from './academic-tracks';
 import { CALENDAR_REVIEW_REASON } from '../topic-schedule/calendar-review';
 import {
   inheritSubjectTeacher,
@@ -67,7 +68,10 @@ function subjectSelection(campusId?: string) {
       select: {
         id: true,
         batch: {
-          select: { name: true, semester: { select: { name: true } } },
+          select: {
+            name: true,
+            semester: { select: { id: true, name: true } },
+          },
         },
         faculty: {
           where: { active: true },
@@ -182,7 +186,6 @@ export class AcademicCalendarService {
     },
     user: AuthenticatedUser,
   ) {
-    this.access.assertGlobalManager(user);
     return this.prisma
       .$transaction(async (tx) => {
         return this.linkSemesterSubjects(tx, semesterId, input, user);
@@ -213,6 +216,7 @@ export class AcademicCalendarService {
       where: { id: semesterId },
     });
     if (!semester) throw new NotFoundException('Semester not found.');
+    this.access.assertCanManageCampus(user, semester.campusId);
     if (semester.status === 'ARCHIVED')
       throw new BadRequestException('This semester is archived.');
     const subjectIds = [...new Set(input.subjectIds)];
@@ -234,6 +238,10 @@ export class AcademicCalendarService {
       throw new BadRequestException(
         'Choose subjects belonging to this campus.',
       );
+    const selectedTrack = requireAcademicTrack(
+      input.trackCode,
+      input.trackName,
+    );
     let batch;
     if (input.batchId) {
       batch = await tx.batch.findFirst({
@@ -257,8 +265,8 @@ export class AcademicCalendarService {
           'This batch code already exists. Select the existing batch.',
         );
       const track = await tx.track.upsert({
-        where: { code: input.trackCode },
-        create: { code: input.trackCode, name: input.trackName },
+        where: { code: selectedTrack.code },
+        create: { code: selectedTrack.code, name: selectedTrack.name },
         update: {},
       });
       if (!track.active)
@@ -277,6 +285,7 @@ export class AcademicCalendarService {
       data: subjectIds.map((subjectId) => ({
         batchId: batch.id,
         subjectId,
+        academicTrack: selectedTrack.code,
         targetFinishDate: semester.endDate,
       })),
       skipDuplicates: true,
@@ -289,6 +298,10 @@ export class AcademicCalendarService {
       throw new BadRequestException(
         'This batch has an archived subject. Choose an active batch or subject.',
       );
+    await tx.subjectOffering.updateMany({
+      where: { id: { in: offerings.map((o) => o.id) } },
+      data: { academicTrack: selectedTrack.code },
+    });
     await inheritSubjectTeachers(
       tx,
       offerings.map((offering) => offering.id),
@@ -300,7 +313,7 @@ export class AcademicCalendarService {
         action: 'CREATE',
         entityType: 'SemesterSubjects',
         entityId: semesterId,
-        metadata: { batchId: batch.id, subjectIds },
+        metadata: { batchId: batch.id, subjectIds, track: selectedTrack.code },
       },
     });
     return { batchId: batch.id, subjectsLinked: subjectIds.length };
@@ -350,7 +363,10 @@ export class AcademicCalendarService {
               },
             },
             batch: {
-              select: { name: true, semester: { select: { name: true } } },
+              select: {
+                name: true,
+                semester: { select: { id: true, name: true } },
+              },
             },
           },
         },
@@ -446,7 +462,7 @@ export class AcademicCalendarService {
         });
         if (!linked)
           throw new BadRequestException(
-            'Ask the admin/program manager to link this subject to a semester batch in Semester setup before assigning its teacher.',
+            'Link this subject to a semester and batch before assigning its teacher.',
           );
         await tx.subjectTeacher.upsert({
           where: {
@@ -495,7 +511,8 @@ export class AcademicCalendarService {
   }
 
   async createSubject(input: CreateSubjectInput, user: AuthenticatedUser) {
-    this.access.assertGlobalManager(user);
+    if (input.campusId) this.access.assertCanManageCampus(user, input.campusId);
+    else this.access.assertGlobalManager(user);
     try {
       if (input.semesterId) {
         return await this.prisma.$transaction(async (tx) => {
@@ -779,8 +796,8 @@ export class AcademicCalendarService {
     input: CreateCalendarDayInput,
     user: AuthenticatedUser,
   ) {
-    this.access.assertGlobalManager(user);
     const semester = await this.requireSemester(semesterId);
+    this.access.assertCanManageCampus(user, semester.campusId);
     this.assertInsideSemester(input.date, semester);
     const teachingAllowed = this.normalizedTeachingAllowed(
       input.type,
@@ -815,12 +832,15 @@ export class AcademicCalendarService {
     input: UpdateCalendarDayInput,
     user: AuthenticatedUser,
   ) {
-    this.access.assertGlobalManager(user);
     const current = await this.prisma.calendarDayOverride.findUnique({
       where: { id: calendarDayId },
       include: { semester: true },
     });
     if (!current) throw new NotFoundException('Calendar day not found.');
+    this.access.assertCanManageCampus(
+      user,
+      (await this.requireSemester(current.semesterId)).campusId,
+    );
 
     const date = input.date ?? formatIsoDate(current.date);
     const type = input.type ?? current.type;
@@ -853,11 +873,14 @@ export class AcademicCalendarService {
   }
 
   async deleteCalendarDay(calendarDayId: string, user: AuthenticatedUser) {
-    this.access.assertGlobalManager(user);
     const current = await this.prisma.calendarDayOverride.findUnique({
       where: { id: calendarDayId },
     });
     if (!current) throw new NotFoundException('Calendar day not found.');
+    this.access.assertCanManageCampus(
+      user,
+      (await this.requireSemester(current.semesterId)).campusId,
+    );
     const result = await this.prisma.calendarDayOverride.deleteMany({
       where: { id: calendarDayId },
     });
@@ -871,8 +894,8 @@ export class AcademicCalendarService {
     input: CreateExamWindowInput,
     user: AuthenticatedUser,
   ) {
-    this.access.assertGlobalManager(user);
     const semester = await this.requireSemester(semesterId);
+    this.access.assertCanManageCampus(user, semester.campusId);
     this.assertExamDates(input, semester);
     await this.assertNoExamOverlap(semesterId, input.startDate, input.endDate);
 
@@ -902,12 +925,12 @@ export class AcademicCalendarService {
     input: UpdateExamWindowInput,
     user: AuthenticatedUser,
   ) {
-    this.access.assertGlobalManager(user);
     const current = await this.prisma.examWindow.findUnique({
       where: { id: examWindowId },
       include: { semester: true },
     });
     if (!current) throw new NotFoundException('Exam window not found.');
+    this.access.assertCanManageCampus(user, current.semester.campusId);
 
     const dates = {
       startDate: input.startDate ?? formatIsoDate(current.startDate),
@@ -924,20 +947,85 @@ export class AcademicCalendarService {
     );
 
     try {
-      return await this.prisma.examWindow.update({
-        where: { id: examWindowId },
-        data: {
-          name: input.name,
-          type: input.type,
-          startDate: input.startDate
-            ? parseIsoDate(input.startDate)
-            : undefined,
-          endDate: input.endDate ? parseIsoDate(input.endDate) : undefined,
-          syllabusDeadline: input.syllabusDeadline
-            ? parseIsoDate(input.syllabusDeadline)
-            : undefined,
-        },
-      });
+      const changed =
+        dates.startDate !== formatIsoDate(current.startDate) ||
+        dates.endDate !== formatIsoDate(current.endDate);
+      const saved = await this.prisma.$transaction(async (tx) => {
+        const attachedDays = await tx.calendarDayOverride.findMany({
+          where: {
+            semesterId: current.semesterId,
+            type: 'EVENT',
+            title: current.name,
+            date: { gte: current.startDate, lte: current.endDate },
+          },
+        });
+        if (attachedDays.length && changed) {
+          const conflicts = await tx.calendarDayOverride.findMany({
+            where: {
+              semesterId: current.semesterId,
+              date: {
+                gte: parseIsoDate(dates.startDate),
+                lte: parseIsoDate(dates.endDate),
+              },
+              id: { notIn: attachedDays.map((d) => d.id) },
+            },
+          });
+          if (conflicts.length)
+            throw new ConflictException(
+              `The new exam dates overlap ${conflicts.map((d) => `${d.title} (${formatIsoDate(d.date)})`).join(', ')}. Update those calendar dates or choose another window.`,
+            );
+          await tx.calendarDayOverride.deleteMany({
+            where: { id: { in: attachedDays.map((d) => d.id) } },
+          });
+          const newDays = [];
+          for (
+            let day = Date.parse(dates.startDate);
+            day <= Date.parse(dates.endDate);
+            day += 86400000
+          )
+            newDays.push({
+              semesterId: current.semesterId,
+              date: new Date(day),
+              type: 'EVENT' as const,
+              title: input.name ?? current.name,
+              teachingAllowed: attachedDays.every((d) => d.teachingAllowed),
+            });
+          await tx.calendarDayOverride.createMany({ data: newDays });
+        } else if (attachedDays.length && input.name) {
+          await tx.calendarDayOverride.updateMany({
+            where: { id: { in: attachedDays.map((d) => d.id) } },
+            data: { title: input.name },
+          });
+        }
+        const updated = await tx.examWindow.update({
+          where: { id: examWindowId },
+          data: {
+            name: input.name,
+            type: input.type,
+            startDate: parseIsoDate(dates.startDate),
+            endDate: parseIsoDate(dates.endDate),
+            syllabusDeadline: parseIsoDate(dates.syllabusDeadline),
+          },
+        });
+        await tx.auditEvent.create({
+          data: {
+            actorId: user.id,
+            campusId: current.semester.campusId,
+            action: 'UPDATE',
+            entityType: 'ExamWindow',
+            entityId: current.id,
+            metadata: {
+              name: updated.name,
+              ...dates,
+              calendarDatesMoved: changed ? attachedDays.length : 0,
+            },
+          },
+        });
+        return updated;
+      }, SETUP_TRANSACTION_OPTIONS);
+      if (changed)
+        await this.timetable.regenerateSemester(current.semesterId, user);
+      return saved;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException(
@@ -949,7 +1037,12 @@ export class AcademicCalendarService {
   }
 
   async deleteExamWindow(examWindowId: string, user: AuthenticatedUser) {
-    this.access.assertGlobalManager(user);
+    const current = await this.prisma.examWindow.findUnique({
+      where: { id: examWindowId },
+      include: { semester: true },
+    });
+    if (!current) throw new NotFoundException('Exam window not found.');
+    this.access.assertCanManageCampus(user, current.semester.campusId);
     const result = await this.prisma.examWindow.deleteMany({
       where: { id: examWindowId },
     });

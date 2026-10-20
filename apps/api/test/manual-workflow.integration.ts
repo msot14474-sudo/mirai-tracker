@@ -94,8 +94,8 @@ it('connects a manually created semester to manager scheduling and faculty subje
         const input = {
           batchName: 'Batch A',
           batchCode: 'A',
-          trackName: `Track ${tag}`,
-          trackCode: tag,
+          trackName: 'Mirai',
+          trackCode: 'MIRAI',
           subjectIds: [subject.id],
         };
         const linked = await calendar.connectSemesterSubjects(
@@ -105,7 +105,12 @@ it('connects a manually created semester to manager scheduling and faculty subje
         );
         await calendar.connectSemesterSubjects(
           semester.id,
-          { batchId: linked.batchId, subjectIds: [subject.id] },
+          {
+            batchId: linked.batchId,
+            trackCode: 'MIRAI',
+            trackName: 'Mirai',
+            subjectIds: [subject.id],
+          },
           admin,
         );
         const courses = await calendar.semesterCourses(semester.id, manager);
@@ -133,6 +138,8 @@ it('connects a manually created semester to manager scheduling and faculty subje
             campusId: campus.id,
             semesterId: semester.id,
             batchId: linked.batchId,
+            trackCode: 'MIRAI',
+            trackName: 'Mirai',
             code: `n${tag}`,
             name: 'New linked subject',
             description: null,
@@ -150,6 +157,8 @@ it('connects a manually created semester to manager scheduling and faculty subje
               campusId: other.id,
               semesterId: semester.id,
               batchId: linked.batchId,
+              trackCode: 'MIRAI',
+              trackName: 'Mirai',
               code: `bad${tag}`,
               name: 'Invalid campus',
               description: null,
@@ -177,7 +186,12 @@ it('connects a manually created semester to manager scheduling and faculty subje
         });
         await calendar.connectSemesterSubjects(
           semester.id,
-          { batchId: linked.batchId, subjectIds: [legacy.id] },
+          {
+            batchId: linked.batchId,
+            trackCode: 'MIRAI',
+            trackName: 'Mirai',
+            subjectIds: [legacy.id],
+          },
           admin,
         );
         const legacyOffering = await tx.subjectOffering.findFirstOrThrow({
@@ -244,6 +258,8 @@ it('connects a manually created semester to manager scheduling and faculty subje
           semester.id,
           {
             batchId: linked.batchId,
+            trackCode: 'MIRAI',
+            trackName: 'Mirai',
             subjectIds: [subject.id, legacy.id, invalidDefault.id],
           },
           admin,
@@ -354,8 +370,17 @@ it('connects a manually created semester to manager scheduling and faculty subje
           calendar.listSemesters(other.id, faculty),
         ).rejects.toThrow();
         await expect(
-          calendar.connectSemesterSubjects(semester.id, input, manager),
-        ).rejects.toThrow();
+          calendar.connectSemesterSubjects(
+            semester.id,
+            {
+              batchId: linked.batchId,
+              trackCode: 'MIRAI',
+              trackName: 'Mirai',
+              subjectIds: [subject.id],
+            },
+            manager,
+          ),
+        ).resolves.toHaveProperty('batchId', linked.batchId);
         const foreign = await tx.subject.create({
           data: {
             campusId: other.id,
@@ -366,7 +391,12 @@ it('connects a manually created semester to manager scheduling and faculty subje
         await expect(
           calendar.connectSemesterSubjects(
             semester.id,
-            { batchId: linked.batchId, subjectIds: [foreign.id] },
+            {
+              batchId: linked.batchId,
+              trackCode: 'MIRAI',
+              trackName: 'Mirai',
+              subjectIds: [foreign.id],
+            },
             admin,
           ),
         ).rejects.toThrow('this campus');

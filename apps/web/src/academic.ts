@@ -19,7 +19,7 @@ export type Subject = {
   }>;
   offerings?: Array<{
     id: string;
-    batch: { name: string; semester: { name: string } };
+    batch: { name: string; semester: { id?: string; name: string } };
     faculty: Array<{ staffProfile: { id: string; user: { name: string } } }>;
   }>;
   id: string;
@@ -97,12 +97,35 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type SemesterBatch = {
-  id: string; name: string; code: string; track: { name: string };
-  subjectOfferings: { id: string; subject: { name: string }; faculty: { staffProfile: { user: { name: string } } }[] }[];
+  id: string;
+  name: string;
+  code: string;
+  track: { name: string };
+  subjectOfferings: {
+    academicTrack?: 'MIRAI' | 'UNIVERSITY' | null;
+    id: string;
+    subject: { name: string };
+    faculty: { staffProfile: { user: { name: string } } }[];
+  }[];
 };
 export const academicApi = {
-  semesterCourses: (id: string) => api<SemesterBatch[]>(`/academic/semesters/${id}/subjects`),
-  connectSubjects: (id: string, input: { batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string; subjectIds: string[] }) => api(`/academic/semesters/${id}/subjects`, { method: 'POST', body: JSON.stringify(input) }),
+  semesterCourses: (id: string) =>
+    api<SemesterBatch[]>(`/academic/semesters/${id}/subjects`),
+  connectSubjects: (
+    id: string,
+    input: {
+      batchId?: string;
+      batchName?: string;
+      batchCode?: string;
+      trackName?: string;
+      trackCode?: string;
+      subjectIds: string[];
+    },
+  ) =>
+    api(`/academic/semesters/${id}/subjects`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   deleteSemester: (id: string) =>
     api<void>(`/academic/semesters/${id}`, { method: 'DELETE' }),
   subjectFaculty: (campusId: string) =>
@@ -113,10 +136,13 @@ export const academicApi = {
     subjectId: string,
     input: { campusId: string; staffProfileId: string; offeringId?: string },
   ) =>
-    api<{ assigned: boolean; subject?: Subject }>(`/academic/subjects/${subjectId}/teacher`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
+    api<{ assigned: boolean; subject?: Subject }>(
+      `/academic/subjects/${subjectId}/teacher`,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+      },
+    ),
   deleteSubject: (id: string) =>
     api<void>(`/academic/subjects/${id}`, { method: 'DELETE' }),
   campuses: () => api<Campus[]>('/academic/campuses'),
@@ -125,7 +151,12 @@ export const academicApi = {
       `/academic/subjects${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
     ),
   createSubject: (input: {
-    semesterId?: string; batchId?: string; batchName?: string; batchCode?: string; trackName?: string; trackCode?: string;
+    semesterId?: string;
+    batchId?: string;
+    batchName?: string;
+    batchCode?: string;
+    trackName?: string;
+    trackCode?: string;
     campusId?: string;
     code: string;
     name: string;
@@ -171,6 +202,22 @@ export const academicApi = {
   ) =>
     api(`/academic/semesters/${semesterId}/calendar-days`, {
       method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteCalendarDay: (id: string) =>
+    api(`/academic/calendar-days/${id}`, { method: 'DELETE' }),
+  updateExamWindow: (
+    id: string,
+    input: {
+      name: string;
+      type: string;
+      startDate: string;
+      endDate: string;
+      syllabusDeadline: string;
+    },
+  ) =>
+    api(`/academic/exam-windows/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(input),
     }),
   createExamWindow: (

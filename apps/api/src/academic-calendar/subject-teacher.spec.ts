@@ -143,7 +143,7 @@ it('rejects a default-only assignment when the semester batch is missing', async
       { campusId: 'campus', staffProfileId: 'teacher' },
       actor,
     ),
-  ).rejects.toThrow('link this subject to a semester batch');
+  ).rejects.toThrow('Link this subject to a semester and batch');
   expect(tx.subjectTeacher.upsert).not.toHaveBeenCalled();
 });
 

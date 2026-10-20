@@ -1,3 +1,4 @@
+import { requireAcademicTrack } from '../academic-calendar/academic-tracks';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
@@ -314,24 +315,23 @@ export class SemesterBundleService {
     };
     await each('Subjects', async (r) => {
       const v = r.values;
-      let track = await tx.track.findUnique({ where: { code: v.track_code } });
-      if (track && track.name !== v.track_name)
-        fail(
-          r,
-          'Track code already has a different name. Use its existing name.',
-        );
+      const selectedTrack = requireAcademicTrack(v.track_code, v.track_name);
+      let track = await tx.track.findUnique({
+        where: { code: selectedTrack.code },
+      });
+      if (track && !track.active) fail(r, 'This track is inactive.');
       track ??= await tx.track.create({
-        data: { code: v.track_code!, name: v.track_name! },
+        data: { code: selectedTrack.code, name: selectedTrack.name },
       });
       let batch = await tx.batch.findUnique({
         where: {
           semesterId_code: { semesterId: semester.id, code: v.batch_code! },
         },
       });
-      if (batch && (batch.trackId !== track.id || batch.name !== v.batch_name))
+      if (batch && batch.name !== v.batch_name)
         fail(
           r,
-          'Batch already has a different track or name. Correct the file to match.',
+          'Batch already has a different name. Correct the file to match.',
         );
       batch ??= await tx.batch.create({
         data: {
@@ -390,10 +390,11 @@ export class SemesterBundleService {
         create: {
           batchId: batch.id,
           subjectId: subject.id,
+          academicTrack: selectedTrack.code,
           targetFinishDate: date(v.target_finish_date!),
           status: 'ACTIVE',
         },
-        update: {},
+        update: { academicTrack: selectedTrack.code },
       });
       affected.add(found.id);
     });

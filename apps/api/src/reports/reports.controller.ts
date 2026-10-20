@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Post,
   Query,
   StreamableFile,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
+import { ReportDocumentService } from './report-document.service';
 import { ReportsService } from './reports.service';
 import { reportQuerySchema } from './reports.schemas';
 
@@ -19,10 +21,24 @@ import { reportQuerySchema } from './reports.schemas';
   UserRole.FACULTY,
 )
 export class ReportsController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(
+    private readonly reports: ReportsService,
+    private readonly documents: ReportDocumentService,
+  ) {}
   @Get()
   read(@Query() raw: unknown, @CurrentUser() user: AuthenticatedUser) {
     return this.reports.read(user, parse(raw));
+  }
+  @Post('document')
+  async document(
+    @Query() raw: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const result = await this.documents.generate(user, parse(raw));
+    return new StreamableFile(result.content, {
+      type: 'text/html; charset=utf-8',
+      disposition: `attachment; filename="${result.filename}"`,
+    });
   }
   @Get('csv')
   async csv(@Query() raw: unknown, @CurrentUser() user: AuthenticatedUser) {

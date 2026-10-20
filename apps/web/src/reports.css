@@ -1,8 +1,10 @@
 .reports-workspace,
 .academic-overview {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   min-width: 0;
+  max-width: 100%;
   color: #1a2d4b;
   --rp-border: #e0e7f1;
   --rp-muted: #63748d;
@@ -689,4 +691,117 @@
   .ov-card-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Tables scroll inside the results card; their intrinsic width must not enlarge the page. */
+.rp-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+.rp-fixed-field {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+.rp-fixed-field span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rp-muted);
+}
+.rp-fixed-field strong {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #f1f5fb;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.progress-workspace .rp-filter-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.progress-scope-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.progress-scope-summary > div {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 10px;
+  border: 1px solid var(--rp-border);
+  border-radius: 12px;
+  padding: 20px;
+  background: #f8faff;
+  min-width: 0;
+}
+.progress-scope-summary > div > span:first-child {
+  font-size: 12px;
+  color: var(--rp-muted);
+}
+.progress-scope-summary strong {
+  font-size: 15px;
+}
+.progress-scope-summary p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--rp-muted);
+}
+@media (max-width: 900px) {
+  .progress-workspace .rp-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .progress-scope-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .progress-workspace .rp-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dashboard-main,
+.dashboard-content {
+  min-width: 0;
+}
+.reports-workspace {
+  width: 100%;
+  box-sizing: border-box;
+  gap: 18px;
+}
+.reports-workspace > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.reports-workspace .rp-filters {
+  padding: 18px 20px;
+}
+.reports-workspace .rp-header h1 {
+  font-size: clamp(25px, 2.4vw, 32px);
+}
+.reports-workspace .rp-filter-grid {
+  gap: 12px 16px;
+}
+.reports-workspace .rp-section-heading {
+  margin-bottom: 14px;
+}
+.reports-workspace .rp-kpis > div {
+  padding: 16px 18px;
+}
+.reports-workspace .rp-table-scroll {
+  max-height: 56vh;
+}
+.reports-workspace .rp-table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }

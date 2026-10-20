@@ -101,6 +101,8 @@ export type GroupReport = {
 export type ReportsData = {
   generatedAt: string;
   facultyOnly: boolean;
+  activeCampusId?: string | null;
+  availableCampuses?: ReportIdentity[];
   options: ReportBase[];
   subjects: CourseReport[];
   exams: ExamReport[];
@@ -135,11 +137,14 @@ export const reportsApi = {
       throw new Error('Reports could not be loaded. Please retry.');
     return data;
   },
-  async csv(filters: ReportFilters) {
-    const response = await apiFetch(`${apiUrl}/reports/csv?${query(filters)}`);
+  async document(filters: ReportFilters) {
+    const response = await apiFetch(
+      `${apiUrl}/reports/document?${query(filters)}`,
+      { method: 'POST' },
+    );
     return {
       blob: await response.blob(),
-      filename: `mirai-${filters.tab ?? 'course'}-report.csv`,
+      filename: `mirai-academic-analysis-${new Date().toISOString().slice(0, 10)}.html`,
     };
   },
 };

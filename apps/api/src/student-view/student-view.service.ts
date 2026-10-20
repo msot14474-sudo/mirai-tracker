@@ -1,3 +1,4 @@
+import { academicTrackIdentity } from '@mirai/calculations';
 import { calculateExamReadiness } from '@mirai/calculations';
 import {
   LessonPlanStatus,
@@ -126,6 +127,7 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
     return {
       id: offering.id,
       subject: offering.subject,
+      track: academicTrackIdentity(offering.academicTrack),
       lessonPlan: plan
         ? { id: plan.id, version: plan.version, status: plan.status }
         : null,
@@ -182,7 +184,7 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       id: batch.id,
       code: batch.code,
       name: batch.name,
-      track: batch.track,
+      tracks: [...new Map(subjects.map((s) => [s.track.id, s.track])).values()],
       semester: {
         id: batch.semester.id,
         name: batch.semester.name,

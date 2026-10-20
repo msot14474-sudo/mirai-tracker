@@ -1,3 +1,4 @@
+import { academicTrackIdentity } from '@mirai/calculations';
 import {
   calculateExamReadiness,
   calculateSubjectProgress,
@@ -226,11 +227,12 @@ export class ProgressService {
     if (campusIds.length) {
       scopes.push({ batch: { semester: { campusId: { in: campusIds } } } });
     }
-    if (
-      user.staffProfileId &&
-      user.roles.some((assignment) => assignment.role === UserRole.FACULTY)
-    ) {
+    const facultyCampuses = user.roles
+      .filter((r) => r.role === UserRole.FACULTY && r.campusId)
+      .map((r) => r.campusId!);
+    if (user.staffProfileId && facultyCampuses.length) {
       scopes.push({
+        batch: { semester: { campusId: { in: facultyCampuses } } },
         faculty: {
           some: { staffProfileId: user.staffProfileId, active: true },
         },
@@ -264,7 +266,7 @@ export class ProgressService {
       include: progressInclude,
       orderBy: [
         { batch: { semester: { campus: { name: 'asc' } } } },
-        { batch: { track: { name: 'asc' } } },
+        { academicTrack: 'asc' },
         { batch: { code: 'asc' } },
         { subject: { code: 'asc' } },
       ],
@@ -336,7 +338,7 @@ function calculateOffering(offering: ProgressOffering, asOfDate: string) {
       code: offering.batch.code,
       name: offering.batch.name,
     },
-    track: offering.batch.track,
+    track: academicTrackIdentity(offering.academicTrack),
     campus: {
       id: offering.batch.semester.campus.id,
       code: offering.batch.semester.campus.code,
@@ -471,7 +473,7 @@ function calculateExamReadinessView(
           code: offering.batch.code,
           name: offering.batch.name,
         },
-        track: offering.batch.track,
+        track: academicTrackIdentity(offering.academicTrack),
         lessonPlan: {
           id: lessonPlan.id,
           version: lessonPlan.version,

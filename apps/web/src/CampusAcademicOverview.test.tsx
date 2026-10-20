@@ -7,7 +7,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-it('shows admin-created subjects even without offerings and exposes no setup writes', async () => {
+it('shows admin-created subjects even without offerings and permits campus subject and calendar management', async () => {
   vi.spyOn(academicApi, 'campuses').mockResolvedValue([
     { id: 'campus', name: 'HI-Tech', code: 'HT', timezone: 'Asia/Kolkata' },
   ]);
@@ -34,7 +34,11 @@ it('shows admin-created subjects even without offerings and exposes no setup wri
   ]);
   vi.spyOn(academicApi, 'semesterCourses').mockResolvedValue([]);
   vi.spyOn(academicApi, 'calendar').mockResolvedValue({
-    semester: {} as any,
+    semester: {
+      id: 'semester',
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+    } as any,
     days: [],
     exams: [],
     summary: { totalDays: 0, workingDays: 0, nonWorkingDays: 0 },
@@ -54,9 +58,17 @@ it('shows admin-created subjects even without offerings and exposes no setup wri
   expect(
     await screen.findByRole('option', { name: /Semester 1/ }),
   ).toBeInTheDocument();
-  expect(screen.getByText(/program manager must link it/)).toBeInTheDocument();
   expect(
-    screen.queryByRole('button', { name: /create|save|delete/i }),
+    screen.getByText(/Link this subject to a semester/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Add subject' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Update calendar date' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /delete/i }),
   ).not.toBeInTheDocument();
   expect(academicApi.subjects).toHaveBeenCalledWith('campus');
 });
@@ -107,7 +119,11 @@ it('shows the selected semester teacher without contradictory default-teacher te
     { id: 'b', name: 'First Year A', subjectOfferings: [{ id: 'current' }] },
   ] as any);
   vi.spyOn(academicApi, 'calendar').mockResolvedValue({
-    semester: {} as any,
+    semester: {
+      id: 'semester',
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+    } as any,
     days: [],
     exams: [],
     summary: { totalDays: 0, workingDays: 0, nonWorkingDays: 0 },

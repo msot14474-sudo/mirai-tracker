@@ -1,3 +1,4 @@
+import { StudentAccessImport } from './StudentAccessImport';
 import { CampusTeamDirectory } from './CampusTeamDirectory';
 import { SubjectTeacherAssignment } from './SubjectTeacherAssignment';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,6 +42,8 @@ export function FacultyAccessWorkspace({
   });
   const [campusId, setCampusId] = useState(initialCampusId);
   const [showCreate, setShowCreate] = useState(false);
+  const [showStudents, setShowStudents] = useState(false);
+  const [facultyCampusId, setFacultyCampus] = useState(initialCampusId);
   const [managerCampusId, setManagerCampusId] = useState('');
   const [editRole, setEditRole] = useState('');
   const [accountFilter, setAccountFilter] = useState('ALL');
@@ -59,6 +62,11 @@ export function FacultyAccessWorkspace({
     refetchInterval: 15000,
     refetchOnWindowFocus: 'always',
     enabled: Boolean(campusId) && !readOnly,
+  });
+  const creationCampus = useQuery({
+    queryKey: ['faculty-access', facultyCampusId],
+    queryFn: () => facultyAccessApi.campus(facultyCampusId),
+    enabled: showCreate && accountType === 'FACULTY' && !!facultyCampusId,
   });
   const subjectCatalog = useQuery({
     queryKey: ['academic', 'subjects', campusId],
@@ -79,7 +87,7 @@ export function FacultyAccessWorkspace({
   });
   const createFaculty = useMutation({
     mutationFn: (input: CreateFacultyInput) =>
-      facultyAccessApi.create(campusId, input),
+      facultyAccessApi.create(facultyCampusId, input),
     onSuccess: async () => {
       form.current?.reset();
       await Promise.all([
@@ -161,6 +169,7 @@ export function FacultyAccessWorkspace({
     };
 
     if (accountType === 'FACULTY') {
+      if (!facultyCampusId) return;
       createFaculty.mutate({
         ...account,
         employeeCode: String(values.get('employeeCode') ?? ''),
@@ -317,6 +326,14 @@ export function FacultyAccessWorkspace({
               <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
               <button
                 type="button"
+                onClick={() => setShowStudents(!showStudents)}
+              >
+                {showStudents
+                  ? 'Close student import'
+                  : 'Add multiple students'}
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setShowCreate(true);
                   setSelectedAccountId('');
@@ -327,6 +344,9 @@ export function FacultyAccessWorkspace({
             </div>
           </div>
 
+          {showStudents && campusId && (
+            <StudentAccessImport key={campusId} campusId={campusId} />
+          )}
           <label className="access-role-filter">
             Role
             <select
@@ -335,11 +355,11 @@ export function FacultyAccessWorkspace({
             >
               <option value="ALL">All roles</option>
               <option value="FACULTY">Faculty</option>
+              <option value="STUDENT">Students</option>
               {!facultyOnly && (
                 <>
                   <option value="CAMPUS_MANAGER">Campus managers</option>
                   <option value="ADMIN">Administrators</option>
-                  <option value="STUDENT">Students</option>
                 </>
               )}
             </select>
@@ -534,6 +554,31 @@ export function FacultyAccessWorkspace({
                       ) : null}
                     </div>
 
+                    {accountType === 'FACULTY' && (
+                      <label>
+                        Faculty campus
+                        <select
+                          required
+                          aria-label="Faculty campus"
+                          value={facultyCampusId}
+                          onChange={(e) => {
+                            setFacultyCampus(e.target.value);
+                            createFaculty.reset();
+                          }}
+                        >
+                          <option value="">Choose a campus</option>
+                          {campuses.data?.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                        <small>
+                          Faculty access and subject assignments belong to this
+                          campus.
+                        </small>
+                      </label>
+                    )}
                     {accountType === 'CAMPUS_MANAGER' && (
                       <label>
                         Assigned campus
@@ -611,25 +656,29 @@ export function FacultyAccessWorkspace({
                           <fieldset className="faculty-offering-picker">
                             <legend>Subject access</legend>
                             <div>
-                              {detail.data?.offerings.map((offering) => (
-                                <label key={offering.id}>
-                                  <input
-                                    type="checkbox"
-                                    name="offeringIds"
-                                    disabled={!canAssignTeachers}
-                                    value={offering.id}
-                                  />
-                                  <span>
-                                    <strong>{offering.subject.code}</strong>
-                                    {offering.subject.name} -{' '}
-                                    {offering.batch.code}
-                                    <small>
-                                      {offering.batch.semester.name}
-                                    </small>
-                                  </span>
-                                </label>
-                              ))}
-                              {detail.data?.offerings.length === 0 ? (
+                              {creationCampus.data?.offerings.map(
+                                (offering) => (
+                                  <label
+                                    key={`${facultyCampusId}:${offering.id}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      name="offeringIds"
+                                      disabled={!canAssignTeachers}
+                                      value={offering.id}
+                                    />
+                                    <span>
+                                      <strong>{offering.subject.code}</strong>
+                                      {offering.subject.name} -{' '}
+                                      {offering.batch.code}
+                                      <small>
+                                        {offering.batch.semester.name}
+                                      </small>
+                                    </span>
+                                  </label>
+                                ),
+                              )}
+                              {creationCampus.data?.offerings.length === 0 ? (
                                 <p className="empty-copy">
                                   Create a semester and subject offering first.
                                 </p>
@@ -675,7 +724,7 @@ export function FacultyAccessWorkspace({
                     <button
                       type="submit"
                       disabled={
-                        (accountType === 'FACULTY' && !campusId) ||
+                        (accountType === 'FACULTY' && !facultyCampusId) ||
                         (accountType === 'CAMPUS_MANAGER' &&
                           !managerCampusId) ||
                         isPending

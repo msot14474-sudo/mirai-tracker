@@ -4,7 +4,7 @@ export function reportFixture(): ReportsData {
     id: 'offering-a',
     subject: { id: 'subject-a', name: 'Web Development', code: 'WEB' },
     campus: { id: 'campus-a', name: 'HI-Tech' },
-    track: { id: 'track-a', name: 'Computer Science' },
+    track: { id: 'MIRAI', name: 'Mirai' },
     semester: { id: 'semester-a', name: 'Semester 1' },
     batch: { id: 'batch-a', name: 'First Year A' },
     teachers: [{ id: 'teacher-a', name: 'Teacher One' }],

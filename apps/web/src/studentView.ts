@@ -12,6 +12,7 @@ export type StudentTopic = {
 };
 
 export type StudentSubject = {
+  track?: { id: string; code: string; name: string };
   id: string;
   subject: { id: string; code: string; name: string };
   lessonPlan: { id: string; version: number; status: string } | null;
@@ -46,7 +47,8 @@ export type StudentOverviewData = {
     id: string;
     code: string;
     name: string;
-    track: { id: string; code: string; name: string };
+    tracks?: { id: string; code: string; name: string }[];
+    track?: { id: string; code: string; name: string };
     semester: {
       id: string;
       name: string;

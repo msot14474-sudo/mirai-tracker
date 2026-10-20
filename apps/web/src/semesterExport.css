@@ -1,0 +1,59 @@
+.semester-export-card {
+  margin-top: 22px;
+  min-width: 0;
+}
+.semester-export-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+.semester-export-sections > div {
+  background: #f7f9fd;
+  padding: 20px;
+  border: 1px solid #e5ebf4;
+  border-radius: 12px;
+}
+.semester-export-sections h4 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+.semester-export-sections p,
+.semester-export-footer > p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #63748d;
+  margin: 0;
+}
+.semester-export-badge {
+  background: #edf3ff;
+  color: #2c59b4;
+  font-size: 12px;
+  padding: 9px 13px;
+  border-radius: 8px;
+}
+.semester-export-footer {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #e5ebf4;
+  padding-top: 22px;
+}
+.semester-export-footer > p {
+  max-width: 560px;
+}
+.semester-export-footer .campus-data-actions {
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .semester-export-footer {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 600px) {
+  .semester-export-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

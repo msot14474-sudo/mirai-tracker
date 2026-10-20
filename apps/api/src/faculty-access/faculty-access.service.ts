@@ -155,7 +155,7 @@ export class FacultyAccessService {
                   },
                 ],
               }
-            : { campusId, role: UserRole.FACULTY },
+            : { campusId, role: { in: [UserRole.FACULTY, UserRole.STUDENT] } },
         },
       },
       select: {
@@ -222,7 +222,10 @@ export class FacultyAccessService {
         UserRole.PROGRAM_MANAGER,
         UserRole.CAMPUS_MANAGER,
       ]);
-      const campusAccountRoles = new Set<UserRole>([UserRole.FACULTY]);
+      const campusAccountRoles = new Set<UserRole>([
+        UserRole.FACULTY,
+        UserRole.STUDENT,
+      ]);
       const elevated = target.roleAssignments.some((assignment) =>
         elevatedRoles.has(assignment.role),
       );
@@ -234,7 +237,7 @@ export class FacultyAccessService {
       );
       if (elevated || !withinScope) {
         throw new ForbiddenException(
-          'Campus Managers can update only faculty in their campus.',
+          'Campus Managers can update only faculty and students in their campus.',
         );
       }
     }

@@ -89,7 +89,7 @@ export class AiInsightsService {
         ? {
             recipient: { name: user.name, roles: user.roles },
             evidenceRule:
-              'Use only the explicit weekly records supplied in the request as academic evidence. Do not infer additional campus records.',
+              'Use only the explicit records supplied in the request as academic evidence. Do not infer additional campus records.',
           }
         : questionContext(snapshot, question)),
     });

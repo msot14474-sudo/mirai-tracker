@@ -34,12 +34,13 @@ const SemesterSetup = lazy(() =>
   })),
 );
 
+const SubjectsWorkspace = lazy(() => import('./SubjectsWorkspace').then(m => ({default:m.SubjectsWorkspace})));
 const SemesterImport = lazy(() =>
   import('./SemesterImport').then((module) => ({
     default: module.SemesterImport,
   })),
 );
-const FullSemesterImport = lazy(() => import('./FullSemesterImport').then(m => ({default:m.FullSemesterImport})));
+const FullSemesterExport = lazy(() => import('./FullSemesterExport').then(m => ({default:m.FullSemesterExport})));
 const VisitingFacultyWorkspace = lazy(() => import('./VisitingFacultyWorkspace').then(m => ({default:m.VisitingFacultyWorkspace})));
 
 const TimetableSetup = lazy(() =>
@@ -941,7 +942,8 @@ type DashboardView =
   | 'exports'
   | 'academic-setup'
   | 'semester-import'
-  | 'full-semester-import'
+  | 'full-semester-export'
+  | 'subjects'
   | 'visiting-faculty'
   | 'faculty-access'
   | 'timetable'
@@ -1175,16 +1177,16 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           },
           {
             id: 'semester-import' as const,
-            label: 'Semester import',
+            label: 'Calendar import',
             icon: 'academic' as const,
           },
         ]
       : []),
     ...(!canManageAcademicCalendar && roles.includes('CAMPUS_MANAGER') ? [{ id: 'academic-setup' as const, label: 'Campus semesters', icon: 'academic' as const }] : []),
     ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [
-      {id:'full-semester-import' as const,label:'Full semester import',icon:'academic' as const},
       {id:'visiting-faculty' as const,label:'Visiting faculty',icon:'faculty' as const},
     ] : []),
+    ...(roles.some(role => ['ADMIN','CAMPUS_MANAGER'].includes(role)) ? [{ id:'subjects' as const,label:'Subjects',icon:'lessons' as const }] : []),
     ...(canManageFaculty
       ? [
           {
@@ -1265,6 +1267,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           },
         ]
       : []),
+    ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [{ id: 'full-semester-export' as const, label: 'Full semester export', icon: 'exports' as const }] : []),
   ];
   const primaryRoleLabel = roles[0] ? roleLabels[roles[0]] : 'User';
   const initials = user.name
@@ -1326,6 +1329,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
           />
         );
       case 'progress':
+        if (roles.some(role => ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role))) return <ReportsWorkspace key={`progress:${selectedCampusId}`} campusId={selectedCampusId || undefined} mode="progress" />;
         return (
           <ProgressDashboard
             key={selectedCampusId}
@@ -1346,8 +1350,11 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             key={`${selectedCampusId}:${reportSubjectId ?? ''}`}
             campusId={selectedCampusId || undefined}
             initialSubjectId={reportSubjectId}
+            facultyOnly={progressScope === 'faculty' && canLogSessions}
           />
         );
+      case 'subjects':
+        return <SubjectsWorkspace key={selectedCampusId} campusId={selectedCampusId||undefined} canDelete={roles.includes('ADMIN')} />;
       case 'academic-setup':
         if (!canManageAcademicCalendar) return <CampusAcademicOverview />;
         return (
@@ -1364,8 +1371,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             campusId={selectedCampusId || undefined}
           />
         );
-      case 'full-semester-import':
-        return <FullSemesterImport key={selectedCampusId} initialCampusId={selectedCampusId||undefined}/>;
+      case 'full-semester-export':
+        return <FullSemesterExport key={selectedCampusId} initialCampusId={selectedCampusId||undefined}/>;
       case 'visiting-faculty':
         return <VisitingFacultyWorkspace key={selectedCampusId} initialCampusId={selectedCampusId||undefined}/>;
       case 'faculty-access':

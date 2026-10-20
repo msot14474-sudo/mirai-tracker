@@ -32,9 +32,9 @@ function show() {
   );
 }
 it('shows the marked exam columns and exports the selected filters and tab', async () => {
-  vi.spyOn(reportsApi, 'csv').mockResolvedValue({
+  vi.spyOn(reportsApi, 'document').mockResolvedValue({
     blob: new Blob(['exam']),
-    filename: 'exam.csv',
+    filename: 'exam.html',
   });
   show();
   await screen.findByRole('table', { name: 'Course Progress' });
@@ -64,11 +64,15 @@ it('shows the marked exam columns and exports the selected filters and tab', asy
     ),
   );
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled(),
+    expect(
+      screen.getByRole('button', { name: 'Generate analysis report' }),
+    ).toBeEnabled(),
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Generate analysis report' }),
+  );
   await waitFor(() =>
-    expect(reportsApi.csv).toHaveBeenCalledWith(
+    expect(reportsApi.document).toHaveBeenCalledWith(
       expect.objectContaining({ subjectId: 'subject-a', tab: 'exams' }),
     ),
   );
@@ -92,9 +96,18 @@ it('shows faculty only their own activity and prevents reversed date queries and
   vi.mocked(reportsApi.read).mockResolvedValue({
     ...reportFixture(),
     facultyOnly: true,
+    activeCampusId: 'campus-a',
   });
   show();
   await screen.findByRole('tab', { name: 'My Activity' });
+  expect(
+    screen.queryByRole('tab', { name: 'Campus & Track' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'Campus' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText('Your campus')).toBeInTheDocument();
+  expect(screen.queryByText('Computer Science')).not.toBeInTheDocument();
   expect(
     screen.queryByRole('combobox', { name: 'Faculty' }),
   ).not.toBeInTheDocument();
@@ -114,10 +127,44 @@ it('shows faculty only their own activity and prevents reversed date queries and
   expect(screen.getByRole('alert')).toHaveTextContent(
     'From date must be on or before To date',
   );
-  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: 'Generate analysis report' }),
+  ).toBeDisabled();
   expect(
     vi
       .mocked(reportsApi.read)
       .mock.calls.every(([f]) => !(f.from && f.to && f.from > f.to)),
   ).toBe(true);
+});
+
+it('exports faculty reports only for their current authorized campus, including after reset', async () => {
+  vi.mocked(reportsApi.read).mockResolvedValue({
+    ...reportFixture(),
+    facultyOnly: true,
+    activeCampusId: 'campus-a',
+  });
+  vi.spyOn(reportsApi, 'document').mockResolvedValue({
+    blob: new Blob(['own']),
+    filename: 'own.csv',
+  });
+  show();
+  await screen.findByRole('tab', { name: 'My Activity' });
+  fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Generate analysis report' }),
+    ).toBeEnabled(),
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Generate analysis report' }),
+  );
+  await waitFor(() =>
+    expect(reportsApi.document).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campusId: 'campus-a',
+        tab: 'course',
+        facultyId: undefined,
+      }),
+    ),
+  );
 });
