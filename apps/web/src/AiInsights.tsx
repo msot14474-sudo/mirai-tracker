@@ -1,3 +1,4 @@
+import { WeeklySummaries } from './WeeklySummaries';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
@@ -208,6 +209,7 @@ export function AiInsights({
         <div>
           <h2>AI insights</h2>
         </div>
+        <WeeklySummaries campusId={campusId} compact/>
       </header>
       {query.isPending ? (
         <LoadingSkeleton variant="cards" label="Loading academic insights" />

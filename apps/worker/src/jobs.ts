@@ -1,4 +1,5 @@
 export type MiraiJobName =
+  | 'weekly-academic-summary'
   | 'health-check'
   | 'missed-session-reminder'
   | 'campus-manager-escalation'
@@ -34,6 +35,26 @@ export async function processMiraiJob(
     fetcher?: typeof fetch;
   },
 ) {
+  if (name === 'weekly-academic-summary') {
+    if (!options.internalSecret)
+      throw new Error('INTERNAL_JOB_SECRET is required for weekly summaries.');
+    const response = await (options.fetcher ?? fetch)(
+      `${options.apiUrl.replace(/\/$/, '')}/notifications/weekly-summaries/process`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-job-secret': options.internalSecret,
+        },
+        body: JSON.stringify({ enqueue: true }),
+      },
+    );
+    if (!response.ok)
+      throw new Error(
+        `Weekly summary scan failed with HTTP ${response.status}.`,
+      );
+    return response.json();
+  }
   if (!isAlertJob(name)) {
     return {
       processedAt: new Date().toISOString(),
@@ -71,6 +92,8 @@ export async function processMiraiJob(
 
 export function describeJob(name: MiraiJobName): string {
   const descriptions: Record<MiraiJobName, string> = {
+    'weekly-academic-summary':
+      'Prepare personalized weekly summaries and deliver them to authorized faculty and managers.',
     'health-check':
       'Verify that the background worker can process queued work.',
     'missed-session-reminder':

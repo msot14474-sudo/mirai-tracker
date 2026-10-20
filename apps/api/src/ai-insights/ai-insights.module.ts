@@ -4,6 +4,7 @@ import { AiContextService } from './ai-context.service';
 import { AiInsightsService } from './ai-insights.service';
 import { AiInsightsController } from './ai-insights.controller';
 @Module({
+  exports: [AiContextService, AiInsightsService],
   controllers: [AiInsightsController],
   providers: [AiConversationService, AiContextService, AiInsightsService],
 })

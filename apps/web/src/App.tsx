@@ -39,6 +39,8 @@ const SemesterImport = lazy(() =>
     default: module.SemesterImport,
   })),
 );
+const FullSemesterImport = lazy(() => import('./FullSemesterImport').then(m => ({default:m.FullSemesterImport})));
+const VisitingFacultyWorkspace = lazy(() => import('./VisitingFacultyWorkspace').then(m => ({default:m.VisitingFacultyWorkspace})));
 
 const TimetableSetup = lazy(() =>
   import('./TimetableSetup').then((module) => ({
@@ -85,8 +87,8 @@ const StudentOverview = lazy(() =>
   })),
 );
 
-const AlertCenter = lazy(() =>
-  import('./AlertCenter').then((module) => ({ default: module.AlertCenter })),
+const NotificationCenter = lazy(() =>
+  import('./NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
 );
 
 const ExportCenter = lazy(() =>
@@ -939,6 +941,8 @@ type DashboardView =
   | 'exports'
   | 'academic-setup'
   | 'semester-import'
+  | 'full-semester-import'
+  | 'visiting-faculty'
   | 'faculty-access'
   | 'timetable'
   | 'lesson-plans'
@@ -1088,7 +1092,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const canLogSessions = roles.includes('FACULTY');
   const canViewStudentOverview = roles.includes('STUDENT');
   const canViewAlerts = roles.some(
-    (role) => role === 'FACULTY' || role === 'CAMPUS_MANAGER',
+    (role) => ['ADMIN','PROGRAM_MANAGER','FACULTY','CAMPUS_MANAGER'].includes(role),
   );
   const canViewProgressDashboard = roles.some((role) => role !== 'STUDENT');
   const canExport = roles.some(
@@ -1178,6 +1182,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         ]
       : []),
     ...(!canManageAcademicCalendar && roles.includes('CAMPUS_MANAGER') ? [{ id: 'academic-setup' as const, label: 'Campus semesters', icon: 'academic' as const }] : []),
+    ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [
+      {id:'full-semester-import' as const,label:'Full semester import',icon:'academic' as const},
+      {id:'visiting-faculty' as const,label:'Visiting faculty',icon:'faculty' as const},
+    ] : []),
     ...(canManageFaculty
       ? [
           {
@@ -1247,7 +1255,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         ]
       : []),
     ...(canViewAlerts
-      ? [{ id: 'alerts' as const, label: 'Alerts', icon: 'alerts' as const }]
+      ? [{ id: 'alerts' as const, label: 'Notifications', icon: 'alerts' as const }]
       : []),
     ...(canExport
       ? [
@@ -1297,9 +1305,15 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         return <StudentOverview />;
       case 'alerts':
         return (
-          <AlertCenter
+          <NotificationCenter
             key={selectedCampusId}
             campusId={selectedCampusId || undefined}
+            canViewMissedLogs={roles.includes('FACULTY')||roles.includes('CAMPUS_MANAGER')}
+            onOpen={(view,campusId)=>{
+              if(campusId&&canManageAcademicCalendar)setSelectedCampusId(campusId);
+              const target=navigation.some(n=>n.id===view)?view:(view==='faculty-access'?'account':view==='timetable'||view==='daily-logging'||view==='lesson-plans'?'progress':'overview');
+              setActiveView(target as DashboardView);
+            }}
           />
         );
       case 'ai-insights':
@@ -1349,6 +1363,10 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             campusId={selectedCampusId || undefined}
           />
         );
+      case 'full-semester-import':
+        return <FullSemesterImport key={selectedCampusId} initialCampusId={selectedCampusId||undefined}/>;
+      case 'visiting-faculty':
+        return <VisitingFacultyWorkspace key={selectedCampusId} initialCampusId={selectedCampusId||undefined}/>;
       case 'faculty-access':
         return (
           <FacultyAccessWorkspace

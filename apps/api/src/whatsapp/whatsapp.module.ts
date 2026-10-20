@@ -1,3 +1,4 @@
+import { ActivityService } from '../notifications/activity.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { SessionLogModule } from '../session-log/session-log.module';
@@ -6,6 +7,6 @@ import { WhatsAppService } from './whatsapp.service';
 @Module({
   imports: [AuthModule, SessionLogModule],
   controllers: [WhatsAppController],
-  providers: [WhatsAppService],
+  providers: [WhatsAppService, ActivityService],
 })
 export class WhatsAppModule {}

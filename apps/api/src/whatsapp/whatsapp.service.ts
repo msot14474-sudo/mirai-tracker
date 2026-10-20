@@ -1,7 +1,10 @@
+import { ActivityService } from '../notifications/activity.service';
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
@@ -30,6 +33,7 @@ export class WhatsAppService {
     private readonly db: PrismaService,
     private readonly redis: RedisService,
     private readonly logs: SessionLogService,
+    @Optional() private readonly activity?: ActivityService,
   ) {}
   ready() {
     return (
@@ -349,6 +353,28 @@ Record unfinished work and intended carry-forward in summaries/notes. You cannot
             )
               throw error;
             recalculationPending = true;
+          }
+          if (this.activity) {
+            try {
+              const scope = await this.activity.resolve(
+                { sessionId: session.id },
+                {},
+              );
+              await this.activity.publish(
+                user,
+                {
+                  title: 'Class log saved through WhatsApp',
+                  category: 'Teaching',
+                  view: 'daily-logging',
+                },
+                scope,
+              );
+            } catch {
+              Logger.warn(
+                'Class log saved, but its notification could not be recorded.',
+                'WhatsAppService',
+              );
+            }
           }
           reply = `Saved for ${session.subject.name} · ${session.batch.name} · ${session.sessionDate}.\n${input.status.replaceAll('_', ' ')} · ${input.overallCompletionPercentage}%\nCovered: ${input.coveredSummary}\nLeft: ${input.leftOverSummary || 'None recorded'}\nClasswork: ${input.classworkStatus.replaceAll('_', ' ')} · Homework: ${input.homeworkStatus.replaceAll('_', ' ')}${input.notes ? `\nNotes: ${input.notes}` : ''}${input.carryForwardTopicId ? '\nCarry-forward topic recorded.' : ''}\nTimetable dates have not been moved.${recalculationPending ? '\nProgress recalculation needs attention in the app.' : ''}`;
         }

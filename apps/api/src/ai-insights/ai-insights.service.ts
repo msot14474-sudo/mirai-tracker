@@ -64,6 +64,7 @@ export class AiInsightsService {
     question?: string,
     useAi = false,
     conversationId?: string,
+    background = false,
   ) {
     // Fresh authorization and data on every request, including cache hits.
     const snapshot = await this.context.snapshot(user, filter);
@@ -78,16 +79,19 @@ export class AiInsightsService {
       throw new ServiceUnavailableException(
         'AI is not connected yet. You can still generate a data report.',
       );
-    const history = await this.chats.history(
-      user,
-      filter,
-      snapshot,
-      conversationId,
-    );
+    const history = background
+      ? null
+      : await this.chats.history(user, filter, snapshot, conversationId);
     const prior = conversationContext(history?.messages ?? []);
     const context = JSON.stringify({
       application: applicationGuide,
-      ...questionContext(snapshot, question),
+      ...(background
+        ? {
+            recipient: { name: user.name, roles: user.roles },
+            evidenceRule:
+              'Use only the explicit weekly records supplied in the request as academic evidence. Do not infer additional campus records.',
+          }
+        : questionContext(snapshot, question)),
     });
     if (context.length > 120000)
       throw new BadRequestException(
@@ -120,14 +124,16 @@ export class AiInsightsService {
           typeof parsed.generatedAt === 'string'
         )
           return {
-            conversationId: await this.chats.append(
-              user,
-              filter,
-              snapshot,
-              history,
-              question || 'Generate an academic monitoring report',
-              parsed.text,
-            ),
+            conversationId: background
+              ? undefined
+              : await this.chats.append(
+                  user,
+                  filter,
+                  snapshot,
+                  history,
+                  question || 'Generate an academic monitoring report',
+                  parsed.text,
+                ),
             mode: 'ai' as const,
             text: parsed.text,
             generatedAt: parsed.generatedAt,
@@ -141,7 +147,10 @@ export class AiInsightsService {
       }
     }
     const [userCount, totalCount] = await Promise.all([
-      this.redis.incrementWithExpiry(`ai:hour:user:${user.id}`, 3600),
+      this.redis.incrementWithExpiry(
+        `${background ? 'ai:weekly:user' : 'ai:hour:user'}:${user.id}`,
+        3600,
+      ),
       this.redis.incrementWithExpiry('ai:hour:global', 3600),
     ]).catch(() => {
       throw new ServiceUnavailableException(
@@ -267,14 +276,16 @@ export class AiInsightsService {
         await this.redis
           .setWithExpiry(cacheKey, JSON.stringify(saved), 300)
           .catch(() => undefined);
-      const savedConversationId = await this.chats.append(
-        user,
-        filter,
-        snapshot,
-        history,
-        question || 'Generate an academic monitoring report',
-        incomplete ? `[Incomplete response]\n${saved.text}` : saved.text,
-      );
+      const savedConversationId = background
+        ? undefined
+        : await this.chats.append(
+            user,
+            filter,
+            snapshot,
+            history,
+            question || 'Generate an academic monitoring report',
+            incomplete ? `[Incomplete response]\n${saved.text}` : saved.text,
+          );
       return {
         conversationId: savedConversationId,
         mode: 'ai' as const,

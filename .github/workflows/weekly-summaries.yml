@@ -1,0 +1,36 @@
+name: Weekly academic summaries
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mirai-weekly-summaries
+  cancel-in-progress: false
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Generate and deliver due weekly summaries
+        env:
+          WEEKLY_SUMMARY_JOB_SECRET: ${{ secrets.WEEKLY_SUMMARY_JOB_SECRET }}
+          SUMMARY_API_URL: https://mirai-tracker-api.vercel.app
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request
+          secret = os.environ.get('WEEKLY_SUMMARY_JOB_SECRET')
+          if not secret:
+              raise SystemExit('Set the WEEKLY_SUMMARY_JOB_SECRET repository secret to the API weekly-summary job secret.')
+          endpoint = os.environ['SUMMARY_API_URL'] + '/notifications/weekly-summaries/process'
+          for index in range(40):
+              request = urllib.request.Request(endpoint,
+                  data=json.dumps({'enqueue': index == 0}).encode(),
+                  headers={'Content-Type': 'application/json', 'x-internal-job-secret': secret}, method='POST')
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  result = json.load(response)
+              print('Weekly summary queue item checked:', index + 1, 'processed:', result.get('processed', False))
+              if not result.get('remaining'):
+                  break
+          PY

@@ -27,6 +27,11 @@ async function registerAlertSchedules() {
       ),
     ),
   );
+  await queue.upsertJobScheduler(
+    'weekly-academic-summary',
+    { every: 5 * 60 * 1000 },
+    { name: 'weekly-academic-summary', data: {} },
+  );
   console.info('[worker] M14 missed-log scans scheduled every 5 minutes');
 }
 

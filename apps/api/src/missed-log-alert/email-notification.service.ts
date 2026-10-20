@@ -29,6 +29,24 @@ export class EmailNotificationService {
     });
   }
 
+  async sendWeeklySummary(message: {
+    id: string;
+    recipientEmail: string;
+    title: string;
+    text: string;
+  }) {
+    return this.transporter.sendMail({
+      from: process.env.SMTP_FROM ?? 'notifications@mirai.local',
+      to: message.recipientEmail,
+      messageId: `<weekly-${message.id}@mirai-tracker.app>`,
+      subject: message.title,
+      text:
+        message.text +
+        '\n\nOpen Mirai Tracker → AI insights → Weekly summaries to review this summary.\n' +
+        (process.env.WEB_ORIGIN ?? 'https://mirai-tracker.vercel.app'),
+    });
+  }
+
   async sendDeploymentTest(recipientEmail: string) {
     return this.transporter.sendMail({
       from: process.env.SMTP_FROM ?? 'notifications@mirai.local',

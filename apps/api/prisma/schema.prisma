@@ -219,6 +219,8 @@ model User {
   importJobs             ImportJob[]
   exportJobs             ExportJob[]
   auditEvents            AuditEvent[]           @relation("AuditActor")
+  activityReads ActivityRead[]
+  weeklySummaries WeeklySummary[]
 
   @@index([status])
 }
@@ -249,6 +251,8 @@ model RoleAssignment {
 }
 
 model StaffProfile {
+  visitingRates VisitingFacultyRate[]
+  visitingLedger VisitingFacultyLedger[]
   subjectTeachers SubjectTeacher[]
   id                 String              @id @default(uuid()) @db.Uuid
   userId             String              @unique @db.Uuid
@@ -278,6 +282,7 @@ model StudentProfile {
 }
 
 model Campus {
+  visitingRates VisitingFacultyRate[]
   subjectTeachers SubjectTeacher[]
   id              String           @id @default(uuid()) @db.Uuid
   code            String           @unique @db.VarChar(32)
@@ -305,6 +310,8 @@ model Track {
 }
 
 model Semester {
+  dataImports SemesterDataImport[]
+  visitingLedger VisitingFacultyLedger[]
   id                      String                @id @default(uuid()) @db.Uuid
   campusId                String                @db.Uuid
   name                    String                @db.VarChar(160)
@@ -821,4 +828,81 @@ model WhatsAppReceipt {
   id String @id @db.VarChar(200)
   reply String @db.Text
   createdAt DateTime @default(now())
+}
+
+model VisitingFacultyRate {
+  id String @id @default(uuid()) @db.Uuid
+  campusId String @db.Uuid
+  staffProfileId String @db.Uuid
+  effectiveFrom DateTime @db.Date
+  ratePerClass Decimal @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
+  @@unique([campusId, staffProfileId, effectiveFrom])
+}
+
+model VisitingFacultyLedger {
+  id String @id @default(uuid()) @db.Uuid
+  semesterId String @db.Uuid
+  staffProfileId String @db.Uuid
+  date DateTime @db.Date
+  kind String @db.VarChar(16)
+  category String @db.VarChar(80)
+  amount Decimal @db.Decimal(12, 2)
+  notes String @db.VarChar(2000)
+  reference String? @db.VarChar(200)
+  voided Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Restrict)
+  @@unique([semesterId, reference])
+  @@index([semesterId, staffProfileId, date])
+}
+
+model SemesterDataImport {
+  id String @id @default(uuid()) @db.Uuid
+  semesterId String @db.Uuid
+  fingerprint String @db.VarChar(64)
+  uploadedById String @db.Uuid
+  fileNames String @db.Text
+  sourceData Json
+  counts Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  @@unique([semesterId, fingerprint])
+}
+
+model ActivityRead {
+  userId String @db.Uuid
+  eventId String @db.Uuid
+  readAt DateTime @default(now()) @db.Timestamptz(3)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@id([userId,eventId])
+}
+
+model WeeklySummary {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  campusId String @db.Uuid
+  weekStart DateTime @db.Date
+  weekEnd DateTime @db.Date
+  offeringIds String[] @db.Uuid
+  accessKey String @db.VarChar(64)
+  title String @db.VarChar(240)
+  text String @default("") @db.Text
+  mode String @default("pending") @db.VarChar(20)
+  status String @default("QUEUED") @db.VarChar(20)
+  attempts Int @default(0)
+  leaseUntil DateTime? @db.Timestamptz(3)
+  emailStatus String @default("PENDING") @db.VarChar(20)
+  emailSentAt DateTime? @db.Timestamptz(3)
+  emailAttempts Int @default(0)
+  lastError String? @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@unique([userId,campusId,weekStart])
+  @@index([status,leaseUntil])
+  @@index([userId,weekStart])
 }
