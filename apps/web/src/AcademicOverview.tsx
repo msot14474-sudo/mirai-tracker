@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { BufferRatioValue, BufferRatioLegend } from './BufferRatio';
 import { useState } from 'react';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import {
@@ -280,8 +281,8 @@ export function AcademicOverview({
                       </dd>
                     </div>
                     <div>
-                      <dt>Time cushion</dt>
-                      <dd>{num(r.metrics?.bufferRatio, '×')}</dd>
+                      <dt>Buffer ratio</dt>
+                      <dd><BufferRatioValue metrics={r.metrics ? { ...r.metrics, status: r.status } : null} /></dd>
                     </div>
                   </dl>
                   {r.metrics ? (
@@ -298,6 +299,7 @@ export function AcademicOverview({
                   <p className="ov-reason">{r.reason}</p>
                   <details>
                     <summary>Why this status?</summary>
+                    <BufferRatioLegend thresholds={r.metrics?.thresholds} />
                     <dl className="ov-detail-grid">
                       <div>
                         <dt>Semester</dt>

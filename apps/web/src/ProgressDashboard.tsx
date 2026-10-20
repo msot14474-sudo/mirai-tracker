@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { BufferRatioLegend } from './BufferRatio';
 import { useMemo, useState } from 'react';
 import { RecoveryPlanner } from './RecoveryPlanner';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -206,6 +207,7 @@ function SubjectCard({ subject }: { subject: SubjectProgress }) {
       </div>
       <Coverage value={subject.coveragePercentage} />
       <Metrics metrics={subject} />
+      <details><summary>Buffer ratio thresholds</summary><BufferRatioLegend thresholds={subject.thresholds} /></details>
       <div className="subject-card-footer">
         <span>Target {displayDate(subject.targetFinishDate)}</span>
         <span>
@@ -247,7 +249,7 @@ function Metrics({
       'Buffer ratio',
       metrics.bufferRatio === null
         ? 'Complete'
-        : `${formatNumber(metrics.bufferRatio)}×`,
+        : `${metrics.bufferRatio.toFixed(2)}×`,
     ],
     ['Pace vs plan', pace(metrics.paceVsPlanHours)],
   ];

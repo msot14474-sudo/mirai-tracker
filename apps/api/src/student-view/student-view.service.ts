@@ -1,5 +1,5 @@
 import { academicTrackIdentity } from '@mirai/calculations';
-import { calculateExamReadiness } from '@mirai/calculations';
+import { calculateExamReadiness, calculateSubjectProgress } from '@mirai/calculations';
 import {
   LessonPlanStatus,
   Prisma,
@@ -31,6 +31,7 @@ const studentBatchInclude = Prisma.validator<Prisma.BatchInclude>()({
     },
     orderBy: { subject: { code: 'asc' } },
     include: {
+      _count: { select: { sessions: true } },
       subject: { select: { id: true, code: true, name: true } },
       faculty: {
         where: {
@@ -60,13 +61,13 @@ const studentBatchInclude = Prisma.validator<Prisma.BatchInclude>()({
       sessions: {
         where: { status: 'SCHEDULED' },
         orderBy: { startsAt: 'asc' },
-        take: 5,
         select: {
           id: true,
           sessionDate: true,
           startsAt: true,
           endsAt: true,
           isExtraSession: true,
+          status: true,
         },
       },
       lessonPlans: {
@@ -152,7 +153,7 @@ export class StudentViewService {
             sessions: {
               ...studentBatchInclude.subjectOfferings.include.sessions,
               where: {
-                status: 'SCHEDULED',
+                status: { in: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] },
                 sessionDate: { gte: new Date(`${asOfDate}T00:00:00.000Z`) },
                 endsAt: { gt: new Date() },
               },
@@ -199,6 +200,20 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
         })),
       ) ?? [];
     const calculation = calculateExamReadiness(topics);
+    const capacity = plan && calculation.topicsInScope ? calculateSubjectProgress({
+      asOfDate,
+      targetFinishDate: formatIsoDate(offering.targetFinishDate ?? batch.semester.endDate),
+      topics,
+      thresholds: {
+        onTrack: Number(offering.onTrackThreshold ?? batch.semester.defaultOnTrackThreshold ?? 1.15),
+        tight: Number(offering.tightThreshold ?? batch.semester.defaultTightThreshold ?? 1),
+      },
+      sessions: offering.sessions.map(session => ({
+        sessionDate: formatIsoDate(session.sessionDate),
+        plannedMinutes: Math.round((session.endsAt.getTime() - session.startsAt.getTime()) / 60_000),
+        status: session.status ?? 'SCHEDULED',
+      })),
+    }) : null;
     const weeklyClasses = offering.timetableEntries
       .filter(
         (entry) =>
@@ -215,6 +230,13 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
 
     return {
       id: offering.id,
+      buffer: capacity ? {
+        availableHours: capacity.availableHours,
+        remainingHours: capacity.remainingHours,
+        bufferRatio: capacity.bufferRatio,
+        thresholds: capacity.thresholds,
+        status: !offering.timetableEntries.length && !(offering._count?.sessions ?? offering.sessions.length) && capacity.remainingHours > 0 ? 'NEEDS_DATA' : capacity.status,
+      } : null,
       subject: offering.subject,
       track: academicTrackIdentity(offering.academicTrack),
       teachers: [
@@ -235,7 +257,7 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       weeklyClasses,
       weeklyHours:
         weeklyClasses.reduce((total, entry) => total + entry.minutes, 0) / 60,
-      upcomingClasses: offering.sessions.map((session) => ({
+      upcomingClasses: offering.sessions.filter(s => !s.status || s.status === 'SCHEDULED').slice(0, 5).map((session) => ({
         id: session.id,
         date: formatIsoDate(session.sessionDate),
         startsAt: session.startsAt.toISOString(),

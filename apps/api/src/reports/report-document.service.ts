@@ -1,3 +1,4 @@
+import { bufferRatioText } from '../progress/buffer-ratio';
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthenticatedUser } from '../auth/auth.types';
@@ -173,8 +174,9 @@ export function renderReportDocument(
     })),
     ' h',
   )}
+  ${chart('Buffer ratio by subject', data.subjects.map(s => ({ label: `${s.subject.name} · ${s.batch.name}`, value: s.status === 'NEEDS_DATA' ? null : s.metrics?.bufferRatio ?? null })), '×')}
   <figure><figcaption>From planning to recorded delivery</figcaption><div class="flow"><div><strong>${data.summary.subjects} subjects</strong><small>Campus → semester → batch → Mirai / University</small></div><div><strong>${data.summary.upcoming} upcoming classes</strong><small>Generated from the timetable and calendar</small></div><div><strong>${data.summary.logged} logged classes</strong><small>Saved lecture records</small></div><div><strong>${data.summary.unlogged} awaiting logs</strong><small>Teaching not yet verified</small></div></div></figure>
-  <h2>Subject-by-subject review</h2>${data.subjects.map((s) => `<article class="subject"><h3>${text(s.subject.name)} · ${text(s.subject.code)}</h3><p class="muted">${text(s.campus.name)} · ${text(s.batch.name)} · ${text(s.track.name)}<br>Teacher: ${text(s.teachers.map((t) => t.name).join(', ') || 'Not assigned')}</p><p><strong>${text(label(s.status))}.</strong> ${text(s.reason)}</p>${table(['Recorded coverage', 'Syllabus hours left', 'Teaching hours left', 'Time cushion'], [[num(s.metrics?.coveragePercentage, '%'), num(s.metrics?.remainingHours, ' h'), num(s.metrics?.availableHours, ' h'), num(s.metrics?.bufferRatio, '×')]])}<p>Next topic: ${text(s.nextTopic || 'No upcoming topic recorded')}. Deadline: ${text(s.deadline)}.</p></article>`).join('')}
+  <h2>Subject-by-subject review</h2>${data.subjects.map((s) => `<article class="subject"><h3>${text(s.subject.name)} · ${text(s.subject.code)}</h3><p class="muted">${text(s.campus.name)} · ${text(s.batch.name)} · ${text(s.track.name)}<br>Teacher: ${text(s.teachers.map((t) => t.name).join(', ') || 'Not assigned')}</p><p><strong>${text(label(s.status))}.</strong> ${text(s.reason)}</p>${table(['Recorded coverage', 'Syllabus hours left', 'Teaching hours left', 'Buffer ratio'], [[num(s.metrics?.coveragePercentage, '%'), num(s.metrics?.remainingHours, ' h'), num(s.metrics?.availableHours, ' h'), s.status === 'NEEDS_DATA' ? 'Needs data' : s.status === 'COMPLETE' ? 'Complete' : num(s.metrics?.bufferRatio, '×')]])}<p>${text(bufferRatioText(s.metrics ? { ...s.metrics, status: s.status } : null))}</p><p>Next topic: ${text(s.nextTopic || 'No upcoming topic recorded')}. Deadline: ${text(s.deadline)}.</p></article>`).join('')}
   ${
     data.facultyOnly
       ? ''
@@ -194,7 +196,7 @@ export function renderReportDocument(
             'Coverage',
             'Syllabus left',
             'Teaching left',
-            'Time cushion',
+            'Buffer ratio',
             'Scope',
           ],
           data.exams.map((e) => [
@@ -204,7 +206,7 @@ export function renderReportDocument(
             num(e.coverage, '%'),
             num(e.remainingHours, ' h'),
             num(e.teachingHours, ' h'),
-            num(e.bufferRatio, '×'),
+            bufferRatioText({ ...e, availableHours: e.teachingHours, remainingHours: e.remainingHours ?? 0 }),
             e.scopeMode,
           ]),
         )}`
@@ -269,7 +271,7 @@ export function renderReportDocument(
         )}`
       : ''
   }
-  <footer>Generated ${esc(data.generatedAt)}. Only records allowed by your current access and chosen filters are included. Recorded hours do not measure classroom attendance. Time cushion = available teaching hours ÷ remaining syllabus hours. No remaining work is shown as not available for this ratio.</footer></main></body></html>`;
+  <footer>Generated ${esc(data.generatedAt)}. Only records allowed by your current access and chosen filters are included. Recorded hours do not measure classroom attendance. Buffer ratio = available teaching hours ÷ remaining syllabus hours. Default thresholds: ≥ 1.15 ON TRACK; 1.00–&lt;1.15 TIGHT; &lt;1.00 DANGER. Configured subject thresholds are shown in each review. Complete means no remaining syllabus; missing data is not zero.</footer></main></body></html>`;
 }
 @Injectable()
 export class ReportDocumentService {

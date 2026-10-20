@@ -1,4 +1,5 @@
 import { WeeklySummaries } from './WeeklySummaries';
+import { BufferRatio, BufferMetrics } from './BufferRatio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
@@ -12,7 +13,7 @@ type Subject = {
   name: string;
   batch: string;
   campus: { name: string };
-  monitoring?: {
+  monitoring?: BufferMetrics & {
     status: string;
     remainingHours: number;
     availableHours: number;
@@ -488,6 +489,7 @@ export function AiInsights({
                         {subject.monitoring.paceVsPlanHours}h
                       </p>
                     )}
+                    <BufferRatio metrics={subject.monitoring} />
                     {subject.issues.length ? (
                       <ul>
                         {subject.issues.map((issue) => (

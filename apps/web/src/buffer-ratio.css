@@ -1,0 +1,16 @@
+.buffer-ratio { min-width: 0; margin: 1rem 0; padding: 1rem 1.2rem; border: 1px solid #d9e3f3; border-radius: 14px; background: #f7faff; }
+.buffer-ratio-heading { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.buffer-ratio-heading > span:first-child { font-weight: 650; color: #435878; }
+.buffer-ratio-heading > strong { font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+.buffer-ratio p, .buffer-ratio-legend p { margin: .5rem 0; line-height: 1.5; }
+.buffer-ratio details > summary { cursor: pointer; color: #315fa3; font-size: .85rem; }
+.buffer-ratio-legend { font-size: .85rem; color: #526884; overflow-wrap: anywhere; }
+.buffer-ratio-legend small { display: block; line-height: 1.6; }
+.buffer-status { padding: .3rem .6rem; border-radius: 6px; font-size: .7rem; font-weight: 700; background: #e9eef6; }
+.buffer-on_track, .buffer-complete { color: #16654b; background: #e4f4eb; }
+.buffer-tight { color: #89590f; background: #fff2d7; }
+.buffer-danger { color: #9b342c; background: #fce9e5; }
+.buffer-threshold-form { display: grid; gap: .8rem; margin-top: 1rem; }
+.buffer-threshold-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.buffer-threshold-fields label { display: grid; gap: .4rem; }
+@media (max-width: 540px) { .buffer-threshold-fields { grid-template-columns: 1fr; } }

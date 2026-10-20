@@ -325,7 +325,7 @@ export class AiContextService {
         (a, t) => a + (t.status === 'COMPLETED' ? t.minutes : (t.minutes * t.completion) / 100),
         0,
       );
-      const monitoring = plan && o.targetFinishDate ? calculateSubjectProgress({
+      const monitoring = plan && minutes > 0 && o.targetFinishDate ? calculateSubjectProgress({
         asOfDate: today, targetFinishDate: o.targetFinishDate.toISOString().slice(0,10),
         thresholds: {onTrack: Number(o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold ?? 1.15), tight: Number(o.tightThreshold ?? o.batch.semester.defaultTightThreshold ?? 1)},
         topics: topics.map(t => ({id:t.id,title:t.title,plannedMinutes:t.minutes,status:t.status,completionPercentage:t.completion,plannedFinishDate:t.finishDate})),
@@ -393,7 +393,7 @@ export class AiContextService {
           );
       }
       return {
-        monitoring,
+        monitoring: monitoring ? { ...monitoring, status: plan?.status !== 'ACTIVE' || !o.sessions?.length ? 'NEEDS_DATA' : monitoring.status } : null,
         id: o.id,
         status: o.status,
         localDate: today,

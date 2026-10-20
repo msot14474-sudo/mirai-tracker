@@ -190,6 +190,7 @@ function SubjectReadiness({ subject }: { subject: ExamReadinessSubject }) {
           {subject.completedTopics}/{subject.topicsInScope} complete
         </span>
       </div>
+      <BufferRatio metrics={subject.buffer} />
       <div className="exam-topic-list">
         {subject.topics.map((topic) => (
           <TopicRow topic={topic} key={topic.id} />
@@ -285,3 +286,4 @@ function today() {
   const offset = current.getTimezoneOffset() * 60_000;
   return new Date(current.getTime() - offset).toISOString().slice(0, 10);
 }
+import { BufferRatio } from './BufferRatio';

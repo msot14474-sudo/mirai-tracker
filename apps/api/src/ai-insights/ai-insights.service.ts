@@ -1,3 +1,4 @@
+import { bufferRatioText } from '../progress/buffer-ratio';
 import { applicationGuide } from './app-guide';
 import { AiConversationService } from './ai-conversation.service';
 import {
@@ -390,6 +391,7 @@ export function compactContext(s: InsightSnapshot) {
       teachers: o.teachers,
       plan: o.plan,
       completion: o.completion,
+      monitoring: o.monitoring,
       issues: o.issues,
       exams: o.exams,
       next: o.nextTopics,
@@ -447,6 +449,7 @@ export function dataReport(s: InsightSnapshot) {
       `Recorded coverage: ${subject.completion === null ? 'No planned teaching time' : subject.completion + '%'}`,
       `Plan: ${subject.plan ? 'v' + subject.plan.version + ' · ' + subject.plan.status : 'Missing'}`,
       `Faculty: ${subject.teachers.join(', ') || 'Unassigned'}`,
+      bufferRatioText(subject.monitoring),
       ...subject.issues.map((i) => '- ' + i),
       `Next topics: ${subject.nextTopics.join(', ') || 'No remaining topics recorded'}`,
     );

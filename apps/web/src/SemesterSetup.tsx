@@ -1,4 +1,5 @@
 import { ExamCalendarEditor } from './ExamCalendarEditor';
+import { BufferThresholdSettings } from './BufferThresholdSettings';
 import { academicTrackIdentity } from './tracks';
 import { TrackSelect } from './TrackSelect';
 import { SemesterSubjects } from './SemesterSubjects';
@@ -275,6 +276,7 @@ export function SemesterSetup({
                 </div>
 
                 <div className="calendar-preview">
+                  <BufferThresholdSettings key={semesterId} semester={calendar.data.semester} />
                   <div className="subheading-row">
                     <h3>Full semester calendar</h3>
                     <span>

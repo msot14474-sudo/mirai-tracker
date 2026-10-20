@@ -62,6 +62,14 @@ async function messageFrom(response: Response) {
 }
 
 export const progressApi = {
+  subject: async (offeringId: string, asOfDate: string): Promise<SubjectProgress> => {
+    const response = await apiFetch(
+      `${apiUrl}/progress/subjects/${encodeURIComponent(offeringId)}?asOf=${encodeURIComponent(asOfDate)}`,
+      { credentials: 'include' },
+    );
+    if (!response.ok) throw new Error(await messageFrom(response));
+    return response.json() as Promise<SubjectProgress>;
+  },
   dashboard: async (
     asOfDate: string,
     campusId?: string,

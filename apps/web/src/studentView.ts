@@ -1,4 +1,5 @@
 import { apiFetch, apiUrl } from './http';
+import type { BufferMetrics } from './BufferRatio';
 export type StudentTopic = {
   id: string;
   unit: { sequence: number; title: string };
@@ -12,6 +13,7 @@ export type StudentTopic = {
 };
 
 export type StudentSubject = {
+  buffer?: BufferMetrics | null;
   track?: { id: string; code: string; name: string };
   id: string;
   subject: { id: string; code: string; name: string };

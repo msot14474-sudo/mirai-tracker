@@ -220,6 +220,19 @@ describe('ProgressService', () => {
     });
   });
 
+  it('calculates exam buffer only through its deadline using configured offering thresholds', async () => {
+    const { service, prisma } = setup();
+    const record = offering({ onTrackThreshold: 3, tightThreshold: 2 });
+    prisma.subjectOffering.findMany.mockResolvedValue([record]);
+    const result = await service.examReadiness('2026-10-08', faculty);
+    for (const [index, exam] of result.exams.entries()) {
+      const subject = exam.subjects[0] as { buffer: { availableHours: number; remainingHours: number; status: string; thresholds: unknown } };
+      expect(subject.buffer.availableHours).toBe(index === 0 ? 0 : 3);
+      expect(subject.buffer.thresholds).toEqual({ onTrack: 3, tight: 2 });
+      expect(subject.buffer.status).toBe('DANGER');
+    }
+  });
+
   it('uses an active lesson plan instead of a newer draft', async () => {
     const { service, prisma } = setup();
     prisma.subjectOffering.findUnique.mockResolvedValue(

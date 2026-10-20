@@ -49,7 +49,7 @@ it('shows the marked exam columns and exports the selected filters and tab', asy
     'Coverage',
     'Syllabus Left',
     'Teaching Left',
-    'Time Cushion',
+    'Buffer Ratio',
     'Scope Mode',
   ])
     expect(

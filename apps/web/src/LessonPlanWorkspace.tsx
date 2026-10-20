@@ -1,3 +1,4 @@
+import { SubjectBufferRatio } from './BufferRatio';
 import { FacultyPlanSchedule } from './FacultyPlanSchedule';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
@@ -174,6 +175,7 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
   return (
     <>
       <FacultyPlanSchedule detail={detail} />
+      <SubjectBufferRatio offeringId={detail.id} enabled={detail.plan?.status === 'ACTIVE' && detail.plan.summary.totalPlannedMinutes > 0} />
       <details
         className="plan-upload-disclosure"
         open={!detail.plan || undefined}

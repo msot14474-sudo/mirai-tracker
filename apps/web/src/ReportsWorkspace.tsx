@@ -1,4 +1,5 @@
 import { academicTracks } from './tracks';
+import { BufferRatioValue, BufferRatioLegend } from './BufferRatio';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 import { LoadingSkeleton } from './LoadingSkeleton';
@@ -218,7 +219,7 @@ export function ReportContent({
       'Coverage',
       'Syllabus Left',
       'Teaching Left',
-      'Time Cushion',
+      'Buffer Ratio',
       'Scope Mode',
     ];
     rows = data.exams.map((r) => ({
@@ -236,12 +237,13 @@ export function ReportContent({
           <ReportBadge status={r.status} />
           <Detail label="Why this status?">
             <p>{r.reason}</p>
+            <BufferRatioLegend thresholds={r.thresholds} />
           </Detail>
         </div>,
         <Coverage value={r.coverage} />,
         num(r.remainingHours, ' h'),
         num(r.teachingHours, ' h'),
-        num(r.bufferRatio, '×'),
+        <BufferRatioValue metrics={r.remainingHours == null ? null : { ...r, availableHours: r.teachingHours, remainingHours: r.remainingHours }} />,
         <div>
           {r.scopeMode}
           <small>{r.scopeTopics} topics in scope</small>
@@ -363,6 +365,7 @@ export function ReportContent({
       'Covered Hours',
       'Remaining Hours',
       'Teaching Left',
+      'Buffer Ratio',
       'Needs Data',
       'Worst Subject',
     ];
@@ -382,6 +385,7 @@ export function ReportContent({
         num(r.metrics?.coveredHours, ' h'),
         num(r.metrics?.remainingHours, ' h'),
         num(r.metrics?.availableHours, ' h'),
+        <BufferRatioValue metrics={r.metrics ? { ...r.metrics, status: r.status } : null} />,
         r.needsData,
         r.worstSubject,
       ],
@@ -398,7 +402,7 @@ export function ReportContent({
       'Behind Plan',
       'Syllabus Left',
       'Teaching Left',
-      'Time Cushion',
+      'Buffer Ratio',
       'Deadline',
     ];
     rows = data.subjects.map((r) => ({
@@ -414,6 +418,7 @@ export function ReportContent({
           <ReportBadge status={r.status} />
           <Detail label="Why this status?">
             <p>{r.reason}</p>
+            <BufferRatioLegend thresholds={r.metrics?.thresholds} />
             <p>
               {r.logged} classes have logs; {r.unlogged} past classes have none.
             </p>
@@ -430,7 +435,7 @@ export function ReportContent({
         num(r.metrics ? Math.max(0, -r.metrics.paceVsPlanHours) : null, ' h'),
         num(r.metrics?.remainingHours, ' h'),
         num(r.metrics?.availableHours, ' h'),
-        num(r.metrics?.bufferRatio, '×'),
+        <BufferRatioValue metrics={r.metrics ? { ...r.metrics, status: r.status } : null} />,
         reportDate(r.deadline),
       ],
     }));
@@ -954,8 +959,9 @@ export function ReportsWorkspace({
           <footer className="rp-footnote">
             Updated {new Date(data.generatedAt).toLocaleString()} · Coverage is
             recorded progress. Missing logs do not prove that teaching was
-            missed. Time cushion = teaching hours left ÷ syllabus hours left; no
-            remaining work is shown as —.
+            missed. Combined buffer ratios use total available hours ÷ total
+            remaining hours. Campus and track status still follow the worst subject.
+            <BufferRatioLegend />
           </footer>
         </div>
       ) : null}

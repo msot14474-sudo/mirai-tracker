@@ -1,3 +1,4 @@
+import { SubjectBufferRatio } from './BufferRatio';
 import { CalendarChangeReview } from './CalendarChangeReview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
@@ -186,6 +187,7 @@ function ScheduleDetail({
 
   return (
     <div className="schedule-detail">
+      <SubjectBufferRatio offeringId={detail.id} enabled={detail.plan.status === 'ACTIVE' && summary.requiredMinutes > 0} />
       {canManageSessions && (
         <CalendarChangeReview sessions={detail.sessions} onChanged={refresh} />
       )}

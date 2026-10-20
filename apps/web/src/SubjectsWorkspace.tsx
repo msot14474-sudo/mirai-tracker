@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BufferRatio, BufferRatioValue } from './BufferRatio';
 import { useQuery } from '@tanstack/react-query';
 import { CampusDataScope } from './CampusDataScope';
 import { academicApi } from './academic';
@@ -153,6 +154,7 @@ function SubjectDirectory({
                         {reportNumber(o.metrics?.coveragePercentage, '%')}{' '}
                         covered →
                       </small>
+                      <small>Buffer ratio: <BufferRatioValue metrics={o.metrics ? { ...o.metrics, status: o.status } : null} /></small>
                     </span>
                   </button>
                 ))}
@@ -279,6 +281,7 @@ function SubjectDetail({
           },
         ]}
       />
+      <BufferRatio metrics={metrics ? { ...metrics, status: current.status } : null} />
       <div className="rp-tabbar" role="tablist" aria-label="Subject details">
         {[
           ['overview', 'Overview'],
@@ -326,8 +329,6 @@ function SubjectDetail({
                       ? 'Loading…'
                       : 'Not uploaded'}
                 </dd>
-                <dt>Time cushion</dt>
-                <dd>{reportNumber(metrics?.bufferRatio, '×')}</dd>
                 <dt>Recorded taught classes</dt>
                 <dd>{taught.length}</dd>
               </dl>

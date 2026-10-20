@@ -30,6 +30,8 @@ export type Subject = {
 };
 
 export type Semester = {
+  defaultOnTrackThreshold?: number | string;
+  defaultTightThreshold?: number | string;
   id: string;
   campusId: string;
   name: string;
@@ -109,6 +111,8 @@ export type SemesterBatch = {
   }[];
 };
 export const academicApi = {
+  updateBufferThresholds: (id: string, input: { defaultOnTrackThreshold: number; defaultTightThreshold: number }) =>
+    api<Semester>(`/academic/semesters/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   semesterCourses: (id: string) =>
     api<SemesterBatch[]>(`/academic/semesters/${id}/subjects`),
   connectSubjects: (

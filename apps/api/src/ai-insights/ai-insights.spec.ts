@@ -420,7 +420,7 @@ it('uses dashboard calculations and excludes skipped work from AI monitoring', a
   const result = await context.snapshot(user('ADMIN'));
   expect(result.subjects[0]?.plannedMinutes).toBe(200);
   expect(result.subjects[0]?.coveredMinutes).toBe(50);
-  expect(result.subjects[0]?.monitoring?.status).toBe('DANGER');
+  expect(result.subjects[0]?.monitoring?.status).toBe('NEEDS_DATA');
   expect(result.subjects[0]?.monitoring?.remainingHours).toBe(2.5);
   expect(result.subjects[0]?.issues).toContain('Create the weekly timetable.');
 });

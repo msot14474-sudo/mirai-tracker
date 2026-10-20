@@ -25,7 +25,7 @@ export type ReportBase = {
   track: ReportIdentity;
   teachers: ReportIdentity[];
 };
-export type ReportMetrics = ProgressMetrics & { overdueTopicIds: string[] };
+export type ReportMetrics = ProgressMetrics & { overdueTopicIds: string[]; thresholds?: { onTrack: number; tight: number } };
 export type CourseReport = ReportBase & {
   status: ReportStatus;
   reason: string;
@@ -41,6 +41,7 @@ export type CourseReport = ReportBase & {
   reviewChanges: number;
 };
 export type ExamReport = ReportBase & {
+  thresholds?: { onTrack: number; tight: number };
   examId: string;
   exam: string;
   date: string;

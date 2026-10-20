@@ -373,7 +373,9 @@ export class SemesterExportService {
         coverage_percent: e.coverage,
         remaining_hours: e.remainingHours,
         teaching_hours: e.teachingHours,
-        time_cushion: e.bufferRatio,
+        buffer_ratio: e.bufferRatio,
+        on_track_threshold: e.thresholds.onTrack,
+        tight_threshold: e.thresholds.tight,
         reason: e.reason,
       })),
       'Visiting faculty': visiting.faculty.map((f) => ({

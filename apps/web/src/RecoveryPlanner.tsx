@@ -208,7 +208,7 @@ export function RecoveryPlanner({ subjects }: { subjects: SubjectProgress[] }) {
                     <strong>{statusLabels[scenario.projectedStatus]}</strong>
                   </div>
                   <div>
-                    <span>Projected buffer</span>
+                    <span>Projected buffer ratio</span>
                     <strong>
                       {scenario.projectedBufferRatio === null
                         ? 'Complete'

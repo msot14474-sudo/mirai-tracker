@@ -463,6 +463,20 @@ function calculateExamReadinessView(
       );
       if (scopedTopics.length === 0) continue;
       const calculation = calculateExamReadiness(scopedTopics);
+      const capacity = calculateSubjectProgress({
+        asOfDate,
+        targetFinishDate: formatIsoDate(exam.syllabusDeadline),
+        topics: scopedTopics,
+        thresholds: {
+          onTrack: Number(offering.onTrackThreshold ?? offering.batch.semester.defaultOnTrackThreshold),
+          tight: Number(offering.tightThreshold ?? offering.batch.semester.defaultTightThreshold),
+        },
+        sessions: offering.sessions.map(session => ({
+          sessionDate: formatIsoDate(session.sessionDate),
+          plannedMinutes: Math.round((session.endsAt.getTime() - session.startsAt.getTime()) / 60_000),
+          status: session.status,
+        })),
+      });
       const accumulator = exams.get(exam.id)!;
       accumulator.topics.push(...scopedTopics);
       accumulator.subjects.push({
@@ -480,6 +494,13 @@ function calculateExamReadinessView(
           status: lessonPlan.status,
         },
         ...calculation,
+        buffer: calculation.topicsInScope ? {
+          availableHours: capacity.availableHours,
+          remainingHours: capacity.remainingHours,
+          bufferRatio: capacity.bufferRatio,
+          thresholds: capacity.thresholds,
+          status: lessonPlan.status !== 'ACTIVE' || !offering.sessions.length ? 'NEEDS_DATA' : capacity.status,
+        } : null,
         topics: scopedTopics.map(({ examWindowIds: _ids, ...topic }) => topic),
       });
     }

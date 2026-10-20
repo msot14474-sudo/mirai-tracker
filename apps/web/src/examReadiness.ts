@@ -1,4 +1,5 @@
 import { apiFetch, apiUrl } from './http';
+import type { BufferMetrics } from './BufferRatio';
 export type ExamReadinessMetrics = {
   topicsInScope: number;
   completedTopics: number;
@@ -17,6 +18,7 @@ export type ExamReadinessTopic = {
 };
 
 export type ExamReadinessSubject = ExamReadinessMetrics & {
+  buffer?: BufferMetrics | null;
   id: string;
   subject: { id: string; code: string; name: string };
   batch: { id: string; code: string; name: string };

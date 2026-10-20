@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { BufferRatio } from './BufferRatio';
 import {
   StudentExam,
   StudentSubject,
@@ -197,6 +198,7 @@ function StudentSubjectCard({
         </span>
       </div>
 
+      <BufferRatio metrics={subject.buffer} />
       <div className="student-topic-section covered-work">
         <h5>What we covered</h5>
         {subject.coveredTopics.length ? (

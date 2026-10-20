@@ -21,6 +21,37 @@ const student: AuthenticatedUser = {
 };
 
 describe('StudentViewService', () => {
+  it('shows danger when the timetable has ended but syllabus remains', async () => {
+    const { service, prisma } = setup();
+    const record = batch();
+    const subject = record.subjectOfferings[0]!;
+    subject.sessions = [];
+    subject.timetableEntries = [];
+    prisma.batch.findFirst.mockResolvedValue({
+      ...record,
+      subjectOfferings: [{ ...subject, _count: { sessions: 8 } }],
+    });
+    const result = await service.overview('2026-10-08', student);
+    expect(result.subjects[0]?.buffer).toMatchObject({
+      availableHours: 0, remainingHours: 2.5, bufferRatio: 0, status: 'DANGER',
+    });
+  });
+  it('uses all future class hours for the buffer while listing only the next five classes', async () => {
+    const { service, prisma } = setup();
+    const record = batch();
+    const subject = record.subjectOfferings[0]!;
+    subject.sessions = Array.from({ length: 8 }, (_, i) => ({
+      ...subject.sessions[0]!, id: `future-${i}`,
+      sessionDate: date(`2026-11-${String(i + 1).padStart(2, '0')}`),
+    }));
+    prisma.batch.findFirst.mockResolvedValue(record);
+    const result = await service.overview('2026-10-08', student);
+    expect(result.subjects[0]?.upcomingClasses).toHaveLength(5);
+    expect(result.subjects[0]?.buffer).toMatchObject({
+      availableHours: 8, remainingHours: 2.5, bufferRatio: 3.2, status: 'ON_TRACK',
+    });
+    expect(prisma.batch.findFirst.mock.calls[0][0].include.subjectOfferings.include.sessions.take).toBeUndefined();
+  });
   it('loads only the authenticated student batch', async () => {
     const { service, prisma } = setup();
     prisma.batch.findFirst.mockResolvedValue(batch());

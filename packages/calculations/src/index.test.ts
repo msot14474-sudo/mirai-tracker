@@ -291,6 +291,21 @@ describe('M10 subject progress calculation', () => {
     expect(result.status).toBe('ON_TRACK');
   });
 
+  it.each([
+    [1149, 'TIGHT'],
+    [1150, 'ON_TRACK'],
+    [1000, 'TIGHT'],
+    [999, 'DANGER'],
+    [0, 'DANGER'],
+  ])('classifies %i available minutes against 1000 remaining without rounding the status', (available, status) => {
+    const result = calculateSubjectProgress(example({
+      topics: [topic('buffer', 1000, 'NOT_STARTED', 0, '2026-11-01')],
+      pastSessionMinutes: [],
+      futureSessionMinutes: available ? [available] : [],
+    }));
+    expect(result.status).toBe(status);
+  });
+
   it('rejects invalid dates, durations and thresholds', () => {
     expect(() =>
       calculateSubjectProgress({

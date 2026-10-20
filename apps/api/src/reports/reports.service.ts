@@ -102,6 +102,7 @@ export type CourseRow = RowIdentity & {
   reviewChanges: number;
 };
 export type ExamRow = RowIdentity & {
+  thresholds: { onTrack: number; tight: number };
   examId: string;
   exam: string;
   date: string;
@@ -554,38 +555,30 @@ export class ReportsService {
             completionPercentage: Number(t.currentCompletionPercentage),
           })),
         );
-        const teachingHours = round(
-          o.sessions
-            .filter(
-              (s) =>
-                iso(s.sessionDate) > today &&
-                iso(s.sessionDate) <= iso(exam.syllabusDeadline) &&
-                ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED'].includes(s.status),
-            )
-            .reduce((n, s) => n + hours(s), 0),
-        );
-        const ratio =
-          scoped.length && readiness.hoursStillNeeded > 0
-            ? teachingHours / readiness.hoursStillNeeded
-            : null;
+        const capacity = calculateSubjectProgress({
+          asOfDate: today,
+          targetFinishDate: iso(exam.syllabusDeadline),
+          thresholds: {
+            onTrack: Number(o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold),
+            tight: Number(o.tightThreshold ?? o.batch.semester.defaultTightThreshold),
+          },
+          topics: scoped.map(t => ({
+            id: t.id, title: t.title, plannedMinutes: t.plannedMinutes,
+            status: t.status, completionPercentage: Number(t.currentCompletionPercentage),
+          })),
+          sessions: o.sessions.map(s => ({
+            sessionDate: iso(s.sessionDate),
+            plannedMinutes: Math.round(hours(s) * 60),
+            status: s.status,
+          })),
+        });
+        const teachingHours = capacity.availableHours;
+        const ratio = scoped.length ? capacity.bufferRatio : null;
         const needsData =
           !scoped.length || plan?.status !== 'ACTIVE' || !o.sessions.length;
         const status: ReportStatus = needsData
           ? 'NEEDS_DATA'
-          : readiness.hoursStillNeeded === 0
-            ? 'COMPLETE'
-            : ratio! >=
-                Number(
-                  o.onTrackThreshold ??
-                    o.batch.semester.defaultOnTrackThreshold,
-                )
-              ? 'ON_TRACK'
-              : ratio! >=
-                  Number(
-                    o.tightThreshold ?? o.batch.semester.defaultTightThreshold,
-                  )
-                ? 'TIGHT'
-                : 'DANGER';
+          : capacity.status;
         const scopeMode = !plan
           ? 'No lesson plan'
           : !scoped.length
@@ -609,6 +602,7 @@ export class ReportsService {
           remainingHours: scoped.length ? readiness.hoursStillNeeded : null,
           teachingHours,
           bufferRatio: ratio === null ? null : round(ratio),
+          thresholds: capacity.thresholds,
           scopeTopics: scoped.length,
           reason: needsData
             ? scopeMode
@@ -767,7 +761,7 @@ export class ReportsService {
           'Coverage %': r.coverage,
           'Syllabus left (h)': r.remainingHours,
           'Teaching left (h)': r.teachingHours,
-          'Time cushion': r.bufferRatio,
+          'Buffer ratio': r.bufferRatio,
           'Scope mode': r.scopeMode,
           'Scope topics': r.scopeTopics,
           Reason: r.reason,
@@ -787,6 +781,7 @@ export class ReportsService {
           'Covered hours': r.metrics?.coveredHours,
           'Remaining hours': r.metrics?.remainingHours,
           'Available hours': r.metrics?.availableHours,
+          'Buffer ratio': r.metrics?.bufferRatio,
           'Logged classes': r.logged,
           'Unlogged classes': r.unlogged,
         }));
@@ -804,7 +799,7 @@ export class ReportsService {
           'Behind plan (h)': r.metrics
             ? Math.max(0, -r.metrics.paceVsPlanHours)
             : null,
-          'Time cushion': r.metrics?.bufferRatio,
+          'Buffer ratio': r.metrics?.bufferRatio,
           Deadline: r.deadline,
           'Plan status': r.planStatus,
           'Logged classes': r.logged,
