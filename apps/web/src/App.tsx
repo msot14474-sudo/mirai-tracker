@@ -1158,40 +1158,22 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
   const navigation: DashboardNavigationItem[] = [
     { id: 'overview', label: canViewStudentOverview && !canViewProgressDashboard ? 'My subjects' : 'Overview', icon: 'home' },
-    ...(canViewStudentOverview && canViewProgressDashboard
-      ? [
-          {
-            id: 'student-view' as const,
-            label: 'My subjects',
-            icon: 'student' as const,
-          },
-        ]
-      : []),
-    ...(canManageAcademicCalendar
-      ? [
-          {
-            id: 'academic-setup' as const,
-            label: 'Semester setup',
-            icon: 'academic' as const,
-          },
-          {
-            id: 'semester-import' as const,
-            label: 'Calendar import',
-            icon: 'academic' as const,
-          },
-        ]
-      : []),
-    ...(!canManageAcademicCalendar && roles.includes('CAMPUS_MANAGER') ? [{ id: 'academic-setup' as const, label: 'Campus semesters', icon: 'academic' as const }] : []),
-    ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [
-      {id:'visiting-faculty' as const,label:'Visiting faculty',icon:'faculty' as const},
-    ] : []),
     ...(roles.some(role => ['ADMIN','CAMPUS_MANAGER'].includes(role)) ? [{ id:'subjects' as const,label:'Subjects',icon:'lessons' as const }] : []),
-    ...(canManageFaculty
+    ...(canExport
       ? [
           {
-            id: 'faculty-access' as const,
-            label: 'User access',
-            icon: 'faculty' as const,
+            id: 'exports' as const,
+            label: 'Reports',
+            icon: 'exports' as const,
+          },
+        ]
+      : []),
+    ...(canViewProgressDashboard
+      ? [
+          {
+            id: 'progress' as const,
+            label: 'Progress',
+            icon: 'progress' as const,
           },
         ]
       : []),
@@ -1201,6 +1183,18 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             id: 'timetable' as const,
             label: 'Timetable',
             icon: 'timetable' as const,
+          },
+        ]
+      : []),
+    ...(canViewAlerts
+      ? [{ id: 'alerts' as const, label: 'Notifications', icon: 'alerts' as const }]
+      : []),
+    ...(canViewStudentOverview && canViewProgressDashboard
+      ? [
+          {
+            id: 'student-view' as const,
+            label: 'My subjects',
+            icon: 'student' as const,
           },
         ]
       : []),
@@ -1243,29 +1237,39 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     ...(canViewProgressDashboard
       ? [
           {
-            id: 'progress' as const,
-            label: 'Progress',
-            icon: 'progress' as const,
-          },
-          {
             id: 'exam-readiness' as const,
             label: 'Exam readiness',
             icon: 'progress' as const,
           },
         ]
       : []),
-    ...(canViewAlerts
-      ? [{ id: 'alerts' as const, label: 'Notifications', icon: 'alerts' as const }]
-      : []),
-    ...(canExport
+    ...(canManageAcademicCalendar
       ? [
           {
-            id: 'exports' as const,
-            label: 'Reports',
-            icon: 'exports' as const,
+            id: 'academic-setup' as const,
+            label: 'Semester setup',
+            icon: 'academic' as const,
+          },
+          {
+            id: 'semester-import' as const,
+            label: 'Calendar import',
+            icon: 'academic' as const,
           },
         ]
       : []),
+    ...(!canManageAcademicCalendar && roles.includes('CAMPUS_MANAGER') ? [{ id: 'academic-setup' as const, label: 'Campus semesters', icon: 'academic' as const }] : []),
+    ...(canManageFaculty
+      ? [
+          {
+            id: 'faculty-access' as const,
+            label: 'User access',
+            icon: 'faculty' as const,
+          },
+        ]
+      : []),
+    ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [
+      {id:'visiting-faculty' as const,label:'Visiting faculty',icon:'faculty' as const},
+    ] : []),
     ...(roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER'].includes(role)) ? [{ id: 'full-semester-export' as const, label: 'Full semester export', icon: 'exports' as const }] : []),
   ];
   const primaryRoleLabel = roles[0] ? roleLabels[roles[0]] : 'User';
