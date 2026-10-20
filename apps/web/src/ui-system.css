@@ -1846,3 +1846,40 @@
 .campus-assignment-panel {
   margin-bottom: 20px;
 }
+
+.class-create-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.class-create-panel > .timetable-form {
+  flex: 1;
+}
+.class-kind-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  background: #edf2fa;
+  border: 1px solid #e0e7f2;
+  border-radius: 12px;
+}
+.class-kind-tabs button {
+  flex: 1;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #536582;
+  font-weight: 650;
+}
+.class-kind-tabs button[aria-pressed='true'] {
+  color: #2454bb;
+  background: white;
+  box-shadow: 0 1px 4px #1d376510;
+}
+.extra-class-form .schedule-help {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}

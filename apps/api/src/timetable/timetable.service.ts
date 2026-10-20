@@ -5,6 +5,7 @@ import { UploadedImportFile } from '../semester-import/semester-import.types';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
 import {
   Prisma,
+  AuditAction,
   ScheduledSessionStatus,
   ScheduleCalculationReason,
 } from '@prisma/client';
@@ -23,12 +24,14 @@ import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 import {
   buildTimetableSessions,
+  isoWeekday,
   durationMinutes,
   formatTimetableTime,
   timetableTime,
 } from './timetable-engine';
 import {
   CreateTimetableEntryInput,
+  ExtraClassInput,
   UpdateTimetableEntryInput,
 } from './timetable.schemas';
 
@@ -172,6 +175,7 @@ export class TimetableService {
         ),
         status: session.status,
         hasLogs: (session._count?.logs ?? 0) > 0,
+        isExtraSession: session.isExtraSession,
       })),
       summary: {
         weeklyPlannedMinutes: activeEntries.reduce(
@@ -225,6 +229,179 @@ export class TimetableService {
       session.offering.batch.semester.campusId,
     );
     return this.schedules.moveSession(sessionId, input, user);
+  }
+
+  async createExtraClass(
+    offeringId: string,
+    input: ExtraClassInput,
+    user: AuthenticatedUser,
+  ) {
+    const result = await this.prisma
+      .$transaction(
+        async (tx) => {
+          const offering = await this.requireOffering(offeringId, tx);
+          const semester = offering.batch.semester;
+          this.access.assertCanManageCampus(user, semester.campusId);
+          const day = isoWeekday(input.date);
+          await this.validateEntry(
+            offering,
+            {
+              weekday: day,
+              startTime: input.startTime,
+              endTime: input.endTime,
+              effectiveFrom: input.date,
+              effectiveTo: input.date,
+              facultyAssignmentId: input.facultyAssignmentId,
+            },
+            undefined,
+            tx,
+          );
+          const planned = buildTimetableSessions({
+            offeringId,
+            timezone: semester.campus.timezone,
+            semesterStart: input.date,
+            semesterEnd: input.date,
+            saturdayRule: semester.workingSaturdayRule,
+            overrides: semester.calendarDays.map((d) => ({
+              ...d,
+              date: formatIsoDate(d.date),
+            })),
+            entries: [
+              {
+                id: 'extra',
+                weekday: day,
+                startTime: input.startTime,
+                endTime: input.endTime,
+                effectiveFrom: input.date,
+                effectiveTo: input.date,
+                facultyAssignmentId: input.facultyAssignmentId,
+              },
+            ],
+          })[0];
+          if (!planned)
+            throw new BadRequestException(
+              'This date is closed under the semester calendar or Saturday rule. Choose a teaching day, or ask your program manager to update the calendar.',
+            );
+          if (planned.startsAt <= new Date())
+            throw new BadRequestException(
+              'Choose a future date and time for the extra class.',
+            );
+          const date = parseIsoDate(input.date);
+          const teachers = offering.faculty
+            .filter(
+              (f) =>
+                f.active &&
+                f.startDate <= date &&
+                (!f.endDate || f.endDate >= date) &&
+                (!input.facultyAssignmentId ||
+                  f.id === input.facultyAssignmentId),
+            )
+            .map((f) => f.staffProfileId);
+          const conflict = await tx.scheduledSession.findFirst({
+            where: {
+              status: { notIn: ['CANCELLED', 'SKIPPED', 'MERGED'] },
+              startsAt: { lt: planned.endsAt },
+              endsAt: { gt: planned.startsAt },
+              OR: [
+                { offering: { batchId: offering.batchId } },
+                ...(teachers.length
+                  ? [
+                      {
+                        facultyAssignment: { staffProfileId: { in: teachers } },
+                      },
+                      {
+                        facultyAssignmentId: null,
+                        offering: {
+                          faculty: {
+                            some: {
+                              active: true,
+                              staffProfileId: { in: teachers },
+                              startDate: { lte: date },
+                              OR: [
+                                { endDate: null },
+                                { endDate: { gte: date } },
+                              ],
+                            },
+                          },
+                        },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          });
+          if (conflict)
+            throw new ConflictException(
+              'This time overlaps another class for the batch or teacher. Choose a free time.',
+            );
+          const session = await tx.scheduledSession.create({
+            data: {
+              sourceKey: `extra:${offeringId}:${input.date}:${input.startTime}:${input.endTime}`,
+              offeringId,
+              timetableEntryId: null,
+              facultyAssignmentId: input.facultyAssignmentId,
+              sessionDate: date,
+              startsAt: planned.startsAt,
+              endsAt: planned.endsAt,
+              isExtraSession: true,
+            },
+          });
+          await tx.auditEvent.create({
+            data: {
+              actorId: user.id,
+              campusId: semester.campusId,
+              action: AuditAction.CREATE,
+              entityType: 'ScheduledSession',
+              entityId: session.id,
+              after: {
+                offeringId,
+                date: input.date,
+                startTime: input.startTime,
+                endTime: input.endTime,
+                facultyAssignmentId: input.facultyAssignmentId,
+                reason: input.reason,
+                isExtraSession: true,
+              },
+            },
+          });
+          return {
+            sessionId: session.id,
+            plannedMinutes: planned.plannedMinutes,
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          if (error.code === 'P2002')
+            throw new ConflictException(
+              'This extra class already exists. Review the class dates before adding it again.',
+            );
+          if (error.code === 'P2034')
+            throw new ConflictException(
+              'The timetable changed while saving. Refresh and try again.',
+            );
+        }
+        throw error;
+      });
+    const warnings: string[] = [];
+    try {
+      const plan = await this.prisma.lessonPlan.findFirst({
+        where: { offeringId, status: { in: ['ACTIVE', 'DRAFT'] } },
+        select: { id: true },
+      });
+      if (plan)
+        await this.schedules.calculate(
+          offeringId,
+          { reason: ScheduleCalculationReason.MANUAL_RECALCULATION },
+          user,
+        );
+    } catch {
+      warnings.push(
+        'The extra class was saved. Lesson-plan dates could not refresh yet; use Update class dates to retry.',
+      );
+    }
+    return { ...result, warnings };
   }
 
   async createEntry(

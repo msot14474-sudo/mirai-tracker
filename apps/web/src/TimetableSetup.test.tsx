@@ -117,9 +117,18 @@ function renderTimetable() {
 function installFetchMock(
   onCreate?: (body: unknown) => void,
   onUpdate?: (body: unknown) => void,
+  onExtra?: (body: unknown) => void,
 ) {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
+    if (url.endsWith('/extra-classes') && init?.method === 'POST') {
+      onExtra?.(JSON.parse(String(init.body)));
+      return json({
+        sessionId: 'extra-class',
+        plannedMinutes: 90,
+        warnings: [],
+      });
+    }
     if (
       url.endsWith('/timetable/entries/entry-a') &&
       init?.method === 'PATCH'
@@ -186,6 +195,52 @@ describe('TimetableSetup', () => {
       }),
     );
   });
+  it('offers a single extra class and refreshes the subject after saving', async () => {
+    const extra = vi.fn();
+    // Use an upcoming semester so the date picker remains valid.
+    const future = { startDate: '2030-01-01', endDate: '2030-03-31' };
+    const old = {
+      startDate: offeringDetail.semester.startDate,
+      endDate: offeringDetail.semester.endDate,
+    };
+    Object.assign(offeringDetail.semester, future);
+    try {
+      installFetchMock(undefined, undefined, extra);
+      renderTimetable();
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Extra class' }),
+      );
+      expect(screen.queryByLabelText('Repeat from')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Class date'), {
+        target: { value: '2030-01-07' },
+      });
+      fireEvent.change(screen.getByLabelText('Extra class start time'), {
+        target: { value: '14:00' },
+      });
+      fireEvent.change(screen.getByLabelText('Extra class end time'), {
+        target: { value: '15:30' },
+      });
+      fireEvent.change(screen.getByLabelText('Reason (optional)'), {
+        target: { value: 'Revision' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Add extra class' }));
+      await waitFor(() =>
+        expect(extra).toHaveBeenCalledWith({
+          date: '2030-01-07',
+          startTime: '14:00',
+          endTime: '15:30',
+          facultyAssignmentId: null,
+          reason: 'Revision',
+        }),
+      );
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Extra class added',
+      );
+    } finally {
+      Object.assign(offeringDetail.semester, old);
+    }
+  });
+
   it('shows loading skeletons instead of a premature selection prompt', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       () => new Promise<Response>(() => undefined),

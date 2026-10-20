@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { academicApi } from './academic';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { BatchTimetableGrid } from './BatchTimetableGrid';
+import { ExtraClassForm } from './ExtraClassForm';
 import { TimetableSessionEditor } from './TimetableSessionEditor';
 import { BatchTimetableImport } from './BatchTimetableImport';
 import { OfferingTimetable, TimetableEntry, timetableApi } from './timetable';
@@ -353,6 +354,7 @@ function TimetableDetail({
   offeringId: string;
   onChanged: () => Promise<void>;
 }) {
+  const [classKind, setClassKind] = useState<'weekly' | 'extra'>('weekly');
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(
     requestedEntry,
   );
@@ -361,6 +363,7 @@ function TimetableDetail({
   >(null);
   useEffect(() => {
     setEditingEntry(requestedEntry);
+    if (requestedEntry) setClassKind('weekly');
   }, [requestedEntry]);
   const generate = useMutation({
     mutationFn: () => timetableApi.generate(offeringId),
@@ -397,14 +400,36 @@ function TimetableDetail({
       </div>
 
       <div className="timetable-grid">
-        <EntryForm
-          key={editingEntry?.id || offeringId}
-          entry={editingEntry}
-          onCancel={() => setEditingEntry(null)}
-          detail={detail}
-          offeringId={offeringId}
-          onChanged={onChanged}
-        />
+        <div className="class-create-panel">
+          <div className="class-kind-tabs" role="group" aria-label="Class type">
+            <button
+              type="button"
+              aria-pressed={classKind === 'weekly'}
+              onClick={() => setClassKind('weekly')}
+            >
+              Weekly class
+            </button>
+            <button
+              type="button"
+              aria-pressed={classKind === 'extra'}
+              onClick={() => setClassKind('extra')}
+            >
+              Extra class
+            </button>
+          </div>
+          {classKind === 'extra' ? (
+            <ExtraClassForm detail={detail} onChanged={onChanged} />
+          ) : (
+            <EntryForm
+              key={editingEntry?.id || offeringId}
+              entry={editingEntry}
+              onCancel={() => setEditingEntry(null)}
+              detail={detail}
+              offeringId={offeringId}
+              onChanged={onChanged}
+            />
+          )}
+        </div>
         <div className="weekly-slots">
           <div className="subheading-row">
             <h3>Weekly schedule</h3>
@@ -442,7 +467,10 @@ function TimetableDetail({
                     type="button"
                     className="text-button"
                     aria-label={`Edit ${weekdayLabels[entry.weekday]} ${entry.startTime} class`}
-                    onClick={() => setEditingEntry(entry)}
+                    onClick={() => {
+                      setEditingEntry(entry);
+                      setClassKind('weekly');
+                    }}
                   >
                     Edit
                   </button>
@@ -491,6 +519,7 @@ function TimetableDetail({
               <span
                 className={`session-status status-${session.status.toLowerCase()}`}
               >
+                {session.isExtraSession ? 'Extra · ' : ''}
                 {session.status.toLowerCase().replaceAll('_', ' ')}
               </span>
               {session.status === 'SCHEDULED' &&
@@ -519,7 +548,7 @@ function TimetableDetail({
         )}
         {detail.sessions.length === 0 ? (
           <p className="empty-copy">
-            Save a weekly class above to see all its teaching dates here.
+            Add a weekly or extra class above to see its teaching dates here.
           </p>
         ) : null}
       </div>

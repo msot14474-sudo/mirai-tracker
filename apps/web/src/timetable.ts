@@ -62,6 +62,7 @@ export type OfferingTimetable = {
     plannedMinutes: number;
     status: string;
     hasLogs?: boolean;
+    isExtraSession?: boolean;
   }>;
   summary: {
     weeklyPlannedMinutes: number;
@@ -106,6 +107,20 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const timetableApi = {
+  addExtraClass: (
+    offeringId: string,
+    input: {
+      date: string;
+      startTime: string;
+      endTime: string;
+      facultyAssignmentId: string | null;
+      reason: string;
+    },
+  ) =>
+    api<{ sessionId: string; plannedMinutes: number; warnings: string[] }>(
+      `/timetable/offerings/${offeringId}/extra-classes`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
   moveSession: (
     sessionId: string,
     input: { date: string; startTime: string; endTime: string; reason: string },

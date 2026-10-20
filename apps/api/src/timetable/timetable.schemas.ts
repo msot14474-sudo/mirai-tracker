@@ -25,3 +25,12 @@ export type CreateTimetableEntryInput = z.infer<
 export type UpdateTimetableEntryInput = z.infer<
   typeof updateTimetableEntrySchema
 >;
+
+export const extraClassSchema = z.object({
+  date: isoDateSchema,
+  startTime: timeSchema,
+  endTime: timeSchema,
+  facultyAssignmentId: uuidSchema.nullable().optional().default(null),
+  reason: z.string().trim().max(1000).default(''),
+});
+export type ExtraClassInput = z.infer<typeof extraClassSchema>;

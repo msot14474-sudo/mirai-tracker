@@ -25,6 +25,7 @@ import { CurrentUser, Roles } from '../auth/auth.decorators';
 import { AuthenticatedUser } from '../auth/auth.types';
 import {
   createTimetableEntrySchema,
+  extraClassSchema,
   updateTimetableEntrySchema,
 } from './timetable.schemas';
 import { TimetableService } from './timetable.service';
@@ -101,6 +102,20 @@ export class TimetableController {
     return this.timetable.createEntry(
       id(offeringId),
       parse(createTimetableEntrySchema, body),
+      user,
+    );
+  }
+
+  @Post('offerings/:offeringId/extra-classes')
+  @Roles(UserRole.CAMPUS_MANAGER)
+  extraClass(
+    @Param('offeringId') offeringId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.timetable.createExtraClass(
+      id(offeringId),
+      parse(extraClassSchema, body),
       user,
     );
   }

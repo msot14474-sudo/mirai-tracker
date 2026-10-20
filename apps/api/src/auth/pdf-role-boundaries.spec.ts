@@ -9,6 +9,7 @@ const roles = (handler: Function) =>
 it('keeps program managers out of operational editing endpoints', () => {
   for (const method of [
     TimetableController.prototype.create,
+    TimetableController.prototype.extraClass,
     TimetableController.prototype.update,
     TimetableController.prototype.archive,
     TimetableController.prototype.generate,
@@ -84,6 +85,7 @@ it.each([
 it('keeps administrators out of teaching-operation writes', () => {
   for (const method of [
     TimetableController.prototype.create,
+    TimetableController.prototype.extraClass,
     TimetableController.prototype.update,
     TimetableController.prototype.archive,
     TimetableController.prototype.generate,
