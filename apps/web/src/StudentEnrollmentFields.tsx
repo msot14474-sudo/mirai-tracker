@@ -22,7 +22,7 @@ export function StudentEnrollmentFields({
   });
   const profile = account.studentProfile;
   return (
-    <fieldset>
+    <fieldset className="student-enrollment-fields">
       <legend>Student enrolment</legend>
       <p>
         {profile

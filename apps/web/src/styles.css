@@ -9694,6 +9694,9 @@ body:has(.auth-shell) {
 .student-plan-details > summary { cursor: pointer; color: #2855a6; font-size: .85rem; font-weight: 650; padding: .3rem 0; }
 .student-plan-details > summary:focus-visible { outline: 2px solid #295bd3; outline-offset: 4px; border-radius: .2rem; }
 .student-plan-details[open] > summary { margin-bottom: .65rem; }
+.student-enrollment-fields { min-width: 0; margin: 0; padding: 1rem; border: 1px solid #dbe4f3; border-radius: .85rem; background: #f7f9fd; }
+.student-enrollment-fields > legend { padding: 0 .35rem; color: #284a85; font-size: .85rem; font-weight: 700; }
+.student-enrollment-fields > p { margin: 0 0 1rem; color: #4b5f80; font-size: .85rem; line-height: 1.5; }
 @media (max-width: 700px) {
   .student-overview .student-batch-banner dl { grid-template-columns: 1fr; }
   .student-overview .student-overview-heading h2 { font-size: 1.75rem; }
