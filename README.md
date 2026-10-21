@@ -102,6 +102,6 @@ React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. N
 | docs/submission | Downloadable reports and calculation workbook |
 | docs/evidence/2026-10-20 | Current measured evidence |
 
-[Design](docs/design-document.md) · [Architecture source](docs/architecture.mmd) · [Backup/recovery](docs/m17-security-and-recovery.md)
+[Design](docs/design-document.md) · [Architecture source](docs/architecture.mmd) · [Backup/recovery](docs/m17-security-and-recovery.md) · [Future enhancements](docs/future-enhancements.md)
 
 Secrets, local evaluator credentials and `outputs/` are excluded from Git and image build contexts. Earlier milestone documents are historical; this README and the dated submission reports describe the current product.
