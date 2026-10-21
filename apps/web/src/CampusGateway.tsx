@@ -91,13 +91,7 @@ export function AdminCampusGateway({
       <header className="campus-hub-header">
         <div className="campus-hub-brand">
           <span className="campus-hub-logo">
-            <img
-              src="/mirai-wordmark-light-hd.png"
-              alt="Mirai School of Technology"
-            />
-          </span>
-          <span className="campus-hub-product">
-            Academic workspace<span>Campus selection</span>
+            <img src="/mirai-wordmark.webp" alt="Mirai School of Technology" />
           </span>
         </div>
         <div className="campus-hub-account">

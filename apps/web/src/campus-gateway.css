@@ -28,30 +28,17 @@
 .campus-hub-logo {
   display: flex;
   align-items: center;
-  width: 161px;
-  height: 48px;
-  padding: 9px 13px;
-  background: #132e65;
-  border-radius: 9px;
+  overflow: hidden;
+  width: clamp(240px, 20vw, 310px);
+  height: 72px;
+  background: #fff;
   flex-shrink: 0;
 }
 .campus-hub-logo img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-}
-.campus-hub-product {
-  border-left: 1px solid #dce2eb;
-  padding-left: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-.campus-hub-product > span {
-  display: block;
-  font-size: 11px;
-  color: #6a778c;
-  font-weight: 400;
+  object-fit: cover;
+  object-position: center;
 }
 .campus-hub-avatar {
   display: grid;
@@ -503,9 +490,6 @@
   .campus-hub-card-footer {
     padding-inline: 17px;
   }
-  .campus-hub-product {
-    display: none;
-  }
   .campus-hub-orbit {
     transform: scale(0.85);
     transform-origin: right center;
@@ -519,8 +503,8 @@
     gap: 16px;
   }
   .campus-hub-logo {
-    width: 132px;
-    height: 42px;
+    width: 205px;
+    height: 58px;
   }
   .campus-hub-user,
   .campus-hub-avatar {
