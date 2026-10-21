@@ -13,6 +13,11 @@ pnpm monorepos. Keep that setting enabled for the API because it imports
 
 ## Managed services
 
+- Keep the API function in the same region as PostgreSQL. The current Neon
+  database is in Singapore (`ap-southeast-1`), so `apps/api/vercel.json` pins
+  the API to Vercel's `sin1` region. Update this setting if the database moves;
+  the US default adds a cross-region round trip to every database query.
+  See [Vercel function regions](https://vercel.com/docs/functions/configuring-functions/region).
 - Provision a serverless PostgreSQL database through the Vercel Marketplace and
   connect it to the API project as `DATABASE_URL`.
 - Provision Upstash Redis and expose its TLS connection string as `REDIS_URL`.
