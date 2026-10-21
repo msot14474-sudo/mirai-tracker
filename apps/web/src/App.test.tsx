@@ -552,9 +552,16 @@ describe('App authentication', () => {
     expect(
       await screen.findByRole('heading', { name: 'User access' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add new' })).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Student Excel / CSV' }),
+    );
     expect(
-      screen.queryByRole('button', { name: 'Add new' }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole('button', { name: 'CSV template' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Export students CSV' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Timetable' }),
     ).not.toBeInTheDocument();
@@ -749,6 +756,17 @@ describe('App authentication', () => {
     expect(
       screen.queryByRole('heading', { name: 'Weekly timetable' }),
     ).not.toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: 'Add new' })).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Student Excel / CSV' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'CSV template' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Export students CSV' }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Timetable' }));
     expect(

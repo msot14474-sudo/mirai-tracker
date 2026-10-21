@@ -214,7 +214,9 @@ export function FacultyAccessWorkspace({
             }
           : {}),
         ...(password ? { password } : {}),
-        ...(values.get('studentBatchId') ? { studentBatchId: String(values.get('studentBatchId')) } : {}),
+        ...(values.get('studentBatchId')
+          ? { studentBatchId: String(values.get('studentBatchId')) }
+          : {}),
       },
     });
   }
@@ -276,44 +278,6 @@ export function FacultyAccessWorkspace({
         </p>
       ) : null}
 
-      <section
-        className="setup-card campus-team-panel"
-        aria-label="Campus people and assignments"
-      >
-        {network.isLoading && (
-          <LoadingSkeleton variant="list" label="Loading campus team" />
-        )}
-        {network.error && (
-          <p role="alert" className="form-error">
-            {network.error.message}
-          </p>
-        )}
-        {network.data
-          ?.filter((campus) => campus.id === campusId)
-          .map((campus) => (
-            <CampusTeamDirectory key={campus.id} campus={campus} />
-          ))}
-      </section>
-
-      {!readOnly && (
-        <details className="setup-card campus-assignment-panel">
-          <summary>Assign teachers to campus subjects</summary>
-          {subjectCatalog.error && (
-            <p role="alert">{subjectCatalog.error.message}</p>
-          )}
-          {Array.isArray(subjectCatalog.data) &&
-            subjectCatalog.data.map((subject) => (
-              <article key={subject.id}>
-                <h4>{subject.name}</h4>
-                <SubjectTeacherAssignment
-                  subject={subject}
-                  campusId={campusId}
-                  readOnly={!canAssignTeachers}
-                />
-              </article>
-            ))}
-        </details>
-      )}
       {!readOnly && (
         <section
           className="managed-accounts"
@@ -323,6 +287,10 @@ export function FacultyAccessWorkspace({
             <div>
               <p className="workspace-kicker">Account controls</p>
               <h3 id="managed-accounts-title">People with access</h3>
+              <p>
+                Add faculty individually or grant student access from an Excel
+                or CSV file.
+              </p>
             </div>
             <div className="access-directory-actions">
               <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
@@ -330,9 +298,7 @@ export function FacultyAccessWorkspace({
                 type="button"
                 onClick={() => setShowStudents(!showStudents)}
               >
-                {showStudents
-                  ? 'Close student import'
-                  : 'Add multiple students'}
+                {showStudents ? 'Close student tools' : 'Student Excel / CSV'}
               </button>
               <button
                 type="button"
@@ -753,8 +719,16 @@ export function FacultyAccessWorkspace({
                     </div>
                     <span>{accountRoleLabel(selectedAccount)}</span>
                   </header>
-                  {selectedAccount.roleAssignments.some((r) => r.role === 'STUDENT') && !editRole &&
-                    <StudentEnrollmentFields key={selectedAccount.id} campusId={campusId} account={selectedAccount} />}
+                  {selectedAccount.roleAssignments.some(
+                    (r) => r.role === 'STUDENT',
+                  ) &&
+                    !editRole && (
+                      <StudentEnrollmentFields
+                        key={selectedAccount.id}
+                        campusId={campusId}
+                        account={selectedAccount}
+                      />
+                    )}
                   <div className="field-pair">
                     <label>
                       Full name
@@ -903,6 +877,44 @@ export function FacultyAccessWorkspace({
             </div>
           )}
         </section>
+      )}
+      <section
+        className="setup-card campus-team-panel"
+        aria-label="Campus people and assignments"
+      >
+        {network.isLoading && (
+          <LoadingSkeleton variant="list" label="Loading campus team" />
+        )}
+        {network.error && (
+          <p role="alert" className="form-error">
+            {network.error.message}
+          </p>
+        )}
+        {network.data
+          ?.filter((campus) => campus.id === campusId)
+          .map((campus) => (
+            <CampusTeamDirectory key={campus.id} campus={campus} />
+          ))}
+      </section>
+
+      {!readOnly && canAssignTeachers && (
+        <details className="setup-card campus-assignment-panel">
+          <summary>Assign teachers to campus subjects</summary>
+          {subjectCatalog.error && (
+            <p role="alert">{subjectCatalog.error.message}</p>
+          )}
+          {Array.isArray(subjectCatalog.data) &&
+            subjectCatalog.data.map((subject) => (
+              <article key={subject.id}>
+                <h4>{subject.name}</h4>
+                <SubjectTeacherAssignment
+                  subject={subject}
+                  campusId={campusId}
+                  readOnly={!canAssignTeachers}
+                />
+              </article>
+            ))}
+        </details>
       )}
     </section>
   );

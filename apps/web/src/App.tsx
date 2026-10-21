@@ -1392,7 +1392,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             initialCampusId={selectedCampusId}
             campusLocked={Boolean(selectedCampus)}
             currentUserId={user.id}
-            readOnly={!roles.includes('ADMIN') && !roles.includes('CAMPUS_MANAGER')}
+            readOnly={!canManageFaculty}
             facultyOnly={!roles.includes('ADMIN')}
             canCreateCampusManagers={roles.includes('ADMIN')}
             canCreateAdministrators={roles.includes('ADMIN')}

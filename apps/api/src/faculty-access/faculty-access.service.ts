@@ -141,11 +141,13 @@ export class FacultyAccessService {
   async accounts(campusId: string, actor: AuthenticatedUser) {
     await this.requireCampus(campusId);
     this.access.assertCanManageCampus(actor, campusId);
-    const globalManager = this.access.isGlobalManager(actor);
+    const canManageAllRoles = actor.roles.some(
+      (r) => r.role === UserRole.ADMIN,
+    );
     const accounts = await this.prisma.user.findMany({
       where: {
         roleAssignments: {
-          some: globalManager
+          some: canManageAllRoles
             ? {
                 OR: [
                   { campusId },
@@ -217,6 +219,23 @@ export class FacultyAccessService {
     if (!target) throw new NotFoundException('Account not found.');
 
     const globalManager = this.access.isGlobalManager(actor);
+    const isProgramManager = actor.roles.some(
+      (r) => r.role === UserRole.PROGRAM_MANAGER,
+    );
+    const isAdmin = actor.roles.some((r) => r.role === UserRole.ADMIN);
+    if (isProgramManager && !isAdmin) {
+      if (
+        input.role ||
+        !target.roleAssignments.length ||
+        target.roleAssignments.some(
+          (r) => r.role !== UserRole.FACULTY && r.role !== UserRole.STUDENT,
+        )
+      ) {
+        throw new ForbiddenException(
+          'Program managers can manage faculty and student accounts. Only administrators can manage staff roles and manager accounts.',
+        );
+      }
+    }
     if (!globalManager) {
       const managedCampuses = new Set(
         actor.roles
@@ -674,6 +693,10 @@ export class FacultyAccessService {
     input: CreateAccessAccountInput,
     actor: AuthenticatedUser,
   ) {
+    if (!actor.roles.some((r) => r.role === UserRole.ADMIN))
+      throw new ForbiddenException(
+        'Only administrators can create campus-manager accounts.',
+      );
     await this.requireCampus(campusId);
     this.access.assertGlobalManager(actor);
     return this.createRoleAccount(
@@ -688,6 +711,10 @@ export class FacultyAccessService {
     input: CreateAccessAccountInput,
     actor: AuthenticatedUser,
   ) {
+    if (!actor.roles.some((r) => r.role === UserRole.ADMIN))
+      throw new ForbiddenException(
+        'Only administrators can create administrator accounts.',
+      );
     this.access.assertGlobalManager(actor);
     return this.createRoleAccount(input, actor, UserRole.ADMIN, null);
   }

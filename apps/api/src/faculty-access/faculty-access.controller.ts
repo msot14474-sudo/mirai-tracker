@@ -52,7 +52,7 @@ export class FacultyAccessController {
   }
 
   @Patch('accounts/:userId')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
+  @Roles(...managers)
   updateAccount(
     @Param('userId') userId: string,
     @Body() body: unknown,
@@ -66,7 +66,7 @@ export class FacultyAccessController {
   }
 
   @Post('campuses/:campusId/faculty')
-  @Roles(UserRole.ADMIN, UserRole.CAMPUS_MANAGER)
+  @Roles(...managers)
   createFaculty(
     @Param('campusId') campusId: string,
     @Body() body: unknown,

@@ -37,10 +37,24 @@ export function StudentAccessImport({ campusId }: { campusId: string }) {
     enabled: !!semesterId,
   });
   const path = `${apiUrl}/faculty-access/campuses/${campusId}/students`;
-  const template = useMutation({
-    mutationFn: async () => {
-      const response = await apiFetch(`${path}/template`);
-      saveDownload(await response.blob(), 'student-access-template.xlsx');
+  const download = useMutation({
+    mutationFn: async ({
+      kind,
+      format,
+    }: {
+      kind: 'template' | 'export';
+      format: 'xlsx' | 'csv';
+    }) => {
+      const response = await apiFetch(
+        `${path}/${kind}?format=${format}`,
+        {},
+        { download: true },
+      );
+      if (!response.ok) throw new Error(await errorMessage(response));
+      saveDownload(
+        await response.blob(),
+        `${kind === 'template' ? 'student-access-template' : 'campus-students'}.${format}`,
+      );
     },
   });
   const upload = useMutation({
@@ -55,6 +69,7 @@ export function StudentAccessImport({ campusId }: { campusId: string }) {
         `${path}/${commit ? 'import' : 'preview'}`,
         { method: 'POST', body },
       );
+      if (!response.ok) throw new Error(await errorMessage(response));
       return (await response.json()) as Preview;
     },
     onSuccess: async (data, commit) => {
@@ -80,20 +95,54 @@ export function StudentAccessImport({ campusId }: { campusId: string }) {
     >
       <div className="campus-data-card-heading">
         <div>
-          <h3>Add students from Excel</h3>
+          <h3>Student Excel / CSV tools</h3>
           <p>
             Choose their semester and batch, then upload Name, Campus and Email.
             Every row is checked before access is granted.
           </p>
         </div>
-        <button
-          className="secondary-button"
-          disabled={!campusId || template.isPending}
-          onClick={() => template.mutate()}
-        >
-          Download student template
-        </button>
       </div>
+      <div className="student-file-tools">
+        <div>
+          <h4>Blank import templates</h4>
+          <p>Fill one row per student: Name, Campus and Email.</p>
+          <div className="campus-data-actions">
+            {(['xlsx', 'csv'] as const).map((format) => (
+              <button
+                key={format}
+                className="secondary-button"
+                disabled={!campusId || download.isPending}
+                onClick={() => download.mutate({ kind: 'template', format })}
+              >
+                {format === 'xlsx' ? 'Excel template' : 'CSV template'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h4>Current student list</h4>
+          <p>
+            Download students from this campus, including their semester, batch
+            and access status.
+          </p>
+          <div className="campus-data-actions">
+            {(['xlsx', 'csv'] as const).map((format) => (
+              <button
+                key={format}
+                className="secondary-button"
+                disabled={!campusId || download.isPending}
+                onClick={() => download.mutate({ kind: 'export', format })}
+              >
+                {format === 'xlsx'
+                  ? 'Export students Excel'
+                  : 'Export students CSV'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {download.isPending && <p role="status">Preparing student file…</p>}
+      <h4>Grant student access</h4>
       <div className="form-grid">
         <label>
           Student semester
@@ -148,11 +197,11 @@ export function StudentAccessImport({ campusId }: { campusId: string }) {
         </label>
       </div>
       <p className="campus-data-note">
-        Students receive access to this batch in the selected campus. They sign
-        in using their email verification code. Existing matching accounts are
-        skipped.
+        Students receive access to this batch in the selected campus. For their
+        first sign-in, they choose Forgot password on the login page, verify
+        their email and set a password. Existing matching accounts are skipped.
       </p>
-      {[upload.error, template.error, semesters.error, batches.error]
+      {[upload.error, download.error, semesters.error, batches.error]
         .filter(Boolean)
         .map((e, i) => (
           <p role="alert" className="form-error" key={i}>
@@ -234,4 +283,12 @@ export function StudentAccessImport({ campusId }: { campusId: string }) {
       )}
     </section>
   );
+}
+
+async function errorMessage(response: Response) {
+  const body = await response.json().catch(() => null);
+  return Array.isArray(body?.message)
+    ? body.message.join(' ')
+    : (body?.message ??
+        'The student file request could not be completed. Please try again.');
 }

@@ -14,8 +14,14 @@ const actor = {
   studentProfile: null,
 };
 
-const programManager = {
+const administrator = {
   ...actor,
+  id: 'administrator-a',
+  roles: [{ role: UserRole.ADMIN, campusId: null }],
+};
+
+const programManager = {
+  ...administrator,
   id: 'program-manager-a',
   roles: [{ role: UserRole.PROGRAM_MANAGER, campusId: null }],
 };
@@ -103,6 +109,82 @@ describe('FacultyAccessService', () => {
   function service() {
     return new FacultyAccessService(prisma as never, access as never);
   }
+
+  it('lets a program manager create faculty access with a password in the selected campus', async () => {
+    await service().createFaculty(
+      campusId,
+      {
+        name: 'Dr Asha',
+        email: 'asha@example.edu',
+        notificationEmail: null,
+        employeeCode: 'FAC-101',
+        staffType: StaffType.REGULAR,
+        password: 'a-strong-temporary-password',
+        offeringIds: [],
+      },
+      programManager,
+    );
+    expect(
+      userCreate.mock.calls[0][0].data.roleAssignments.create,
+    ).toMatchObject({ role: UserRole.FACULTY, campusId });
+  });
+
+  it('lets a program manager update students but prevents promotions and changes to manager accounts', async () => {
+    access.isGlobalManager.mockReturnValue(true);
+    const student = {
+      id: 'student-a',
+      name: 'Student',
+      email: 'student@example.edu',
+      notificationEmail: null,
+      status: UserStatus.ACTIVE,
+      roleAssignments: [{ role: UserRole.STUDENT, campusId }],
+    };
+    userFindUnique.mockResolvedValue(student);
+    await service().updateAccount(
+      student.id,
+      { name: 'New Name' },
+      programManager,
+    );
+    expect(userUpdate).toHaveBeenCalled();
+    userUpdate.mockClear();
+    await expect(
+      service().updateAccount(
+        student.id,
+        { role: UserRole.ADMIN },
+        programManager,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    userFindUnique.mockResolvedValue({
+      ...student,
+      roleAssignments: [{ role: UserRole.CAMPUS_MANAGER, campusId }],
+    });
+    await expect(
+      service().updateAccount(
+        student.id,
+        { password: 'a-new-password' },
+        programManager,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(userUpdate).not.toHaveBeenCalled();
+  });
+
+  it('shows only faculty and student account controls to program managers', async () => {
+    userFindMany.mockResolvedValue([]);
+    access.isGlobalManager.mockReturnValue(true);
+    await service().accounts(campusId, programManager);
+    expect(userFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          roleAssignments: {
+            some: {
+              campusId,
+              role: { in: [UserRole.FACULTY, UserRole.STUDENT] },
+            },
+          },
+        },
+      }),
+    );
+  });
 
   it('creates a campus-scoped faculty login with hashed credentials and assignments', async () => {
     const result = await service().createFaculty(
@@ -214,10 +296,10 @@ describe('FacultyAccessService', () => {
         notificationEmail: null,
         password: 'a-strong-temporary-password',
       },
-      programManager,
+      administrator,
     );
 
-    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(administrator);
     expect(userCreate.mock.calls[0][0].data.roleAssignments.create).toEqual({
       role: UserRole.CAMPUS_MANAGER,
       campusId,
@@ -230,7 +312,7 @@ describe('FacultyAccessService', () => {
     });
   });
 
-  it('creates a global Administrator account for a Program Manager', async () => {
+  it('creates a global Administrator account for an administrator', async () => {
     userCreate.mockResolvedValue({
       id: 'admin-user-b',
       name: 'New Administrator',
@@ -246,10 +328,10 @@ describe('FacultyAccessService', () => {
         notificationEmail: 'otp@example.edu',
         password: 'a-strong-temporary-password',
       },
-      programManager,
+      administrator,
     );
 
-    expect(access.assertGlobalManager).toHaveBeenCalledWith(programManager);
+    expect(access.assertGlobalManager).toHaveBeenCalledWith(administrator);
     expect(userCreate.mock.calls[0][0].data.roleAssignments.create).toEqual({
       role: UserRole.ADMIN,
       campusId: null,
@@ -257,7 +339,7 @@ describe('FacultyAccessService', () => {
     });
     expect(auditCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        actorId: programManager.id,
+        actorId: administrator.id,
         campusId: null,
         entityType: 'UserAccess',
         after: expect.objectContaining({ role: UserRole.ADMIN }),
@@ -321,7 +403,7 @@ describe('FacultyAccessService', () => {
 
   it('lets an administrator update their own account without suspending it', async () => {
     const administrator = {
-      ...programManager,
+      ...actor,
       id: 'admin-user-a',
       roles: [{ role: UserRole.ADMIN, campusId: null }],
     };
@@ -380,7 +462,7 @@ describe('FacultyAccessService', () => {
         notificationEmail: null,
         password: 'not-a-replacement-password',
       },
-      programManager,
+      administrator,
     );
     expect(userCreate).not.toHaveBeenCalled();
     expect(transaction.$queryRaw).toHaveBeenCalled();
@@ -421,7 +503,7 @@ describe('FacultyAccessService', () => {
       service().updateAccount(
         'other-user',
         { role: UserRole.CAMPUS_MANAGER },
-        programManager,
+        administrator,
       ),
     ).rejects.toThrow('Choose the campus');
     expect(userUpdate).not.toHaveBeenCalled();
@@ -442,7 +524,7 @@ describe('FacultyAccessService', () => {
     await service().updateAccount(
       target.id,
       { role: UserRole.CAMPUS_MANAGER, campusId },
-      programManager,
+      administrator,
     );
     expect(userUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -472,10 +554,10 @@ describe('FacultyAccessService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userUpdate).not.toHaveBeenCalled();
   });
-  it('lists global administrators for global managers but keeps campus managers scoped', async () => {
+  it('lists global administrators for administrators but keeps campus managers scoped', async () => {
     userFindMany.mockResolvedValue([]);
     access.isGlobalManager.mockReturnValue(true);
-    await service().accounts(campusId, programManager);
+    await service().accounts(campusId, administrator);
     expect(userFindMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {

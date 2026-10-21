@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
@@ -22,18 +23,38 @@ const id = (s: string) => {
   return v.data;
 };
 @Controller('faculty-access/campuses/:campusId/students')
-@Roles('ADMIN', 'CAMPUS_MANAGER')
+@Roles('ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER')
 export class StudentImportController {
   constructor(private readonly service: StudentImportService) {}
   @Get('template')
   async template(
     @Param('campusId') campusId: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Query('format') format?: string,
   ) {
-    return new StreamableFile(await this.service.template(id(campusId), user), {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      disposition: 'attachment; filename="student-access-template.xlsx"',
-    });
+    const ext = fileFormat(format, 'xlsx');
+    return new StreamableFile(
+      await this.service.template(id(campusId), user, ext),
+      {
+        type: contentType(ext),
+        disposition: `attachment; filename="student-access-template.${ext}"`,
+      },
+    );
+  }
+  @Get('export')
+  async exportStudents(
+    @Param('campusId') campusId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('format') format?: string,
+  ) {
+    const ext = fileFormat(format, 'csv');
+    return new StreamableFile(
+      await this.service.exportStudents(id(campusId), user, ext),
+      {
+        type: contentType(ext),
+        disposition: `attachment; filename="campus-students.${ext}"`,
+      },
+    );
   }
   @Post('preview')
   @UseInterceptors(FileInterceptor('file'))
@@ -63,4 +84,15 @@ export class StudentImportController {
       fingerprint,
     );
   }
+}
+
+function fileFormat(value: string | undefined, fallback: 'csv' | 'xlsx') {
+  if (!value) return fallback;
+  if (value === 'csv' || value === 'xlsx') return value;
+  throw new BadRequestException('Choose Excel or CSV format.');
+}
+function contentType(format: 'csv' | 'xlsx') {
+  return format === 'csv'
+    ? 'text/csv; charset=utf-8'
+    : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 }

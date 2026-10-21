@@ -12,6 +12,7 @@ import { AccessPolicyService } from '../auth/access-policy.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { UploadedImportFile } from '../semester-import/semester-import.types';
 import { parseCsv } from '../semester-import/semester-import.parser';
+import { buildCsv, csvBuffer } from '../export/export-csv';
 
 type StudentRow = { row: number; name: string; campus: string; email: string };
 const studentSchema = z.object({
@@ -122,11 +123,12 @@ export class StudentImportService {
       !actor.roles.some(
         (r) =>
           r.role === 'ADMIN' ||
+          r.role === 'PROGRAM_MANAGER' ||
           (r.role === 'CAMPUS_MANAGER' && r.campusId === campusId),
       )
     )
       throw new ForbiddenException(
-        'Only administrators and the assigned campus manager can grant student access.',
+        'Only administrators, program managers and the assigned campus manager can manage student access.',
       );
     this.access.assertCanManageCampus(actor, campusId);
     const campus = await this.db.campus.findFirst({
@@ -135,8 +137,13 @@ export class StudentImportService {
     if (!campus) throw new BadRequestException('Choose an active campus.');
     return campus;
   }
-  async template(campusId: string, actor: AuthenticatedUser) {
+  async template(
+    campusId: string,
+    actor: AuthenticatedUser,
+    format: 'xlsx' | 'csv' = 'xlsx',
+  ) {
     const campus = await this.campus(campusId, actor);
+    if (format === 'csv') return csvBuffer('Name,Campus,Email\r\n');
     const book = new ExcelJS.Workbook();
     const sheet = book.addWorksheet('Students');
     sheet.addRow(['Name', 'Campus', 'Email']);
@@ -152,13 +159,91 @@ export class StudentImportService {
           'Select the semester and batch in the app before uploading. All students in this upload join that batch.',
         ],
         [
-          'Use student email addresses. Students sign in with their email verification code; no shared password is created.',
+          'Use student email addresses. After access is granted, students use Forgot password on the login page to verify their email and set their own password. They then sign in with that password and email verification.',
         ],
         [
           'Existing matching student accounts are skipped. Accounts with another role or batch are not changed.',
         ],
       ]);
     return Buffer.from(await book.xlsx.writeBuffer());
+  }
+  async exportStudents(
+    campusId: string,
+    actor: AuthenticatedUser,
+    format: 'xlsx' | 'csv',
+  ) {
+    const campus = await this.campus(campusId, actor);
+    const students = await this.db.user.findMany({
+      where: {
+        roleAssignments: { some: { role: 'STUDENT', campusId } },
+        studentProfile: { batch: { semester: { campusId } } },
+      },
+      select: {
+        name: true,
+        email: true,
+        status: true,
+        studentProfile: {
+          select: {
+            enrollmentStatus: true,
+            batch: {
+              select: { name: true, semester: { select: { name: true } } },
+            },
+          },
+        },
+      },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+    });
+    const headings = [
+      'Name',
+      'Campus',
+      'Email',
+      'Semester',
+      'Batch',
+      'Account status',
+      'Enrollment status',
+    ];
+    const rows = students.map((s) => [
+      s.name,
+      campus.name,
+      s.email,
+      s.studentProfile!.batch.semester.name,
+      s.studentProfile!.batch.name,
+      s.status,
+      s.studentProfile!.enrollmentStatus,
+    ]);
+    let buffer: Buffer;
+    if (format === 'csv') {
+      buffer = csvBuffer(
+        buildCsv(
+          rows,
+          headings.map((header, i) => ({
+            header,
+            value: (row: string[]) => row[i],
+          })),
+        ),
+      );
+    } else {
+      const book = new ExcelJS.Workbook();
+      const sheet = book.addWorksheet('Students');
+      sheet.addRow(headings);
+      sheet.addRows(rows);
+      sheet.columns = headings.map((h) => ({ width: h === 'Email' ? 42 : 28 }));
+      sheet.getRow(1).font = { bold: true };
+      sheet.views = [{ state: 'frozen', ySplit: 1 }];
+      sheet.autoFilter = { from: 'A1', to: 'G1' };
+      buffer = Buffer.from(await book.xlsx.writeBuffer());
+    }
+    await this.db.auditEvent.create({
+      data: {
+        actorId: actor.id,
+        campusId,
+        action: 'EXPORT',
+        entityType: 'StudentAccess',
+        entityId: campusId,
+        metadata: { format, students: rows.length },
+      },
+    });
+    return buffer;
   }
   async inspect(
     campusId: string,
