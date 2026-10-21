@@ -7,6 +7,7 @@ import { App } from './App';
 import '@fontsource-variable/inter/wght.css';
 import './styles.css';
 import './ui-system.css';
+import './campus-gateway.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
