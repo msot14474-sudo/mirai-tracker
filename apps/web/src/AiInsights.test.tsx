@@ -53,7 +53,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-function setup(ready = false, fail = false, empty = false) {
+function setup(ready = false, fail = false, empty = false, canLog = false) {
   const requests: unknown[] = [];
   const onOpen = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
@@ -100,7 +100,7 @@ function setup(ready = false, fail = false, empty = false) {
         })
       }
     >
-      <AiInsights campusId="campus-a" canLog={false} onOpen={onOpen} />
+      <AiInsights campusId="campus-a" canLog={canLog} onOpen={onOpen} />
     </QueryClientProvider>,
   );
   return { requests, onOpen };
@@ -119,6 +119,19 @@ it('shows grounded priorities without header action buttons', async () => {
     screen.queryByRole('button', { name: 'Refresh' }),
   ).not.toBeInTheDocument();
   expect(requests).toEqual([]);
+});
+it.each([false, true])('offers upcoming-class preparation within the current scope (canLog=%s)', async (canLog) => {
+  const { requests } = setup(true, false, false, canLog);
+  const question = canLog
+    ? 'Summarise my upcoming classes and preparation priorities.'
+    : 'Summarise upcoming classes and preparation priorities.';
+  fireEvent.click(await screen.findByRole('button', { name: question }));
+  expect(screen.queryByRole('button', { name: 'Summarise student understanding gaps.' })).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Message Mirai AI')).toHaveValue(question);
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  await waitFor(() => expect(requests).toEqual([
+    { campusId: 'campus-a', useAi: true, question },
+  ]));
 });
 it('submits AI questions with selected scope but never client context', async () => {
   const { requests } = setup(true);

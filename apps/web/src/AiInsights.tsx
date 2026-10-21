@@ -258,7 +258,9 @@ export function AiInsights({
                     {[
                       'Which subjects need attention?',
                       'What should we focus on next?',
-                      'Summarise student understanding gaps.',
+                      canLog
+                        ? 'Summarise my upcoming classes and preparation priorities.'
+                        : 'Summarise upcoming classes and preparation priorities.',
                     ].map((prompt) => (
                       <button
                         key={prompt}
