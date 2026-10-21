@@ -11,8 +11,8 @@ import './ui-system.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
+      staleTime: 60_000,
+      gcTime: 15 * 60_000,
       refetchOnWindowFocus: (query) =>
         query.state.status === 'error' && canRecoverRequest(query.state.error),
       retry: false,

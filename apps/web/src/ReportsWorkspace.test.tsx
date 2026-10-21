@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -19,18 +20,26 @@ afterEach(() => {
 });
 beforeEach(() => {
   vi.spyOn(reportsApi, 'read').mockResolvedValue(reportFixture());
+  vi.spyOn(reportsApi, 'summary').mockResolvedValue(reportFixture());
 });
 function show(props: Parameters<typeof ReportsWorkspace>[0] = {}) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <ReportsWorkspace {...props} />
     </QueryClientProvider>,
   );
+  return client;
 }
+it('keeps loaded course figures visible when a background refresh fails', async () => {
+  const client = show();
+  await screen.findByRole('table', { name: 'Course Progress' });
+  vi.mocked(reportsApi.summary).mockRejectedValue(new Error('Temporary outage'));
+  await act(async () => { await client.invalidateQueries({ queryKey: ['reports'] }); });
+  expect(client.getQueryCache().getAll().some(q => q.state.status === 'error')).toBe(true);
+  expect(screen.getByRole('table', { name: 'Course Progress' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Retry reports' })).not.toBeInTheDocument();
+});
 it('shows the marked exam columns and exports the selected filters and tab', async () => {
   vi.spyOn(reportsApi, 'document').mockResolvedValue({
     blob: new Blob(['exam']),
@@ -38,6 +47,8 @@ it('shows the marked exam columns and exports the selected filters and tab', asy
   });
   show();
   await screen.findByRole('table', { name: 'Course Progress' });
+  expect(reportsApi.read).not.toHaveBeenCalled();
+  expect(reportsApi.summary).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('tab', { name: 'Exam Readiness' }));
   const table = await screen.findByRole('table', { name: 'Exam Readiness' });
   expect(reportsApi.read).toHaveBeenCalledTimes(1);
@@ -93,11 +104,12 @@ it('does not show scheduled classes as taught and can select all logged statuses
   );
 });
 it('shows faculty only subject and teaching reports and prevents reversed date queries and exports', async () => {
-  vi.mocked(reportsApi.read).mockResolvedValue({
-    ...reportFixture(),
-    facultyOnly: true,
-    activeCampusId: 'campus-a',
-  });
+  for (const method of [reportsApi.read, reportsApi.summary])
+    vi.mocked(method).mockResolvedValue({
+      ...reportFixture(),
+      facultyOnly: true,
+      activeCampusId: 'campus-a',
+    });
   show();
   await screen.findByRole('tab', { name: 'My Teaching' });
   expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
@@ -142,11 +154,12 @@ it('shows faculty only subject and teaching reports and prevents reversed date q
 });
 
 it('exports faculty reports only for their current authorized campus, including after reset', async () => {
-  vi.mocked(reportsApi.read).mockResolvedValue({
-    ...reportFixture(),
-    facultyOnly: true,
-    activeCampusId: 'campus-a',
-  });
+  for (const method of [reportsApi.read, reportsApi.summary])
+    vi.mocked(method).mockResolvedValue({
+      ...reportFixture(),
+      facultyOnly: true,
+      activeCampusId: 'campus-a',
+    });
   vi.spyOn(reportsApi, 'document').mockResolvedValue({
     blob: new Blob(['own']),
     filename: 'own.csv',
@@ -173,7 +186,7 @@ it('exports faculty reports only for their current authorized campus, including 
   );
 });
 it('never shows management report tabs while a faculty session is loading or opens a retired tab', async () => {
-  vi.mocked(reportsApi.read).mockReturnValue(new Promise(() => {}));
+  vi.mocked(reportsApi.summary).mockReturnValue(new Promise(() => {}));
   show({ facultyOnly: true, initialTab: 'exams' });
   expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
     'My Subjects',

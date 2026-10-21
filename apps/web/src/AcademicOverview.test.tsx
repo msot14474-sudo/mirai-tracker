@@ -20,7 +20,7 @@ function show(props: Partial<Parameters<typeof AcademicOverview>[0]> = {}) {
   );
 }
 it('keeps manager overview read-only and drills into a subject report', async () => {
-  vi.spyOn(reportsApi, 'read').mockResolvedValue(reportFixture());
+  vi.spyOn(reportsApi, 'summary').mockResolvedValue(reportFixture());
   const open = vi.fn();
   show({ onReports: open, onLog: vi.fn(), onLessonPlan: vi.fn() });
   await screen.findByRole('heading', { name: 'Web Development' });
@@ -51,7 +51,7 @@ it('shows faculty teaching controls and unknown coverage instead of inventing pr
     needsData: 1,
     atRisk: 0,
   };
-  vi.spyOn(reportsApi, 'read').mockResolvedValue(data);
+  vi.spyOn(reportsApi, 'summary').mockResolvedValue(data);
   const plans = vi.fn();
   show({ faculty: true, onLog: vi.fn(), onLessonPlan: plans });
   await screen.findByText(/Coverage unknown until/);

@@ -65,7 +65,7 @@ describe('App authentication', () => {
         if (url.endsWith('/auth/login')) return userResponse('FACULTY');
         if (url.endsWith('/auth/me'))
           return new Response(null, { status: 401 });
-        if (url.includes('/reports?'))
+        if ((url.includes('/reports?') || url.includes('/reports/summary')))
           return new Response(JSON.stringify(reportFixture()), {
             headers: { 'Content-Type': 'application/json' },
           });
@@ -345,7 +345,7 @@ describe('App authentication', () => {
         );
       }
       if (url.endsWith('/auth/verify-otp')) return userResponse('FACULTY');
-      if (url.includes('/reports?'))
+      if ((url.includes('/reports?') || url.includes('/reports/summary')))
         return new Response(JSON.stringify(reportFixture()), {
           headers: { 'Content-Type': 'application/json' },
         });

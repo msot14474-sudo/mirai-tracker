@@ -18,18 +18,19 @@ export function TopicScheduleWorkspace({
   const offerings = useQuery({
     queryKey: ['topic-schedules', 'offerings', campusId],
     queryFn: () => topicScheduleApi.offerings(campusId),
-    staleTime: 0,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: 'always',
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
-  const selectedOfferingId = offeringId || offerings.data?.[0]?.id || '';
+  const selectedOfferingId = offerings.data?.some(o => o.id === offeringId)
+    ? offeringId : offerings.data?.[0]?.id || '';
   const detail = useQuery({
     queryKey: ['topic-schedules', 'offering', selectedOfferingId],
     queryFn: () => topicScheduleApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
-    staleTime: 0,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: 'always',
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
   const selectionIsLoading = offerings.isLoading;
 
@@ -109,7 +110,7 @@ export function TopicScheduleWorkspace({
         </div>
       ) : detail.isLoading ? (
         <LoadingSkeleton variant="table" label="Calculating live dates" />
-      ) : detail.isError ? (
+      ) : detail.isError && !detail.data ? (
         <p className="form-error" role="alert">
           {detail.error.message}
         </p>

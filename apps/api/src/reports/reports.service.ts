@@ -74,7 +74,49 @@ const detail = Prisma.validator<Prisma.SubjectOfferingInclude>()({
     },
   },
 });
-type Offering = Prisma.SubjectOfferingGetPayload<{ include: typeof detail }>;
+// Summary screens need log existence, not every log's text, topic updates and author.
+const courseDetail = Prisma.validator<Prisma.SubjectOfferingInclude>()({
+  ...metadata,
+  lessonPlans: {
+    where: { status: { in: ['ACTIVE', 'DRAFT'] } },
+    orderBy: { version: 'desc' },
+    select: {
+      status: true,
+      version: true,
+      units: {
+        orderBy: { sequence: 'asc' },
+        select: {
+          topics: {
+            orderBy: { sequence: 'asc' },
+            select: {
+              id: true,
+              title: true,
+              plannedMinutes: true,
+              status: true,
+              currentCompletionPercentage: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  scheduleVersions: detail.scheduleVersions,
+  sessions: {
+    orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    select: {
+      id: true,
+      sessionDate: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      cancellationReason: true,
+      logs: { take: 1, select: { id: true } },
+    },
+  },
+});
+type CourseOffering = Prisma.SubjectOfferingGetPayload<{
+  include: typeof courseDetail;
+}>;
 type MetaOffering = Prisma.SubjectOfferingGetPayload<{
   include: typeof metadata;
 }>;
@@ -199,7 +241,7 @@ function rowIdentity(o: MetaOffering): RowIdentity {
     ),
   };
 }
-export function courseRow(o: Offering, now: Date): CourseRow {
+export function courseRow(o: CourseOffering, now: Date): CourseRow {
   const today = localDate(now, o.batch.semester.campus.timezone);
   const plan =
     o.lessonPlans.find((p) => p.status === 'ACTIVE') ?? o.lessonPlans[0];
@@ -320,10 +362,37 @@ function groupRows(subjects: CourseRow[], kind: 'campus' | 'track') {
   });
 }
 
+function reportSummary(
+  subjects: CourseRow[],
+  nextExam: { name: string; date: string; campus: string } | null,
+) {
+  const known = subjects.flatMap((s) => (s.metrics ? [s.metrics] : []));
+  const worst = [...subjects].sort(
+    (a, b) => reportRank[b.status] - reportRank[a.status],
+  )[0];
+  return {
+    status: worst?.status ?? 'NEEDS_DATA',
+    worstSubject: worst ? `${worst.subject.name} · ${worst.batch.name}` : null,
+    metrics: known.length ? rollUpProgress(known) : null,
+    subjects: subjects.length,
+    assessed: subjects.filter((s) => s.status !== 'NEEDS_DATA').length,
+    needsData: subjects.filter((s) => s.status === 'NEEDS_DATA').length,
+    atRisk: subjects.filter((s) => ['DANGER', 'TIGHT'].includes(s.status))
+      .length,
+    behindHours: round(
+      known.reduce((n, m) => n + Math.max(0, -m.paceVsPlanHours), 0),
+    ),
+    logged: subjects.reduce((n, s) => n + s.logged, 0),
+    unlogged: subjects.reduce((n, s) => n + s.unlogged, 0),
+    upcoming: subjects.reduce((n, s) => n + s.upcoming, 0),
+    nextExam,
+  };
+}
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly db: PrismaService) {}
-  async read(user: AuthenticatedUser, q: ReportQuery) {
+  async read(user: AuthenticatedUser, q: ReportQuery, compact = false) {
     const now = new Date();
     const scope = reportScope(user);
     const facultyOnly = !user.roles.some((r) =>
@@ -370,7 +439,13 @@ export class ReportsService {
     });
     const permitted = await this.db.subjectOffering.findMany({
       where: {
-        AND: [scope, { status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } }],
+        AND: [
+          scope,
+          { status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } },
+          ...(activeCampusId
+            ? [{ batch: { semester: { campusId: activeCampusId } } }]
+            : []),
+        ],
       },
       include: metadata,
       orderBy: { id: 'asc' },
@@ -387,10 +462,80 @@ export class ReportsService {
         (!q.semesterId || o.batch.semesterId === q.semesterId) &&
         (!q.batchId || o.batchId === q.batchId) &&
         (!q.subjectId || o.subjectId === q.subjectId) &&
+        (!q.offeringId || o.id === q.offeringId) &&
         (!q.facultyId ||
           o.faculty.some((f) => f.staffProfile.user.id === q.facultyId)),
     );
     const ids = filtered.map((o) => o.id);
+    if (compact) {
+      const [offerings, exams] = await Promise.all([
+        this.db.subjectOffering.findMany({
+          where: { AND: [scope, { id: { in: ids } }] },
+          include: {
+            lessonPlans: courseDetail.lessonPlans,
+            scheduleVersions: courseDetail.scheduleVersions,
+            sessions: courseDetail.sessions,
+          },
+          orderBy: { subject: { name: 'asc' } },
+        }),
+        this.db.examWindow.findMany({
+          where: {
+            semesterId: {
+              in: [...new Set(filtered.map((o) => o.batch.semesterId))],
+            },
+          },
+          orderBy: { startDate: 'asc' },
+        }),
+      ]);
+      const identities = new Map(filtered.map((o) => [o.id, o]));
+      const subjects = offerings.map((o) =>
+        courseRow({ ...identities.get(o.id)!, ...o }, now),
+      );
+      const next = exams.find((e) => {
+        const offering = filtered.find(
+          (o) => o.batch.semesterId === e.semesterId,
+        );
+        return (
+          offering &&
+          iso(e.endDate) >=
+            localDate(now, offering.batch.semester.campus.timezone) &&
+          (!q.from || iso(e.endDate) >= q.from) &&
+          (!q.to || iso(e.startDate) <= q.to)
+        );
+      });
+      return {
+        generatedAt: now.toISOString(),
+        facultyOnly,
+        activeCampusId,
+        availableCampuses,
+        options,
+        subjects,
+        exams: [],
+        delivery: [],
+        faculty: [],
+        groups: facultyOnly
+          ? []
+          : [
+              ...groupRows(subjects, 'campus'),
+              ...groupRows(
+                subjects.filter((s) => s.track.id !== 'UNASSIGNED'),
+                'track',
+              ),
+            ],
+        summary: reportSummary(
+          subjects,
+          next
+            ? {
+                name: next.name,
+                date: iso(next.startDate),
+                campus: filtered.find(
+                  (o) => o.batch.semesterId === next.semesterId,
+                )!.batch.semester.campus.name,
+              }
+            : null,
+        ),
+      };
+    }
     const [offerings, exams, uploads] = await Promise.all([
       this.db.subjectOffering.findMany({
         where: { AND: [scope, { id: { in: ids } }] },
@@ -559,14 +704,21 @@ export class ReportsService {
           asOfDate: today,
           targetFinishDate: iso(exam.syllabusDeadline),
           thresholds: {
-            onTrack: Number(o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold),
-            tight: Number(o.tightThreshold ?? o.batch.semester.defaultTightThreshold),
+            onTrack: Number(
+              o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold,
+            ),
+            tight: Number(
+              o.tightThreshold ?? o.batch.semester.defaultTightThreshold,
+            ),
           },
-          topics: scoped.map(t => ({
-            id: t.id, title: t.title, plannedMinutes: t.plannedMinutes,
-            status: t.status, completionPercentage: Number(t.currentCompletionPercentage),
+          topics: scoped.map((t) => ({
+            id: t.id,
+            title: t.title,
+            plannedMinutes: t.plannedMinutes,
+            status: t.status,
+            completionPercentage: Number(t.currentCompletionPercentage),
           })),
-          sessions: o.sessions.map(s => ({
+          sessions: o.sessions.map((s) => ({
             sessionDate: iso(s.sessionDate),
             plannedMinutes: Math.round(hours(s) * 60),
             status: s.status,
@@ -576,9 +728,7 @@ export class ReportsService {
         const ratio = scoped.length ? capacity.bufferRatio : null;
         const needsData =
           !scoped.length || plan?.status !== 'ACTIVE' || !o.sessions.length;
-        const status: ReportStatus = needsData
-          ? 'NEEDS_DATA'
-          : capacity.status;
+        const status: ReportStatus = needsData ? 'NEEDS_DATA' : capacity.status;
         const scopeMode = !plan
           ? 'No lesson plan'
           : !scoped.length
@@ -651,10 +801,6 @@ export class ReportsService {
         a.date.localeCompare(b.date) ||
         reportRank[b.status] - reportRank[a.status],
     );
-    const known = subjects.flatMap((s) => (s.metrics ? [s.metrics] : []));
-    const worst = [...subjects].sort(
-      (a, b) => reportRank[b.status] - reportRank[a.status],
-    )[0];
     return {
       generatedAt: now.toISOString(),
       facultyOnly,
@@ -674,31 +820,16 @@ export class ReportsService {
               'track',
             ),
           ],
-      summary: {
-        status: worst?.status ?? 'NEEDS_DATA',
-        worstSubject: worst
-          ? `${worst.subject.name} · ${worst.batch.name}`
-          : null,
-        metrics: known.length ? rollUpProgress(known) : null,
-        subjects: subjects.length,
-        assessed: subjects.filter((s) => s.status !== 'NEEDS_DATA').length,
-        needsData: subjects.filter((s) => s.status === 'NEEDS_DATA').length,
-        atRisk: subjects.filter((s) => ['DANGER', 'TIGHT'].includes(s.status))
-          .length,
-        behindHours: round(
-          known.reduce((n, m) => n + Math.max(0, -m.paceVsPlanHours), 0),
-        ),
-        logged: subjects.reduce((n, s) => n + s.logged, 0),
-        unlogged: subjects.reduce((n, s) => n + s.unlogged, 0),
-        upcoming: subjects.reduce((n, s) => n + s.upcoming, 0),
-        nextExam: examRows[0]
+      summary: reportSummary(
+        subjects,
+        examRows[0]
           ? {
               name: examRows[0].exam,
               date: examRows[0].date,
               campus: examRows[0].campus.name,
             }
           : null,
-      },
+      ),
     };
   }
 

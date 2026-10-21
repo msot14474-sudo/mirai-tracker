@@ -243,7 +243,17 @@ export function ReportContent({
         <Coverage value={r.coverage} />,
         num(r.remainingHours, ' h'),
         num(r.teachingHours, ' h'),
-        <BufferRatioValue metrics={r.remainingHours == null ? null : { ...r, availableHours: r.teachingHours, remainingHours: r.remainingHours }} />,
+        <BufferRatioValue
+          metrics={
+            r.remainingHours == null
+              ? null
+              : {
+                  ...r,
+                  availableHours: r.teachingHours,
+                  remainingHours: r.remainingHours,
+                }
+          }
+        />,
         <div>
           {r.scopeMode}
           <small>{r.scopeTopics} topics in scope</small>
@@ -385,7 +395,9 @@ export function ReportContent({
         num(r.metrics?.coveredHours, ' h'),
         num(r.metrics?.remainingHours, ' h'),
         num(r.metrics?.availableHours, ' h'),
-        <BufferRatioValue metrics={r.metrics ? { ...r.metrics, status: r.status } : null} />,
+        <BufferRatioValue
+          metrics={r.metrics ? { ...r.metrics, status: r.status } : null}
+        />,
         r.needsData,
         r.worstSubject,
       ],
@@ -435,7 +447,9 @@ export function ReportContent({
         num(r.metrics ? Math.max(0, -r.metrics.paceVsPlanHours) : null, ' h'),
         num(r.metrics?.remainingHours, ' h'),
         num(r.metrics?.availableHours, ' h'),
-        <BufferRatioValue metrics={r.metrics ? { ...r.metrics, status: r.status } : null} />,
+        <BufferRatioValue
+          metrics={r.metrics ? { ...r.metrics, status: r.status } : null}
+        />,
         reportDate(r.deadline),
       ],
     }));
@@ -584,9 +598,16 @@ export function ReportsWorkspace({
     filters.from && filters.to && filters.from > filters.to,
   );
   const { tab: _tab, ...queryFilters } = filters;
+  const compact = ['course', 'campus'].includes(selectedTab);
+  const { deliveryStatus: _deliveryStatus, ...summaryFilters } = queryFilters;
   const query = useQuery({
-    queryKey: ['reports', queryFilters],
-    queryFn: () => reportsApi.read(queryFilters),
+    queryKey: compact
+      ? ['reports', 'summary', summaryFilters]
+      : ['reports', queryFilters],
+    queryFn: () =>
+      compact
+        ? reportsApi.summary(summaryFilters)
+        : reportsApi.read(queryFilters),
     enabled: !dateError,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: true,
@@ -870,7 +891,7 @@ export function ReportsWorkspace({
           {exportError}
         </p>
       ) : null}
-      {query.isError ? (
+      {query.isError && !data ? (
         <div role="alert" className="rp-empty">
           <p>{query.error.message}</p>
           <button type="button" onClick={() => void query.refetch()}>
@@ -960,7 +981,8 @@ export function ReportsWorkspace({
             Updated {new Date(data.generatedAt).toLocaleString()} · Coverage is
             recorded progress. Missing logs do not prove that teaching was
             missed. Combined buffer ratios use total available hours ÷ total
-            remaining hours. Campus and track status still follow the worst subject.
+            remaining hours. Campus and track status still follow the worst
+            subject.
             <BufferRatioLegend />
           </footer>
         </div>

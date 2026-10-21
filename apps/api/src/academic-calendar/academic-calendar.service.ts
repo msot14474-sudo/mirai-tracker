@@ -67,8 +67,10 @@ function subjectSelection(campusId?: string) {
       },
       select: {
         id: true,
+        academicTrack: true,
         batch: {
           select: {
+            id: true,
             name: true,
             semester: { select: { id: true, name: true } },
           },

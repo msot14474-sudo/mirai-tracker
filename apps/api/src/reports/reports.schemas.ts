@@ -15,6 +15,7 @@ export const reportQuerySchema = z
     semesterId: z.string().uuid().optional(),
     batchId: z.string().uuid().optional(),
     subjectId: z.string().uuid().optional(),
+    offeringId: z.string().uuid().optional(),
     facultyId: z.string().uuid().optional(),
     from: isoDateSchema.optional(),
     to: isoDateSchema.optional(),

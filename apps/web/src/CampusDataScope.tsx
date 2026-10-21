@@ -7,11 +7,13 @@ export function CampusDataScope({
   title,
   description,
   children,
+  renderAllSemesters,
 }: {
   initialCampusId?: string;
   title: string;
   description: string;
   children: (semester: Semester) => ReactNode;
+  renderAllSemesters?: (campusId: string) => ReactNode;
 }) {
   const [choice, setChoice] = useState(initialCampusId ?? '');
   const [semesterChoice, setSemesterChoice] = useState('');
@@ -19,14 +21,18 @@ export function CampusDataScope({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
   });
-  const campusId = choice || campuses.data?.[0]?.id || '';
+  const campusId = initialCampusId || choice || campuses.data?.[0]?.id || '';
   const semesters = useQuery({
     queryKey: ['academic', 'semesters', campusId],
     queryFn: () => academicApi.semesters(campusId),
     enabled: !!campusId,
   });
   const selected =
-    semesters.data?.find((s) => s.id === semesterChoice) ?? semesters.data?.[0];
+    semesters.data?.find((s) => s.id === semesterChoice) ??
+    (renderAllSemesters
+      ? undefined
+      : (semesters.data?.find((s) => s.status === 'ACTIVE') ??
+        semesters.data?.[0]));
   return (
     <section className="campus-data-workspace">
       <header className="campus-data-heading">
@@ -62,7 +68,9 @@ export function CampusDataScope({
             disabled={!campusId || semesters.isPending}
             onChange={(e) => setSemesterChoice(e.target.value)}
           >
-            <option value="">Choose semester</option>
+            <option value="">
+              {renderAllSemesters ? 'All semesters' : 'Choose semester'}
+            </option>
             {semesters.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} · {s.startDate.slice(0, 10)} – {s.endDate.slice(0, 10)}
@@ -85,8 +93,11 @@ export function CampusDataScope({
           </button>
         </div>
       )}
-      {campuses.isPending || (campusId && semesters.isPending) ? (
+      {(campuses.isPending && !campusId) ||
+      (!renderAllSemesters && campusId && semesters.isPending) ? (
         <LoadingSkeleton />
+      ) : renderAllSemesters && campusId && !selected ? (
+        <div key={`${campusId}:all`}>{renderAllSemesters(campusId)}</div>
       ) : selected ? (
         <div key={selected.id}>{children(selected)}</div>
       ) : (

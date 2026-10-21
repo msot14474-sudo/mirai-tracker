@@ -9,6 +9,7 @@ export type ReportFilters = {
   semesterId?: string;
   batchId?: string;
   subjectId?: string;
+  offeringId?: string;
   facultyId?: string;
   from?: string;
   to?: string;
@@ -131,6 +132,13 @@ function query(filters: ReportFilters) {
   ).toString();
 }
 export const reportsApi = {
+  async summary(filters: ReportFilters): Promise<ReportsData> {
+    const response = await apiFetch(`${apiUrl}/reports/summary?${query(filters)}`);
+    const data = await response.json();
+    if (!data?.summary || !Array.isArray(data.subjects))
+      throw new Error('Progress could not be loaded. Please retry.');
+    return data;
+  },
   async read(filters: ReportFilters): Promise<ReportsData> {
     const response = await apiFetch(`${apiUrl}/reports?${query(filters)}`);
     const data = await response.json();

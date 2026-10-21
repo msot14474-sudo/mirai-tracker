@@ -29,6 +29,10 @@ export class ReportsController {
   read(@Query() raw: unknown, @CurrentUser() user: AuthenticatedUser) {
     return this.reports.read(user, parse(raw));
   }
+  @Get('summary')
+  summary(@Query() raw: unknown, @CurrentUser() user: AuthenticatedUser) {
+    return this.reports.read(user, parse(raw), true);
+  }
   @Post('document')
   async document(
     @Query() raw: unknown,

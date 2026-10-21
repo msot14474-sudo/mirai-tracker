@@ -36,8 +36,8 @@ export function AcademicOverview({
 }) {
   const [status, setStatus] = useState('ALL');
   const query = useQuery({
-    queryKey: ['reports', { campusId, deliveryStatus: 'TAUGHT' }],
-    queryFn: () => reportsApi.read({ campusId, deliveryStatus: 'TAUGHT' }),
+    queryKey: ['reports', 'summary', { campusId }],
+    queryFn: () => reportsApi.summary({ campusId }),
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
@@ -89,7 +89,7 @@ export function AcademicOverview({
       </header>
       {query.isPending ? (
         <LoadingSkeleton variant="cards" label="Loading academic overview" />
-      ) : query.isError ? (
+      ) : query.isError && !data ? (
         <div className="rp-empty" role="alert">
           <p>{query.error.message}</p>
           <button onClick={() => void query.refetch()}>Retry overview</button>

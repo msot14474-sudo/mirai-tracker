@@ -3,7 +3,8 @@ import { BufferRatio, BufferRatioValue } from './BufferRatio';
 import { useQuery } from '@tanstack/react-query';
 import { CampusDataScope } from './CampusDataScope';
 import { academicApi } from './academic';
-import { reportsApi, CourseReport, reportDate, reportNumber } from './reports';
+import { academicTrackIdentity } from './tracks';
+import { reportsApi, ReportBase, reportDate, reportNumber } from './reports';
 import { ReportBadge, ReportContent, ReportKpis } from './ReportsWorkspace';
 import { lessonPlanApi } from './lessonPlans';
 import { timetableApi } from './timetable';
@@ -23,6 +24,9 @@ export function SubjectsWorkspace({
       initialCampusId={campusId}
       title="Subjects"
       description="Explore each subject’s teaching plan, faculty, class history and exam readiness."
+      renderAllSemesters={(id) => (
+        <SubjectDirectory campusId={id} canDelete={canDelete} />
+      )}
     >
       {(semester) => (
         <SubjectDirectory
@@ -40,10 +44,10 @@ function SubjectDirectory({
   canDelete,
 }: {
   campusId: string;
-  semesterId: string;
+  semesterId?: string;
   canDelete: boolean;
 }) {
-  const [selected, setSelected] = useState<CourseReport | null>(null);
+  const [selected, setSelected] = useState<ReportBase | null>(null);
   const [create, setCreate] = useState(false);
   const [search, setSearch] = useState('');
   const [track, setTrack] = useState('');
@@ -52,8 +56,8 @@ function SubjectDirectory({
     queryFn: () => academicApi.subjects(campusId),
   });
   const query = useQuery({
-    queryKey: ['reports', { campusId, semesterId }],
-    queryFn: () => reportsApi.read({ campusId, semesterId }),
+    queryKey: ['reports', 'summary', { campusId }],
+    queryFn: () => reportsApi.summary({ campusId }),
     refetchOnWindowFocus: true,
   });
   if (selected)
@@ -82,7 +86,8 @@ function SubjectDirectory({
         <div>
           <h3>{catalog.data?.length ?? 0} campus subjects</h3>
           <p>
-            Select a batch subject to see its complete record for this semester.
+            Open a subject to see its progress, teacher, timetable, lesson plan
+            and exams. The semester and batch are shown on each link.
           </p>
         </div>
         <button className="primary-button" onClick={() => setCreate(true)}>
@@ -108,12 +113,11 @@ function SubjectDirectory({
           </select>
         </label>
       </div>
-      {(query.isPending || catalog.isPending) && (
-        <LoadingSkeleton variant="cards" />
-      )}
-      {(query.error || catalog.error) && (
+      {catalog.isPending && <LoadingSkeleton variant="cards" />}
+      {catalog.error && (
         <p role="alert" className="form-error">
-          {query.error?.message || catalog.error?.message}
+          {catalog.error.message}
+          <button onClick={() => void catalog.refetch()}>Retry subjects</button>
         </p>
       )}
       <div className="subject-directory-grid">
@@ -122,56 +126,129 @@ function SubjectDirectory({
             `${s.name} ${s.code}`.toLowerCase().includes(search.toLowerCase()),
           )
           .map((s) => {
-            const offerings =
-              query.data?.subjects.filter((o) => o.subject.id === s.id) ?? [];
+            const offerings = s.offerings ?? [];
             const visible = offerings.filter(
-              (o) => !track || o.track.id === track,
+              (o) =>
+                (!semesterId || o.batch.semester.id === semesterId) &&
+                (!track || o.academicTrack === track),
             );
-            if (track && !visible.length) return null;
+            if ((track || semesterId) && !visible.length) return null;
             return (
               <article className="subject-directory-card" key={s.id}>
                 <header>
                   <span className="subject-code">{s.code}</span>
                   <h3>{s.name}</h3>
                 </header>
-                {visible.map((o) => (
-                  <button
-                    className="subject-offering-link"
-                    key={o.id}
-                    onClick={() => setSelected(o)}
-                  >
-                    <span>
-                      <strong>{o.batch.name}</strong>
-                      <small>
-                        {o.track.name} ·{' '}
-                        {o.teachers.map((t) => t.name).join(', ') ||
-                          'Teacher not assigned'}
-                      </small>
-                    </span>
-                    <span>
-                      <ReportBadge status={o.status} />
-                      <small>
-                        {reportNumber(o.metrics?.coveragePercentage, '%')}{' '}
-                        covered →
-                      </small>
-                      <small>Buffer ratio: <BufferRatioValue metrics={o.metrics ? { ...o.metrics, status: o.status } : null} /></small>
-                    </span>
-                  </button>
-                ))}
+                {visible.map((o) => {
+                  const progress = query.data?.subjects.find(
+                    (row) => row.id === o.id,
+                  );
+                  const identity: ReportBase = {
+                    id: o.id,
+                    subject: s,
+                    campus: { id: campusId, name: '' },
+                    semester: {
+                      id: o.batch.semester.id ?? '',
+                      name: o.batch.semester.name,
+                    },
+                    batch: { id: o.batch.id ?? '', name: o.batch.name },
+                    track: academicTrackIdentity(o.academicTrack),
+                    teachers: o.faculty.map((f) => ({
+                      id: f.staffProfile.id,
+                      name: f.staffProfile.user.name,
+                    })),
+                  };
+                  return (
+                    <button
+                      className="subject-offering-link"
+                      key={o.id}
+                      aria-label={`Open ${s.name} · ${o.batch.name} · ${o.batch.semester.name}`}
+                      onClick={() => setSelected(identity)}
+                    >
+                      <span>
+                        <strong>{o.batch.semester.name}</strong>
+                        <small>
+                          {o.batch.name} · {identity.track.name}
+                        </small>
+                        <small>
+                          {identity.teachers.map((t) => t.name).join(', ') ||
+                            'Teacher assignment pending'}
+                        </small>
+                      </span>
+                      <span>
+                        {progress && (
+                          <>
+                            <ReportBadge status={progress.status} />
+                            <small>
+                              {reportNumber(
+                                progress.metrics?.coveragePercentage,
+                                '%',
+                              )}{' '}
+                              covered
+                            </small>
+                            <small>
+                              Buffer ratio:{' '}
+                              <BufferRatioValue
+                                metrics={
+                                  progress.metrics
+                                    ? {
+                                        ...progress.metrics,
+                                        status: progress.status,
+                                      }
+                                    : null
+                                }
+                              />
+                            </small>
+                          </>
+                        )}
+                        <strong>View subject →</strong>
+                      </span>
+                    </button>
+                  );
+                })}
                 {!offerings.length && (
-                  <p className="academic-meta">
-                    Not linked to this semester. Open Add subject to manage the
-                    campus catalog and link an existing subject to a batch.
-                  </p>
+                  <div className="academic-meta">
+                    <p>No batch has been assigned to this subject yet.</p>
+                    <button
+                      className="secondary-button"
+                      onClick={() => setCreate(true)}
+                    >
+                      Link subject to a batch
+                    </button>
+                  </div>
                 )}
               </article>
             );
           })}
       </div>
-      {catalog.isSuccess && !catalog.data.length && (
-        <p className="empty-copy">
-          No subjects yet. Add the first subject for this campus.
-        </p>
+      {catalog.isSuccess &&
+        !catalog.data.some(
+          (s) =>
+            `${s.name} ${s.code}`
+              .toLowerCase()
+              .includes(search.toLowerCase()) &&
+            (!(track || semesterId) ||
+              s.offerings?.some(
+                (o) =>
+                  (!semesterId || o.batch.semester.id === semesterId) &&
+                  (!track || o.academicTrack === track),
+              )),
+        ) && (
+          <p className="empty-copy">
+            No subjects match these filters. Choose All semesters to see the
+            campus catalog.
+          </p>
+        )}
+      {query.error && (
+        <div role="status" className="academic-meta">
+          Progress could not be refreshed. Subject links are still available.
+          <button
+            className="secondary-button"
+            onClick={() => void query.refetch()}
+          >
+            Refresh progress
+          </button>
+        </div>
       )}
     </section>
   );
@@ -180,42 +257,38 @@ function SubjectDetail({
   offering,
   onBack,
 }: {
-  offering: CourseReport;
+  offering: ReportBase;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState('overview');
   const plan = useQuery({
     queryKey: ['lesson-plans', 'offering', offering.id],
     queryFn: () => lessonPlanApi.offering(offering.id),
+    enabled: tab === 'plan' || tab === 'exams',
   });
   const timetable = useQuery({
     queryKey: ['timetable', 'offering', offering.id],
     queryFn: () => timetableApi.offering(offering.id),
   });
+  const summary = useQuery({
+    queryKey: ['reports', 'summary', { campusId: offering.campus.id }],
+    queryFn: () => reportsApi.summary({ campusId: offering.campus.id }),
+  });
+  const filters = {
+    campusId: offering.campus.id,
+    offeringId: offering.id,
+    deliveryStatus: 'ALL',
+  };
   const reports = useQuery({
-    queryKey: [
-      'reports',
-      {
-        campusId: offering.campus.id,
-        semesterId: offering.semester.id,
-        batchId: offering.batch.id,
-        subjectId: offering.subject.id,
-        deliveryStatus: 'ALL',
-      },
-    ],
-    queryFn: () =>
-      reportsApi.read({
-        campusId: offering.campus.id,
-        semesterId: offering.semester.id,
-        batchId: offering.batch.id,
-        subjectId: offering.subject.id,
-        deliveryStatus: 'ALL',
-      }),
-    refetchOnWindowFocus: true,
+    queryKey: ['reports', filters],
+    queryFn: () => reportsApi.read(filters),
+    enabled: tab === 'lectures' || tab === 'exams',
   });
   const current =
-    reports.data?.subjects.find((s) => s.id === offering.id) ?? offering;
-  const metrics = current.metrics;
+    reports.data?.subjects.find((s) => s.id === offering.id) ??
+    summary.data?.subjects.find((s) => s.id === offering.id);
+  const identity = current ?? offering;
+  const metrics = current?.metrics;
   const upcoming =
     timetable.data?.sessions.filter(
       (s) =>
@@ -223,10 +296,6 @@ function SubjectDetail({
         ['SCHEDULED', 'IN_PROGRESS'].includes(s.status),
     ) ?? [];
   const units = plan.data?.plan?.units ?? [];
-  const taught =
-    reports.data?.delivery.filter((s) =>
-      ['COMPLETED', 'IN_PROGRESS'].includes(s.status),
-    ) ?? [];
   const tz = timetable.data?.semester.campus.timezone ?? 'Asia/Kolkata';
   return (
     <section className="subject-detail reports-workspace">
@@ -236,52 +305,62 @@ function SubjectDetail({
       <header className="rp-header">
         <div>
           <p className="rp-eyebrow">
-            {current.subject.code} · {current.track.name}
+            {identity.subject.code} · {identity.track.name}
           </p>
-          <h1>{current.subject.name}</h1>
+          <h1>{identity.subject.name}</h1>
           <p>
-            {current.campus.name} · {current.semester.name} ·{' '}
-            {current.batch.name}
+            {identity.campus.name ? `${identity.campus.name} · ` : ''}
+            {identity.semester.name} · {identity.batch.name}
           </p>
         </div>
-        <ReportBadge status={current.status} />
+        {current && <ReportBadge status={current.status} />}
       </header>
       <div className="subject-teacher-strip">
         <span>Assigned teacher</span>
         <strong>
-          {current.teachers.map((t) => t.name).join(', ') || 'Not assigned'}
+          {identity.teachers.map((t) => t.name).join(', ') || 'Not assigned'}
         </strong>
         <span>
           {timetable.data
             ? `${reportNumber(timetable.data.summary.weeklyPlannedMinutes / 60)} h per week`
-            : 'Loading assigned hours…'}
+            : timetable.isError
+              ? 'Assigned hours unavailable'
+              : 'Loading assigned hours…'}
         </span>
       </div>
-      <ReportKpis
-        items={[
-          {
-            label: 'Syllabus covered',
-            value: reportNumber(metrics?.coveragePercentage, '%'),
-            note: `${reportNumber(metrics?.coveredHours, ' h')} recorded`,
-          },
-          {
-            label: 'Syllabus remaining',
-            value: reportNumber(metrics?.remainingHours, ' h'),
-            note: 'From the current lesson plan',
-          },
-          {
-            label: 'Teaching time left',
-            value: reportNumber(metrics?.availableHours, ' h'),
-            note: `Target ${reportDate(current.deadline)}`,
-          },
-          {
-            label: 'Classes recorded',
-            value: current.logged,
-            note: `${current.unlogged} awaiting logs · ${current.upcoming} upcoming`,
-          },
-        ]}
-      />
-      <BufferRatio metrics={metrics ? { ...metrics, status: current.status } : null} />
+      {current ? (
+        <ReportKpis
+          items={[
+            {
+              label: 'Syllabus covered',
+              value: reportNumber(metrics?.coveragePercentage, '%'),
+              note: `${reportNumber(metrics?.coveredHours, ' h')} recorded`,
+            },
+            {
+              label: 'Syllabus remaining',
+              value: reportNumber(metrics?.remainingHours, ' h'),
+              note: 'From the current lesson plan',
+            },
+            {
+              label: 'Teaching time left',
+              value: reportNumber(metrics?.availableHours, ' h'),
+              note: `Target ${reportDate(current.deadline)}`,
+            },
+            {
+              label: 'Classes recorded',
+              value: current.logged,
+              note: `${current.unlogged} awaiting logs · ${current.upcoming} upcoming`,
+            },
+          ]}
+        />
+      ) : summary.isPending ? (
+        <LoadingSkeleton variant="cards" label="Loading subject progress" />
+      ) : null}
+      {current && (
+        <BufferRatio
+          metrics={metrics ? { ...metrics, status: current.status } : null}
+        />
+      )}
       <div className="rp-tabbar" role="tablist" aria-label="Subject details">
         {[
           ['overview', 'Overview'],
@@ -301,11 +380,27 @@ function SubjectDetail({
           </button>
         ))}
       </div>
-      {[plan.error, timetable.error, reports.error]
+      {[
+        tab === 'plan' || tab === 'exams' ? plan.error : null,
+        timetable.error,
+        summary.error,
+        tab === 'lectures' || tab === 'exams' ? reports.error : null,
+      ]
         .filter(Boolean)
         .map((e, i) => (
           <p role="alert" className="form-error" key={i}>
             {e?.message}
+            <button
+              onClick={() => {
+                void summary.refetch();
+                void timetable.refetch();
+                if (tab === 'plan' || tab === 'exams') void plan.refetch();
+                if (tab === 'lectures' || tab === 'exams')
+                  void reports.refetch();
+              }}
+            >
+              Retry subject data
+            </button>
           </p>
         ))}
       <div
@@ -317,20 +412,36 @@ function SubjectDetail({
           <div className="subject-detail-grid">
             <article>
               <h3>Progress and next steps</h3>
-              <p>{current.reason}</p>
+              <p>
+                {current?.reason ??
+                  (summary.isPending
+                    ? 'Loading current progress…'
+                    : 'Refresh progress to see the latest figures.')}
+              </p>
               <dl>
                 <dt>Next topic</dt>
-                <dd>{current.nextTopic || 'No upcoming topic scheduled'}</dd>
+                <dd>
+                  {current
+                    ? current.nextTopic || 'No upcoming topic scheduled'
+                    : summary.isError
+                      ? 'Unavailable'
+                      : 'Loading…'}
+                </dd>
                 <dt>Teaching plan</dt>
                 <dd>
-                  {plan.data?.plan
-                    ? `Version ${plan.data.plan.version} · ${plan.data.plan.status.toLowerCase()}`
-                    : plan.isPending
+                  {current?.planStatus
+                    ? `Version ${current.planVersion} · ${current.planStatus.toLowerCase()}`
+                    : summary.isPending
                       ? 'Loading…'
-                      : 'Not uploaded'}
+                      : summary.isError
+                        ? 'Plan information unavailable'
+                        : 'No plan uploaded for this offering'}
                 </dd>
-                <dt>Recorded taught classes</dt>
-                <dd>{taught.length}</dd>
+                <dt>Saved lecture logs</dt>
+                <dd>
+                  {current?.logged ??
+                    (summary.isError ? 'Unavailable' : 'Loading…')}
+                </dd>
               </dl>
             </article>
             <article>
@@ -350,7 +461,9 @@ function SubjectDetail({
                 <p>
                   {timetable.isPending
                     ? 'Loading classes…'
-                    : 'No upcoming lectures scheduled.'}
+                    : timetable.isError
+                      ? 'Class dates could not be loaded.'
+                      : 'No upcoming lectures scheduled.'}
                 </p>
               )}
               <button
@@ -410,7 +523,13 @@ function SubjectDetail({
                   </tbody>
                 </table>
                 {!upcoming.length && (
-                  <p className="rp-empty">No upcoming lectures.</p>
+                  <p className="rp-empty">
+                    {timetable.isPending
+                      ? 'Loading classes…'
+                      : timetable.isError
+                        ? 'Class dates could not be loaded.'
+                        : 'No upcoming lectures.'}
+                  </p>
                 )}
               </div>
             </section>
@@ -424,6 +543,11 @@ function SubjectDetail({
               </div>
               {reports.data ? (
                 <ReportContent tab="delivery" data={reports.data} />
+              ) : reports.isError ? (
+                <p className="rp-empty">
+                  Report records could not be loaded. Use Retry subject data
+                  above.
+                </p>
               ) : (
                 <LoadingSkeleton />
               )}
@@ -438,10 +562,17 @@ function SubjectDetail({
                 <p>
                   {plan.data?.plan
                     ? `${plan.data.plan.fileName || 'Lesson plan'} · Version ${plan.data.plan.version} · ${plan.data.plan.status.toLowerCase()}`
-                    : 'No lesson plan uploaded.'}
+                    : plan.isPending
+                      ? 'Loading teaching plan…'
+                      : plan.isError
+                        ? 'Teaching plan could not be loaded.'
+                        : 'No lesson plan uploaded.'}
                 </p>
               </div>
             </div>
+            {plan.isPending && (
+              <LoadingSkeleton label="Loading teaching plan" />
+            )}
             {units.map((u) => (
               <section className="subject-unit" key={u.id}>
                 <h4>
@@ -488,6 +619,11 @@ function SubjectDetail({
             <section className="rp-results">
               {reports.data ? (
                 <ReportContent tab="exams" data={reports.data} />
+              ) : reports.isError ? (
+                <p className="rp-empty">
+                  Report records could not be loaded. Use Retry subject data
+                  above.
+                </p>
               ) : (
                 <LoadingSkeleton />
               )}

@@ -29,7 +29,8 @@ export function ProgressDashboard({
   const [asOfDate, setAsOfDate] = useState(today());
   const [search, setSearch] = useState('');
   const dashboard = useQuery({
-    refetchInterval: 30000, refetchOnWindowFocus: 'always',
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     queryKey: ['progress-dashboard', asOfDate, campusId],
     queryFn: () => progressApi.dashboard(asOfDate, campusId),
   });
@@ -74,7 +75,7 @@ export function ProgressDashboard({
 
       {dashboard.isLoading ? (
         <LoadingSkeleton variant="panel" label="Calculating progress" />
-      ) : dashboard.isError ? (
+      ) : dashboard.isError && !dashboard.data ? (
         <p className="form-error" role="alert">
           {dashboard.error.message}
         </p>
@@ -207,7 +208,10 @@ function SubjectCard({ subject }: { subject: SubjectProgress }) {
       </div>
       <Coverage value={subject.coveragePercentage} />
       <Metrics metrics={subject} />
-      <details><summary>Buffer ratio thresholds</summary><BufferRatioLegend thresholds={subject.thresholds} /></details>
+      <details>
+        <summary>Buffer ratio thresholds</summary>
+        <BufferRatioLegend thresholds={subject.thresholds} />
+      </details>
       <div className="subject-card-footer">
         <span>Target {displayDate(subject.targetFinishDate)}</span>
         <span>

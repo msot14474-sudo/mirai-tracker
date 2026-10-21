@@ -19,7 +19,8 @@ export type Subject = {
   }>;
   offerings?: Array<{
     id: string;
-    batch: { name: string; semester: { id?: string; name: string } };
+    academicTrack?: 'MIRAI' | 'UNIVERSITY' | null;
+    batch: { id?: string; name: string; semester: { id?: string; name: string } };
     faculty: Array<{ staffProfile: { id: string; user: { name: string } } }>;
   }>;
   id: string;

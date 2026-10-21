@@ -23,9 +23,9 @@ export function LessonPlanWorkspace({
   const offerings = useQuery({
     queryKey: ['lesson-plans', 'offerings', campusId],
     queryFn: () => lessonPlanApi.offerings(campusId),
-    staleTime: 15000,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: 'always',
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
   const selectedOfferingId = offerings.data?.some((o) => o.id === offeringId)
     ? offeringId
@@ -34,9 +34,9 @@ export function LessonPlanWorkspace({
     queryKey: ['lesson-plans', 'offering', selectedOfferingId],
     queryFn: () => lessonPlanApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
-    staleTime: 15000,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: 'always',
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
   const selectionIsLoading = offerings.isLoading;
 
@@ -134,7 +134,7 @@ export function LessonPlanWorkspace({
             </div>
           ) : detail.isLoading ? (
             <LoadingSkeleton variant="panel" label="Loading lesson plan" />
-          ) : detail.isError ? (
+          ) : detail.isError && !detail.data ? (
             <p className="form-error" role="alert">
               {detail.error.message}
             </p>
