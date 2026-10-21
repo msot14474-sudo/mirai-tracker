@@ -5,7 +5,7 @@ This guide shows how academic information moves from semester setup to classroom
 ## End-to-end academic flow
 
 ```mermaid
-flowchart TD
+flowchart LR
     admin([Administrator]) --> semester[Create semester, calendar and exams]
     semester --> manager([Campus manager])
     manager --> setup[Link subjects, people and batches]
