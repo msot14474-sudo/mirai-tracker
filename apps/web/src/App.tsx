@@ -1411,9 +1411,8 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                 })
               }
             >
-              <span>More features below</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m7 7 5 5 5-5M7 13l5 5 5-5" />
+                <path d="m7 9 5 5 5-5" />
               </svg>
             </button>
           ) : null}
