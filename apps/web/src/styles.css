@@ -4559,15 +4559,14 @@ textarea:focus {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 1.85rem;
-    min-height: 1.85rem;
-    margin: 0.22rem auto 0.08rem;
+    width: 1.5rem;
+    min-height: 1.2rem;
+    margin: 0.08rem auto 0;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: 50%;
-    color: rgba(255, 255, 255, 0.92);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0.25rem 0.65rem rgba(3, 24, 70, 0.15);
+    border: 0;
+    color: rgba(255, 255, 255, 0.72);
+    background: transparent;
+    box-shadow: none;
     font: inherit;
     opacity: 0;
     visibility: hidden;
@@ -4580,8 +4579,8 @@ textarea:focus {
   }
 
   .sidebar-more-cue svg {
-    width: 0.9rem;
-    height: 0.9rem;
+    width: 0.78rem;
+    height: 0.78rem;
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
@@ -4600,8 +4599,9 @@ textarea:focus {
   }
 
   .sidebar-more-cue:hover {
-    background: rgba(255, 255, 255, 0.18);
-    transform: translateY(-0.08rem);
+    color: #fff;
+    background: transparent;
+    transform: translateY(0.08rem);
   }
 
   .sidebar-more-cue:focus-visible {
