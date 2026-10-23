@@ -10,7 +10,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { FormEvent, lazy, Suspense, useEffect, useState } from 'react';
+import { FormEvent, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { academicApi, Campus } from './academic';
 import {
   AuthenticatedUser,
@@ -904,6 +904,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const [isLeavingDashboard, setIsLeavingDashboard] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const sidebarNavigationRef = useRef<HTMLElement | null>(null);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -936,6 +937,9 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   );
   const canViewProgressDashboard = roles.some((role) => role !== 'STUDENT');
   const canExport = roles.some(role => ['ADMIN','PROGRAM_MANAGER','CAMPUS_MANAGER','FACULTY'].includes(role));
+  const showSidebarScrollCue = roles.some((role) =>
+    ['ADMIN', 'PROGRAM_MANAGER', 'CAMPUS_MANAGER'].includes(role),
+  );
   const progressScope = roles.some(
     (role) =>
       role === 'ADMIN' ||
@@ -973,6 +977,49 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     }, 250);
     return () => window.clearTimeout(timer);
   }, [canManageLessonPlans, isGlobalAdministrator, selectedCampusId, queryClient]);
+
+  useEffect(() => {
+    const navigationElement = sidebarNavigationRef.current;
+    const frame = navigationElement?.parentElement;
+    if (!showSidebarScrollCue || !navigationElement || !frame) return;
+
+    const updateScrollIndicator = () => {
+      const maximumScroll =
+        navigationElement.scrollHeight - navigationElement.clientHeight;
+      const isScrollable = maximumScroll > 1;
+      const thumbSize = isScrollable
+        ? Math.max(
+            18,
+            (navigationElement.clientHeight / navigationElement.scrollHeight) *
+              100,
+          )
+        : 100;
+      const thumbTop = isScrollable
+        ? (navigationElement.scrollTop / maximumScroll) * (100 - thumbSize)
+        : 0;
+
+      frame.dataset.scrollable = String(isScrollable);
+      frame.style.setProperty('--sidebar-scroll-thumb-size', `${thumbSize}%`);
+      frame.style.setProperty('--sidebar-scroll-thumb-top', `${thumbTop}%`);
+    };
+
+    updateScrollIndicator();
+    navigationElement.addEventListener('scroll', updateScrollIndicator, {
+      passive: true,
+    });
+    window.addEventListener('resize', updateScrollIndicator);
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? undefined
+        : new ResizeObserver(updateScrollIndicator);
+    resizeObserver?.observe(navigationElement);
+
+    return () => {
+      navigationElement.removeEventListener('scroll', updateScrollIndicator);
+      window.removeEventListener('resize', updateScrollIndicator);
+      resizeObserver?.disconnect();
+    };
+  }, [selectedCampusId, showSidebarScrollCue]);
 
   if (isGlobalAdministrator && !selectedCampus) {
     return (
@@ -1325,7 +1372,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     <main
       className={`dashboard-shell ${activeView === 'ai-insights' ? 'dashboard-ai-focus' : ''} ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
     >
-      <aside className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''}`} onKeyDown={(event) => { if (event.key === 'Escape') { setNavigationOpen(false); setProfileMenuOpen(false); } }}>
+      <aside className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''} ${showSidebarScrollCue ? 'sidebar-scroll-cued' : ''}`} onKeyDown={(event) => { if (event.key === 'Escape') { setNavigationOpen(false); setProfileMenuOpen(false); } }}>
         <button
           type="button"
           className="sidebar-brand"
@@ -1343,23 +1390,30 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         </button>
 
         <button type="button" className="sidebar-menu-toggle" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => { setNavigationOpen(!navigationOpen); setProfileMenuOpen(false); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>Menu</button>
-        <nav id="workspace-navigation" className="sidebar-navigation" aria-label="Workspace navigation">
-          {navigation.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              className={item.id === activeView ? 'active' : undefined}
-              aria-label={item.label}
-              aria-current={item.id === activeView ? 'page' : undefined}
-              onMouseEnter={() => warmView(item.id)}
-              onFocus={() => warmView(item.id)}
-              onClick={() => openView(item.id)}
-            >
-              <NavigationIcon name={item.icon} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        <div className="sidebar-navigation-frame">
+          <nav ref={sidebarNavigationRef} id="workspace-navigation" className="sidebar-navigation" aria-label="Workspace navigation">
+            {navigation.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                className={item.id === activeView ? 'active' : undefined}
+                aria-label={item.label}
+                aria-current={item.id === activeView ? 'page' : undefined}
+                onMouseEnter={() => warmView(item.id)}
+                onFocus={() => warmView(item.id)}
+                onClick={() => openView(item.id)}
+              >
+                <NavigationIcon name={item.icon} />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+          {showSidebarScrollCue ? (
+            <span className="sidebar-scroll-indicator" aria-hidden="true">
+              <span />
+            </span>
+          ) : null}
+        </div>
 
         <div
           className={`sidebar-account-wrap ${profileMenuOpen ? 'open' : ''}`}

@@ -4524,8 +4524,60 @@ textarea:focus {
   gap: 0.28rem;
   padding-right: 0.2rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.sidebar-navigation-frame {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sidebar-navigation-frame .sidebar-navigation {
+  width: 100%;
+}
+
+@media (min-width: 901px) {
+  .sidebar-scroll-cued .sidebar-navigation {
+    overflow-y: scroll;
+    padding-right: 0.8rem;
+    scrollbar-width: none;
+  }
+
+  .sidebar-scroll-cued .sidebar-navigation::-webkit-scrollbar {
+    width: 0;
+  }
+
+  .sidebar-scroll-indicator {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.08rem;
+    bottom: 0.3rem;
+    width: 0.42rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  .sidebar-navigation-frame[data-scrollable='true'] .sidebar-scroll-indicator {
+    opacity: 1;
+  }
+
+  .sidebar-scroll-indicator > span {
+    position: absolute;
+    top: var(--sidebar-scroll-thumb-top, 0%);
+    right: 0;
+    left: 0;
+    height: var(--sidebar-scroll-thumb-size, 24%);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 0 0 1px rgba(17, 45, 103, 0.2);
+  }
 }
 
 .sidebar-navigation button {
@@ -5416,6 +5468,14 @@ textarea:focus {
 @media (max-width: 900px) {
   .dashboard-shell {
     grid-template-columns: 1fr;
+  }
+
+  .sidebar-navigation-frame {
+    display: contents;
+  }
+
+  .sidebar-scroll-indicator {
+    display: none;
   }
 
   .app-sidebar {
