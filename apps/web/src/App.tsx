@@ -983,40 +983,31 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     const frame = navigationElement?.parentElement;
     if (!showSidebarScrollCue || !navigationElement || !frame) return;
 
-    const updateScrollIndicator = () => {
+    const updateScrollCue = () => {
       const maximumScroll =
         navigationElement.scrollHeight - navigationElement.clientHeight;
       const isScrollable = maximumScroll > 1;
-      const thumbSize = isScrollable
-        ? Math.max(
-            18,
-            (navigationElement.clientHeight / navigationElement.scrollHeight) *
-              100,
-          )
-        : 100;
-      const thumbTop = isScrollable
-        ? (navigationElement.scrollTop / maximumScroll) * (100 - thumbSize)
-        : 0;
+      const isAtBottom =
+        !isScrollable || navigationElement.scrollTop >= maximumScroll - 2;
 
       frame.dataset.scrollable = String(isScrollable);
-      frame.style.setProperty('--sidebar-scroll-thumb-size', `${thumbSize}%`);
-      frame.style.setProperty('--sidebar-scroll-thumb-top', `${thumbTop}%`);
+      frame.dataset.atBottom = String(isAtBottom);
     };
 
-    updateScrollIndicator();
-    navigationElement.addEventListener('scroll', updateScrollIndicator, {
+    updateScrollCue();
+    navigationElement.addEventListener('scroll', updateScrollCue, {
       passive: true,
     });
-    window.addEventListener('resize', updateScrollIndicator);
+    window.addEventListener('resize', updateScrollCue);
     const resizeObserver =
       typeof ResizeObserver === 'undefined'
         ? undefined
-        : new ResizeObserver(updateScrollIndicator);
+        : new ResizeObserver(updateScrollCue);
     resizeObserver?.observe(navigationElement);
 
     return () => {
-      navigationElement.removeEventListener('scroll', updateScrollIndicator);
-      window.removeEventListener('resize', updateScrollIndicator);
+      navigationElement.removeEventListener('scroll', updateScrollCue);
+      window.removeEventListener('resize', updateScrollCue);
       resizeObserver?.disconnect();
     };
   }, [selectedCampusId, showSidebarScrollCue]);
@@ -1409,9 +1400,22 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             ))}
           </nav>
           {showSidebarScrollCue ? (
-            <span className="sidebar-scroll-indicator" aria-hidden="true">
-              <span />
-            </span>
+            <button
+              type="button"
+              className="sidebar-more-cue"
+              aria-label="Scroll navigation to explore more features"
+              onClick={() =>
+                sidebarNavigationRef.current?.scrollBy({
+                  top: 180,
+                  behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+                })
+              }
+            >
+              <span>More features below</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m7 7 5 5 5-5M7 13l5 5 5-5" />
+              </svg>
+            </button>
           ) : null}
         </div>
 
