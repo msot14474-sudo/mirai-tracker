@@ -17,7 +17,7 @@
 			<text x="305" y="377" style="font-family: Helvetica-Bold; font-size: 15px;fill: rgb(9%,21%,41%); stroke:none;" transform="translate(0,754) scale(1,-1)">NestJS API</text>
 			<text x="305" y="337" style="font-family: Helvetica; font-size: 11px;fill: rgb(36%,43%,54%); stroke:none;" transform="translate(0,674) scale(1,-1)">Permissions · domain services</text>
 			<rect x="600" y="350" width="190" height="65" rx="12" ry="12" style="stroke: rgb(72%,78%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(91%,94%,100%); fill-rule: evenodd;"/>
-			<text x="615" y="387" style="font-family: Helvetica-Bold; font-size: 15px;fill: rgb(9%,21%,41%); stroke:none;" transform="translate(0,774) scale(1,-1)">Neon PostgreSQL</text>
+			<text x="615" y="387" style="font-family: Helvetica-Bold; font-size: 15px;fill: rgb(9%,21%,41%); stroke:none;" transform="translate(0,774) scale(1,-1)">Supabase PostgreSQL</text>
 			<text x="615" y="372" style="font-family: Helvetica; font-size: 11px;fill: rgb(36%,43%,54%); stroke:none;" transform="translate(0,744) scale(1,-1)">Academic records · Prisma</text>
 			<rect x="600" y="245" width="190" height="65" rx="12" ry="12" style="stroke: rgb(72%,78%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(91%,94%,100%); fill-rule: evenodd;"/>
 			<text x="615" y="282" style="font-family: Helvetica-Bold; font-size: 15px;fill: rgb(9%,21%,41%); stroke:none;" transform="translate(0,564) scale(1,-1)">Upstash Redis</text>

@@ -1,6 +1,6 @@
 flowchart LR
   Web["React PWA on Vercel"] -->|Same-origin /api| API["NestJS API on Vercel"]
-  API -->|Prisma| DB[("Neon PostgreSQL")]
+  API -->|Prisma| DB[("Supabase PostgreSQL")]
   API --> Redis[("Upstash Redis")]
   Jobs["QStash schedules"] -->|Protected jobs| API
   API -.-> SMTP["SMTP"]

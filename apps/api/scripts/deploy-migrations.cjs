@@ -11,6 +11,11 @@ function migrationsAlreadyApplied(committed, recorded) {
     row.finished_at && !row.rolled_back_at));
 }
 
+function migrationEnvironment(environment) {
+  if (!environment.DIRECT_URL) return environment;
+  return { ...environment, DATABASE_URL: environment.DIRECT_URL };
+}
+
 async function deploy() {
   if (process.env.VERCEL !== '1' || process.env.VERCEL_ENV !== 'production') return;
   const { PrismaClient } = require('@prisma/client');
@@ -36,12 +41,15 @@ async function deploy() {
   }
   const { spawnSync } = require('node:child_process');
   const result = spawnSync(process.execPath,
-    [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'], { stdio: 'inherit' });
+    [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'], {
+      stdio: 'inherit',
+      env: migrationEnvironment(process.env),
+    });
   if (result.error) console.error('Database migration could not start:', result.error.message);
   process.exitCode = result.status ?? 1;
 }
 
-module.exports = { migrationsAlreadyApplied };
+module.exports = { migrationEnvironment, migrationsAlreadyApplied };
 if (require.main === module) deploy().catch(() => {
   console.error('Database migration verification failed.');
   process.exitCode = 1;

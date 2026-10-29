@@ -4,14 +4,14 @@ Measured on 2026-10-20T14:37:26.735Z. Three campuses are used as requested.
 
 ## Dataset and environment
 
-| Item | Configuration |
-| --- | --- |
+| Item             | Configuration                                                                |
+| ---------------- | ---------------------------------------------------------------------------- |
 | Academic dataset | 3 campuses; 60 faculty; 30 subjects; 1,020 students; full semester relations |
-| Host | Apple M5; 10 logical CPUs; 16 GiB RAM |
-| Runtime | v20.18.0; darwin arm64 |
-| Persistence | Real PostgreSQL 16 and Redis 7; Prisma connection pool 10 |
-| Authentication | 68 accounts authenticated through password and Mailpit email OTP |
-| Network | Loopback HTTP; production Vercel/Neon latency is not represented |
+| Host             | Apple M5; 10 logical CPUs; 16 GiB RAM                                        |
+| Runtime          | v20.18.0; darwin arm64                                                       |
+| Persistence      | Real PostgreSQL 16 and Redis 7; Prisma connection pool 10                    |
+| Authentication   | 68 accounts authenticated through password and Mailpit email OTP             |
+| Network          | Loopback HTTP; production Vercel/Supabase latency is not represented         |
 
 The supported setup runtime is Node 22.13+. This measurement run used the available Node 20.18.0 host runtime; reproduce on the supported runtime before comparing deployment capacity.
 
@@ -22,11 +22,11 @@ Each virtual user performs three sequential dashboard-read/log-write pairs. Virt
 This is a short burst benchmark. It measures client-observed HTTP completion including JSON parsing. Success requires both the expected status and payload shape. It does not use the earlier mocked demo API benchmark.
 
 | Clients | Requests | Dashboard p95 ms | Logging p95 ms | Error rate |
-| --- | --- | --- | --- | --- |
-| 50 | 300 | 289.92 | 541.93 | 0.00% |
-| 60 | 360 | 335.02 | 781.14 | 0.00% |
-| 100 | 600 | 570.31 | 1062.91 | 0.00% |
-| 200 | 1200 | 1046.38 | 1998.97 | 0.00% |
+| ------- | -------- | ---------------- | -------------- | ---------- |
+| 50      | 300      | 289.92           | 541.93         | 0.00%      |
+| 60      | 360      | 335.02           | 781.14         | 0.00%      |
+| 100     | 600      | 570.31           | 1062.91        | 0.00%      |
+| 200     | 1200     | 1046.38          | 1998.97        | 0.00%      |
 
 ## Target checks
 
@@ -42,7 +42,7 @@ Keep PostgreSQL and Redis external to stateless API instances. Match connection 
 
 Profile the class-context queries and transaction wait time first under heavy logging. Cache or preaggregate dashboard results only with campus/subject permission keys and invalidation on logs, plans, calendars and assignments. Retain strong transaction boundaries and conflict checks.
 
-For a hosted capacity claim, rerun the same authenticated workload on an isolated staging deployment with production-equivalent Vercel limits, Neon region/tier and Upstash configuration. Add a sustained 15-minute run, cold-start samples and browser page-load measurements. Track p50/p95/p99, error rates, database connections and slow queries.
+For a hosted capacity claim, rerun the same authenticated workload on an isolated staging deployment with production-equivalent Vercel limits, Supabase region/tier and Upstash configuration. Add a sustained 15-minute run, cold-start samples and browser page-load measurements. Track p50/p95/p99, error rates, database connections and slow queries.
 
 ## Reproduction
 

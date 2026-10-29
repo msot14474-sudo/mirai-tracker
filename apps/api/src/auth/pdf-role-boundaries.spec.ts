@@ -6,7 +6,7 @@ import { FacultyAccessController } from '../faculty-access/faculty-access.contro
 import { TopicScheduleController } from '../topic-schedule/topic-schedule.controller';
 const roles = (handler: Function) =>
   Reflect.getMetadata(REQUIRED_ROLES_KEY, handler) as string[];
-it('keeps program managers out of operational editing endpoints', () => {
+it('keeps program managers out of academic operational editing endpoints', () => {
   for (const method of [
     TimetableController.prototype.create,
     TimetableController.prototype.extraClass,
@@ -16,13 +16,22 @@ it('keeps program managers out of operational editing endpoints', () => {
     LessonPlanController.prototype.execute,
     LessonPlanController.prototype.updateTopic,
     LessonPlanController.prototype.activate,
-    FacultyAccessController.prototype.createFaculty,
-    FacultyAccessController.prototype.updateAccount,
     FacultyAccessController.prototype.createAdministrator,
     TopicScheduleController.prototype.move,
   ]) {
     expect(roles(method)).not.toContain('PROGRAM_MANAGER');
   }
+});
+it('lets program managers manage faculty and student access, but not administrators', () => {
+  for (const method of [
+    FacultyAccessController.prototype.createFaculty,
+    FacultyAccessController.prototype.updateAccount,
+  ]) {
+    expect(roles(method)).toContain('PROGRAM_MANAGER');
+  }
+  expect(
+    roles(FacultyAccessController.prototype.createAdministrator),
+  ).not.toContain('PROGRAM_MANAGER');
 });
 it('lets campus managers manage timetables and faculty, but not faculty lesson plans or administrators', () => {
   expect(roles(TimetableController.prototype.create)).toContain(

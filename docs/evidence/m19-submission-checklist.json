@@ -1,16 +1,16 @@
 {
   "milestone": "M19",
-  "generatedAt": "2026-10-10T04:37:33.630Z",
+  "generatedAt": "2026-10-29T08:31:56.433Z",
   "passed": true,
   "summary": {
     "total": 10,
     "passed": 10,
     "failed": 0
   },
-  "externalCloseOut": [
-    "Hosted M16 performance rerun and disposable restore drill",
-    "Five-faculty phone timing study",
-    "College deadline, naming convention and demonstration date"
+  "evidenceBoundaries": [
+    "Automated faculty timings are not human phone observations",
+    "Hosted load capacity requires a production-equivalent staging run",
+    "The project owner records the final five-minute video"
   ],
   "checks": [
     {
@@ -20,12 +20,12 @@
     },
     {
       "id": "DOC-02",
-      "control": "Architecture covers context, containers, data flow and trust boundaries",
+      "control": "Architecture identifies the live and local deployment boundaries",
       "passed": true
     },
     {
       "id": "DOC-03",
-      "control": "Standalone architecture diagram contains all production components",
+      "control": "Standalone architecture diagram contains the application components",
       "passed": true
     },
     {
@@ -40,7 +40,7 @@
     },
     {
       "id": "DOC-06",
-      "control": "Test Report labels unavailable evidence as pending",
+      "control": "Test Report states the limits of measured evidence",
       "passed": true
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "id": "DOC-08",
-      "control": "Submission checklist separates verified and external work",
+      "control": "Submission checklist distinguishes measured automated evidence",
       "passed": true
     },
     {

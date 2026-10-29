@@ -34,12 +34,12 @@ API readiness: http://localhost:3000/health/ready. Set `API_PORT`, `WEB_PORT`, `
 
 ## Roles
 
-| Role | Access |
-| --- | --- |
-| Administrator / Program Manager | All campuses; semester setup, calendar import, subjects, access, reports, progress, notifications, exams and exports |
-| Campus Manager | Assigned campus; subjects, calendar/exam edits, batch timetables, extra classes, faculty/student access, reports and visiting-faculty expenses |
-| Faculty | Assigned subjects; lesson plans, planned dates, daily logs, own teaching reports, notifications and subject analysis |
-| Student | Read-only subjects, teachers, coverage, upcoming classes and exams for the enrolled batch |
+| Role                            | Access                                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrator / Program Manager | All campuses; semester setup, calendar import, subjects, access, reports, progress, notifications, exams and exports                           |
+| Campus Manager                  | Assigned campus; subjects, calendar/exam edits, batch timetables, extra classes, faculty/student access, reports and visiting-faculty expenses |
+| Faculty                         | Assigned subjects; lesson plans, planned dates, daily logs, own teaching reports, notifications and subject analysis                           |
+| Student                         | Read-only subjects, teachers, coverage, upcoming classes and exams for the enrolled batch                                                      |
 
 ## Connected workflow
 
@@ -58,11 +58,11 @@ Canonical quantities are minutes. Coverage is weighted by planned topic duration
 
 **Buffer ratio = available future teaching hours ÷ remaining syllabus hours.**
 
-| Default ratio | Status |
-| --- | --- |
-| ≥ 1.15 | ON TRACK |
-| ≥ 1.00 and < 1.15 | TIGHT |
-| < 1.00 | DANGER |
+| Default ratio     | Status   |
+| ----------------- | -------- |
+| ≥ 1.15            | ON TRACK |
+| ≥ 1.00 and < 1.15 | TIGHT    |
+| < 1.00            | DANGER   |
 
 Thresholds are configurable by semester. Completed and missing-plan cases are distinct. Subject views, exam readiness, reports and AI context use the shared rules.
 
@@ -84,23 +84,25 @@ pnpm check
 pnpm verify:m10
 ```
 
-The dated evidence includes **586 automated tests**, **27 PostgreSQL integration tests**, **11 authenticated permission checks** and **18 independent numeric comparisons** across three subjects. Local scale data contains 3 campuses, 60 faculty, 30 subjects and 1,020 students. Real HTTP load tests cover 50/100/200 concurrent clients.
+The current suite includes **615 automated tests** across the API, web app, worker and shared packages. The dated evidence also includes **27 PostgreSQL integration tests**, **11 authenticated permission checks** and **18 independent numeric comparisons** across three subjects. Local scale data contains 3 campuses, 60 faculty, 30 subjects and 1,020 students. Real HTTP load tests cover 50/100/200 concurrent clients.
+
+The **What-if recovery planner** compares the extra teaching time required to move a subject from danger to tight or on track. It is read-only and uses each subject's configured buffer thresholds.
 
 Database integration tests use disposable databases. Never point them or the loopback-only load harness at production. Five fictional-account logging timings are automated API measurements, not human phone observations.
 
 ## Architecture and operations
 
-React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. Neon stores relational data; Upstash Redis stores sessions and transient state. QStash invokes protected scheduled jobs. SMTP, AI and WhatsApp are external integrations. Local Compose uses a BullMQ worker and Mailpit.
+React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. Supabase PostgreSQL stores relational data; Upstash Redis stores sessions and transient state. QStash invokes protected scheduled jobs. SMTP, AI and WhatsApp are external integrations. Local Compose uses PostgreSQL, a BullMQ worker and Mailpit.
 
-| Directory | Purpose |
-| --- | --- |
-| apps/web | React interface |
-| apps/api | NestJS, Prisma, authorization and domain services |
-| apps/worker | BullMQ background jobs |
-| packages/calculations | Shared academic calculations |
-| packages/validation | Shared validation |
-| docs/submission | Downloadable reports and calculation workbook |
-| docs/evidence/2026-10-20 | Current measured evidence |
+| Directory                | Purpose                                           |
+| ------------------------ | ------------------------------------------------- |
+| apps/web                 | React interface                                   |
+| apps/api                 | NestJS, Prisma, authorization and domain services |
+| apps/worker              | BullMQ background jobs                            |
+| packages/calculations    | Shared academic calculations                      |
+| packages/validation      | Shared validation                                 |
+| docs/submission          | Downloadable reports and calculation workbook     |
+| docs/evidence/2026-10-20 | Current measured evidence                         |
 
 [Design](docs/design-document.md) · Role workflows: [Word](docs/submission/Mirai_Tracker_Role_Workflows_and_Access.docx), [PDF](docs/submission/Mirai_Tracker_Role_Workflows_and_Access.pdf), [Markdown source](docs/role-workflows.md) · [Architecture source](docs/architecture.mmd) · [Backup/recovery](docs/m17-security-and-recovery.md) · [Future enhancements](docs/future-enhancements.md)
 

@@ -458,7 +458,7 @@ story += [
 
 story += h1("Production deployment")
 story += [
-    p("The M18 package supports the Docker stack and the verified Vercel deployment. The live system uses managed Neon PostgreSQL, Upstash Redis, authenticated QStash schedules and Brevo SMTP behind HTTPS. The API migration ran before the authentication release."),
+    p("The M18 package supports the Docker stack and the verified Vercel deployment. The live system uses managed Supabase PostgreSQL, Upstash Redis, authenticated QStash schedules and Brevo SMTP behind HTTPS. The API migration ran before the authentication release."),
     table([
         ["Step", "Command or outcome"],
         ["Configure", "Copy .env.production.example and supply independent secrets"],

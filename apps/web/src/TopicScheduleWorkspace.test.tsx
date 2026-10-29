@@ -178,7 +178,8 @@ describe('TopicScheduleWorkspace', () => {
     expect(screen.getAllByText('01 Jul 2026').length).toBeGreaterThan(0);
     expect(screen.getAllByText('03 Jul 2026').length).toBeGreaterThan(0);
     expect(screen.getByText('Linked Lists')).toBeInTheDocument();
-    expect(screen.getByText('30 min short')).toBeInTheDocument();
+    expect(screen.getByText('30 min unallocated')).toBeInTheDocument();
+    expect(screen.getByText('Partially placed')).toBeInTheDocument();
     expect(screen.getByText('2 usable classes')).toBeInTheDocument();
   });
 
@@ -230,8 +231,16 @@ it('lets faculty view classes without timetable editing controls', async () => {
   installFetchMock();
   renderWorkspace(false);
   expect(await screen.findByText('Arrays')).toBeInTheDocument();
-  expect(screen.getByText(/ask your campus manager to change class times/i)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Move class' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Cancel class' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+  expect(
+    screen.getByText(/ask your campus manager to change class times/i),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Move class' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Cancel class' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Restore' }),
+  ).not.toBeInTheDocument();
 });

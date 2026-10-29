@@ -22,8 +22,9 @@ export function TopicScheduleWorkspace({
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
-  const selectedOfferingId = offerings.data?.some(o => o.id === offeringId)
-    ? offeringId : offerings.data?.[0]?.id || '';
+  const selectedOfferingId = offerings.data?.some((o) => o.id === offeringId)
+    ? offeringId
+    : offerings.data?.[0]?.id || '';
   const detail = useQuery({
     queryKey: ['topic-schedules', 'offering', selectedOfferingId],
     queryFn: () => topicScheduleApi.offering(selectedOfferingId),
@@ -188,7 +189,10 @@ function ScheduleDetail({
 
   return (
     <div className="schedule-detail">
-      <SubjectBufferRatio offeringId={detail.id} enabled={detail.plan.status === 'ACTIVE' && summary.requiredMinutes > 0} />
+      <SubjectBufferRatio
+        offeringId={detail.id}
+        enabled={detail.plan.status === 'ACTIVE' && summary.requiredMinutes > 0}
+      />
       {canManageSessions && (
         <CalendarChangeReview sessions={detail.sessions} onChanged={refresh} />
       )}
@@ -302,12 +306,26 @@ function ScheduleDetail({
               </span>
             </div>
           ))}
-          {detail.forecast.unscheduledTopics.map((topic) => (
-            <p className="form-error" key={topic.id}>
-              {topic.title}: {formatTeachingTime(topic.remainingMinutes)} needs
-              additional teaching time.
-            </p>
-          ))}
+          {detail.forecast.unscheduledTopics.length > 0 && (
+            <div className="schedule-shortfall" role="note">
+              <strong>More class time is needed</strong>
+              <p>
+                The unfinished lesson plan is{' '}
+                {formatTeachingTime(detail.forecast.summary.shortfallMinutes)}{' '}
+                longer than the classes currently available before the target
+                date. Add an extra class or extend the timetable to place the
+                remaining work.
+              </p>
+              <ul>
+                {detail.forecast.unscheduledTopics.map((topic) => (
+                  <li key={topic.id}>
+                    {topic.title} · {formatTeachingTime(topic.remainingMinutes)}{' '}
+                    unallocated
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {detail.forecast.summary.requiredMinutes === 0 && (
             <p>All in-scope topics are covered.</p>
           )}
@@ -374,8 +392,12 @@ function ScheduleDetail({
                 <strong>{topic.title}</strong>
               </div>
               <span>{formatTeachingTime(topic.requiredMinutes)}</span>
-              <span>Not placed</span>
-              <span>{formatTeachingTime(topic.remainingMinutes)} short</span>
+              <span>
+                {topic.allocatedMinutes > 0 ? 'Partially placed' : 'Not placed'}
+              </span>
+              <span>
+                {formatTeachingTime(topic.remainingMinutes)} unallocated
+              </span>
             </article>
           ))}
           {detail.preview.allocations.length === 0 &&

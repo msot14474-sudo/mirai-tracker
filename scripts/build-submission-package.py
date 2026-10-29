@@ -117,13 +117,13 @@ pnpm check
 pnpm verify:m10
 ```
 
-The dated evidence includes **586 automated tests**, **27 PostgreSQL integration tests**, **11 authenticated permission checks** and **18 independent numeric comparisons** across three subjects. Local scale data contains 3 campuses, 60 faculty, 30 subjects and 1,020 students. Real HTTP load tests cover 50/100/200 concurrent clients.
+The current suite includes **615 automated tests** across the API, web app, worker and shared packages. The dated evidence also includes **27 PostgreSQL integration tests**, **11 authenticated permission checks** and **18 independent numeric comparisons** across three subjects. Local scale data contains 3 campuses, 60 faculty, 30 subjects and 1,020 students. Real HTTP load tests cover 50/100/200 concurrent clients.
 
 Database integration tests use disposable databases. Never point them or the loopback-only load harness at production. Five fictional-account logging timings are automated API measurements, not human phone observations.
 
 ## Architecture and operations
 
-React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. Neon stores relational data; Upstash Redis stores sessions and transient state. QStash invokes protected scheduled jobs. SMTP, AI and WhatsApp are external integrations. Local Compose uses a BullMQ worker and Mailpit.
+React/Vite PWA and NestJS API run on Vercel behind a same-origin `/api` proxy. Supabase PostgreSQL stores relational data; Upstash Redis stores sessions and transient state. QStash invokes protected scheduled jobs. SMTP, AI and WhatsApp are external integrations. Local Compose uses PostgreSQL, a BullMQ worker and Mailpit.
 
 | Directory | Purpose |
 | --- | --- |
@@ -150,7 +150,7 @@ Mirai Course Progression Tracker. Evidence date: 20 October 2026. Code baseline:
 The test scope covers administrator, program manager, campus manager, faculty and student access; calendar/timetable propagation; lesson plans and logs; calculations; exams; reports; notifications; imports; and scale. The requested deployment has three campuses: HI-Tech, Jaggannath and Rathinam.
 
 {table(["Evidence","Result"],[
-["Unit/component tests","586 passed: API 408, web 147, calculations 23, worker 6, validation 2"],
+["Unit/component tests","615 passed: API 427, web 157, calculations 23, worker 6, validation 2"],
 ["PostgreSQL integrations","27 passed across six suites"],
 ["Authenticated HTTP permissions","11 passed using password and Mailpit OTP"],
 ["Independent calculations","18 of 18 numeric comparisons match to two decimals"],
@@ -224,7 +224,7 @@ Measured on {load['startedAt']}. Three campuses are used as requested.
 ["Runtime",f"{environment['node']}; {environment['platform']}"],
 ["Persistence","Real PostgreSQL 16 and Redis 7; Prisma connection pool 10"],
 ["Authentication","68 accounts authenticated through password and Mailpit email OTP"],
-["Network","Loopback HTTP; production Vercel/Neon latency is not represented"],
+["Network","Loopback HTTP; production Vercel/Supabase latency is not represented"],
 ])}
 
 The supported setup runtime is Node 22.13+. This measurement run used the available Node 20.18.0 host runtime; reproduce on the supported runtime before comparing deployment capacity.
@@ -251,7 +251,7 @@ Keep PostgreSQL and Redis external to stateless API instances. Match connection 
 
 Profile the class-context queries and transaction wait time first under heavy logging. Cache or preaggregate dashboard results only with campus/subject permission keys and invalidation on logs, plans, calendars and assignments. Retain strong transaction boundaries and conflict checks.
 
-For a hosted capacity claim, rerun the same authenticated workload on an isolated staging deployment with production-equivalent Vercel limits, Neon region/tier and Upstash configuration. Add a sustained 15-minute run, cold-start samples and browser page-load measurements. Track p50/p95/p99, error rates, database connections and slow queries.
+For a hosted capacity claim, rerun the same authenticated workload on an isolated staging deployment with production-equivalent Vercel limits, Supabase region/tier and Upstash configuration. Add a sustained 15-minute run, cold-start samples and browser page-load measurements. Track p50/p95/p99, error rates, database connections and slow queries.
 
 ## Reproduction
 
@@ -267,7 +267,7 @@ Mirai Tracker connects planning to recorded teaching for HI-Tech, Jaggannath and
 
 ## Deployment
 
-React/Vite serves the PWA from Vercel. Same-origin /api requests reach NestJS on Vercel. Prisma accesses Neon PostgreSQL. Upstash Redis stores opaque sessions and transient auth/job state. QStash invokes protected scheduled endpoints. SMTP delivers OTPs and summaries; AI and WhatsApp are separately configured providers.
+React/Vite serves the PWA from Vercel. Same-origin /api requests reach NestJS on Vercel. Prisma accesses Supabase PostgreSQL. Upstash Redis stores opaque sessions and transient auth/job state. QStash invokes protected scheduled endpoints. SMTP delivers OTPs and summaries; AI and WhatsApp are separately configured providers.
 
 Local Compose runs the web, API, PostgreSQL, Redis, Mailpit and BullMQ worker. The load report uses a host API with local containerized data services. It does not claim to reproduce hosted network latency.
 
@@ -366,7 +366,7 @@ save("docs/submission-checklist.md", """
 | Faculty logging experience | 20% | Responsive logging UI; five automated account flows; actual request timings |
 | Dashboard clarity and warnings | 20% | Subject analytics, configurable buffer ratio, scoped reports and notifications |
 | Exam readiness and student view | 10% | Exact exam-topic scope; read-only batch view; permission tests |
-| Testing depth and scale | 15% | 586 automated tests, 27 database tests, 11 HTTP permission checks, concurrent loads |
+| Testing depth and scale | 15% | 615 automated tests, 27 database tests, 11 HTTP permission checks, concurrent loads |
 | Code and documentation | 10% | Root README, source layout, one-command setup, design and reproducible scripts |
 
 The user's three-campus instruction overrides the four-campus examples. Automated account timings do not establish the original five-human phone-study criterion. The large seed is not presented as a CSV-import test. These distinctions preserve the meaning of the measured evidence.
@@ -399,7 +399,7 @@ navy=colors.HexColor("#17386B");blue=colors.HexColor("#EAF1FF");gray=colors.HexC
 nodes=[
  (25,315,210,90,"Web PWA","React / Vite · Vercel"),
  (290,315,235,90,"NestJS API","Permissions · domain services"),
- (600,350,190,65,"Neon PostgreSQL","Academic records · Prisma"),
+ (600,350,190,65,"Supabase PostgreSQL","Academic records · Prisma"),
  (600,245,190,65,"Upstash Redis","Sessions · transient state"),
  (25,140,210,90,"QStash schedules","Protected job requests"),
  (290,140,235,90,"External providers","SMTP · AI · WhatsApp"),
@@ -427,7 +427,7 @@ renderSVG.drawToFile(d,str(ROOT/"docs/architecture.svg"))
 save("docs/architecture.mmd", """
 flowchart LR
   Web["React PWA on Vercel"] -->|Same-origin /api| API["NestJS API on Vercel"]
-  API -->|Prisma| DB[("Neon PostgreSQL")]
+  API -->|Prisma| DB[("Supabase PostgreSQL")]
   API --> Redis[("Upstash Redis")]
   Jobs["QStash schedules"] -->|Protected jobs| API
   API -.-> SMTP["SMTP"]
@@ -446,7 +446,7 @@ save("docs/architecture.md","""# Architecture diagram
 
 [Separate SVG](architecture.svg) · [Editable Mermaid](architecture.mmd) · [Design document](design-document.md)
 
-The diagram distinguishes the live Vercel/Neon/Upstash deployment from the local Docker/BullMQ environment. External providers require their configured credentials.
+The diagram distinguishes the live Vercel/Supabase/Upstash deployment from the local Docker/BullMQ environment. External providers require their configured credentials.
 """)
 
 styles=getSampleStyleSheet()

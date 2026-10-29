@@ -13,7 +13,11 @@ const paths = {
   demo: 'docs/demo-script.md',
   checklist: 'docs/submission-checklist.md',
 };
-const reportPdf = 'docs/submission/Mirai_Tracker_Submission_Report.pdf';
+const reportPdfs = [
+  'docs/submission/Test_Report.pdf',
+  'docs/submission/Scalability_Report.pdf',
+  'docs/submission/Architecture_and_Design.pdf',
+];
 const files = Object.fromEntries(
   await Promise.all(
     Object.entries(paths).map(async ([name, path]) => [name, await read(path)]),
@@ -31,7 +35,7 @@ const evidencePaths = [
   'docs/evidence/m18-smtp-verification.json',
 ];
 await Promise.all(evidencePaths.map((path) => readFile(join(root, path))));
-await access(join(root, reportPdf));
+await Promise.all(reportPdfs.map((path) => access(join(root, path))));
 
 const checks = [
   check(
@@ -45,52 +49,44 @@ const checks = [
       'demo',
       'checklist',
     ].every((name) => files.index.includes(paths[name])) &&
-      files.index.includes(reportPdf),
+      reportPdfs.every((path) => files.index.includes(path)),
   ),
   check(
     'DOC-02',
-    'Architecture covers context, containers, data flow and trust boundaries',
-    [
-      'System context',
-      'Application containers',
-      'Core data flow',
-      'Trust boundaries',
-    ].every((value) => files.architecture.includes(value)),
+    'Architecture identifies the live and local deployment boundaries',
+    ['System architecture', 'Vercel', 'Supabase', 'local Docker'].every(
+      (value) => files.architecture.includes(value),
+    ),
   ),
   check(
     'DOC-03',
-    'Standalone architecture diagram contains all production components',
-    [
-      'Caddy Gateway',
-      'React Web',
-      'NestJS API',
-      'BullMQ Worker',
-      'PostgreSQL',
-      'Redis',
-    ].every((value) => files.architectureSvg.includes(value)),
+    'Standalone architecture diagram contains the application components',
+    ['React / Vite', 'NestJS API', 'PostgreSQL', 'Redis', 'BullMQ'].every(
+      (value) => files.architectureSvg.includes(value),
+    ),
   ),
   check(
     'DOC-04',
     'Design document covers roles, workflows, data, calculations, security and scaling',
     [
-      'Users and permissions',
-      'Functional design',
-      'Data design',
-      'Security design',
-      'Scalability and reliability',
+      'Purpose and scope',
+      'Deployment',
+      'Data and authorization',
+      'Calculation and calendar',
+      'Security and operations',
     ].every((value) => files.design.includes(value)),
   ),
   check(
     'DOC-05',
     'Test Report records suite counts and mandatory evidence',
-    files.tests.includes('246 automated tests') &&
+    files.tests.includes('615 passed') &&
       files.tests.includes('Mandatory evidence matrix'),
   ),
   check(
     'DOC-06',
-    'Test Report labels unavailable evidence as pending',
-    files.tests.includes('Pending external study') &&
-      files.tests.includes('Hosted M16 load rerun pending'),
+    'Test Report states the limits of measured evidence',
+    files.tests.includes('Evidence boundaries') &&
+      files.tests.includes('not human phone observations'),
   ),
   check(
     'DOC-07',
@@ -100,16 +96,14 @@ const checks = [
       'Campus Manager',
       'Faculty',
       'Student',
-      '10-minute walkthrough',
+      'Five-minute video outline',
     ].every((value) => files.demo.includes(value)),
   ),
   check(
     'DOC-08',
-    'Submission checklist separates verified and external work',
-    files.checklist.includes('Included and verified') &&
-      files.checklist.includes(
-        'Must be completed before claiming a fully live submission',
-      ),
+    'Submission checklist distinguishes measured automated evidence',
+    files.checklist.includes('automated account flows') &&
+      files.checklist.includes('not establish the original five-human'),
   ),
   check(
     'DOC-09',
@@ -132,10 +126,10 @@ const report = {
     passed: checks.filter((item) => item.passed).length,
     failed: checks.filter((item) => !item.passed).length,
   },
-  externalCloseOut: [
-    'Hosted M16 performance rerun and disposable restore drill',
-    'Five-faculty phone timing study',
-    'College deadline, naming convention and demonstration date',
+  evidenceBoundaries: [
+    'Automated faculty timings are not human phone observations',
+    'Hosted load capacity requires a production-equivalent staging run',
+    'The project owner records the final five-minute video',
   ],
   checks,
 };

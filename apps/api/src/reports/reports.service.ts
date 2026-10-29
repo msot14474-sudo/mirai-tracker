@@ -417,39 +417,41 @@ export class ReportsService {
     const global = user.roles.some((r) =>
       ['ADMIN', 'PROGRAM_MANAGER'].includes(r.role),
     );
-    const availableCampuses = await this.db.campus.findMany({
-      where: {
-        active: true,
-        ...(global
-          ? {}
-          : {
-              id: {
-                in: user.roles
-                  .filter((r) =>
-                    facultyOnly
-                      ? r.role === 'FACULTY'
-                      : r.role === 'CAMPUS_MANAGER',
-                  )
-                  .flatMap((r) => (r.campusId ? [r.campusId] : [])),
-              },
-            }),
-      },
-      select: { id: true, name: true, code: true },
-      orderBy: { name: 'asc' },
-    });
-    const permitted = await this.db.subjectOffering.findMany({
-      where: {
-        AND: [
-          scope,
-          { status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } },
-          ...(activeCampusId
-            ? [{ batch: { semester: { campusId: activeCampusId } } }]
-            : []),
-        ],
-      },
-      include: metadata,
-      orderBy: { id: 'asc' },
-    });
+    const [availableCampuses, permitted] = await Promise.all([
+      this.db.campus.findMany({
+        where: {
+          active: true,
+          ...(global
+            ? {}
+            : {
+                id: {
+                  in: user.roles
+                    .filter((r) =>
+                      facultyOnly
+                        ? r.role === 'FACULTY'
+                        : r.role === 'CAMPUS_MANAGER',
+                    )
+                    .flatMap((r) => (r.campusId ? [r.campusId] : [])),
+                },
+              }),
+        },
+        select: { id: true, name: true, code: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.db.subjectOffering.findMany({
+        where: {
+          AND: [
+            scope,
+            { status: { in: ['DRAFT', 'ACTIVE', 'COMPLETE'] } },
+            ...(activeCampusId
+              ? [{ batch: { semester: { campusId: activeCampusId } } }]
+              : []),
+          ],
+        },
+        include: metadata,
+        orderBy: { id: 'asc' },
+      }),
+    ]);
     const options = permitted.map((o) => ({
       ...rowIdentity(o),
       teachers: unique(o.faculty.map((f) => f.staffProfile.user)),

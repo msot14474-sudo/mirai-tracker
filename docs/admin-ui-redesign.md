@@ -26,7 +26,7 @@ This document tracks the administrator interface redesign. The editable design s
 - [x] Required global Admin and Program Manager accounts to select a campus before the full workspace navigation appears.
 - [x] Added a visible active-campus switcher after entry.
 - [x] Used the selected campus context throughout academic setup without repeating the campus field; kept scope locked in faculty access and timetable setup.
-- [x] Updated the active Neon campus catalog to the same three campuses.
+- [x] Updated the active PostgreSQL campus catalog to the same three campuses.
 - [x] Replaced the stacked workspace page with single-view sidebar navigation.
 - [x] Made Overview the first screen after selecting a campus.
 - [x] Added a personalized campus welcome, real campus context and role-aware quick actions.

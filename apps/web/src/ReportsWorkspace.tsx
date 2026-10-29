@@ -610,8 +610,8 @@ export function ReportsWorkspace({
         : reportsApi.read(queryFilters),
     enabled: !dateError,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: true,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
   const data = query.data;
   const facultyOnly = facultyRole || Boolean(data?.facultyOnly);

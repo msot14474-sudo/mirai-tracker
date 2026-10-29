@@ -13,13 +13,19 @@ pnpm monorepos. Keep that setting enabled for the API because it imports
 
 ## Managed services
 
-- Keep the API function in the same region as PostgreSQL. The current Neon
-  database is in Singapore (`ap-southeast-1`), so `apps/api/vercel.json` pins
-  the API to Vercel's `sin1` region. Update this setting if the database moves;
-  the US default adds a cross-region round trip to every database query.
+- Keep the API function in the same region as the Supabase project. The current
+  Supabase project is in AWS `eu-west-3`, so the repository pins the API to
+  Vercel's Paris region (`cdg1`) in `apps/api/vercel.json`.
+  Verify the deployed response's `x-vercel-id` after every project transfer;
+  a function executing in `iad1` while Supabase is in Paris adds a
+  cross-region round trip to every database query. Change either the Vercel
+  function region or Supabase project region so they match.
   See [Vercel function regions](https://vercel.com/docs/functions/configuring-functions/region).
-- Provision a serverless PostgreSQL database through the Vercel Marketplace and
-  connect it to the API project as `DATABASE_URL`.
+- Use the Supabase transaction pooler on port `6543` as `DATABASE_URL` for
+  serverless runtime traffic. Include `sslmode=require`, `pgbouncer=true`, and
+  a conservative connection limit. Set `DIRECT_URL` to the session pooler on
+  port `5432` (or a reachable direct connection) for Prisma migrations. Keep
+  passwords URL-encoded and never use the public anon key as a PostgreSQL URL.
 - Provision Upstash Redis and expose its TLS connection string as `REDIS_URL`.
 - Configure a transactional SMTP provider using the variables in
   `apps/api/.env.vercel.example`.
@@ -29,10 +35,12 @@ pnpm monorepos. Keep that setting enabled for the API because it imports
 ## Production migrations
 
 The API build runs committed Prisma migrations only when Vercel identifies the
-build as production. A migration failure fails the build, leaving the previous
-API deployment active. Local and preview builds do not migrate a database.
-Migrations must remain backward-compatible because the web and API deploy
-independently.
+build as production. Its preflight uses `DATABASE_URL`; when work remains,
+Prisma receives `DIRECT_URL` as its migration connection. If `DIRECT_URL` is
+not set, the build retains the existing `DATABASE_URL` fallback. A migration
+failure fails the build, leaving the previous API deployment active. Local and
+preview builds do not migrate a database. Migrations must remain
+backward-compatible because the web and API deploy independently.
 
 ## Database initialization
 
@@ -41,7 +49,7 @@ apply the committed migrations:
 
 ```sh
 vercel env pull .env.vercel.production --environment=production
-pnpm --filter @mirai/api exec prisma migrate deploy
+DATABASE_URL="$DIRECT_URL" pnpm --filter @mirai/api exec prisma migrate deploy
 ```
 
 Run the seed only when the college has chosen its initial accounts and temporary
@@ -88,7 +96,7 @@ pnpm verify:m18:live
 The production deployment was verified on 8 October 2026:
 
 - `https://mirai-tracker.vercel.app` serves the public React application and proxies `/api` to the NestJS deployment;
-- managed Neon PostgreSQL and Upstash Redis pass dependency readiness;
+- managed PostgreSQL and Upstash Redis pass dependency readiness;
 - the seeded Program Manager can complete password and email-OTP sign-in and read campus and progress data;
 - two authenticated QStash schedules process both missed-log stages every five minutes; and
 - Brevo SMTP accepted an authenticated application test message.
