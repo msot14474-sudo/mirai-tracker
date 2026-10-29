@@ -124,6 +124,11 @@ export type TopicScheduleDetail = {
   } | null;
 };
 
+export type TopicScheduleWorkspaceData = {
+  offerings: TopicScheduleOffering[];
+  initialOffering: TopicScheduleDetail | null;
+};
+
 async function messageFrom(response: Response) {
   const body = (await response.json().catch(() => null)) as {
     message?: string | string[];
@@ -164,6 +169,10 @@ export type RecoverySuggestion = {
   timezone: string;
 };
 export const topicScheduleApi = {
+  workspace: (campusId?: string) =>
+    api<TopicScheduleWorkspaceData>(
+      `/topic-schedules/workspace${campusId ? '?campusId=' + encodeURIComponent(campusId) : ''}`,
+    ),
   recoveryOptions: (sessionId: string) =>
     api<RecoverySuggestion>(
       `/topic-schedules/sessions/${sessionId}/recovery-options`,

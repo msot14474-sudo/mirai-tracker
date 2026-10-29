@@ -7,7 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { AiInsights, reportHtml } from './AiInsights';
+import { AiInsights, cleanReply, reportHtml } from './AiInsights';
 const snapshot = {
   generatedAt: '2026-10-15T10:00:00Z',
   scope: 'Selected campus',
@@ -52,6 +52,16 @@ const snapshot = {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+});
+
+it('removes internal identifiers and formats run-on AI bullets', () => {
+  expect(
+    cleanReply(
+      '4 overdue topics (IDs 6cdc0c2b-c797-4c5d-b3ae-256e0ec17444, 1e42b473-758a-4dce-aa3f-240f4b522c8e) • 6 scheduled classes without logs • 16 h available |',
+    ),
+  ).toBe(
+    '4 overdue topics\n- 6 scheduled classes without logs\n- 16 h available',
+  );
 });
 function setup(ready = false, fail = false, empty = false, canLog = false) {
   const requests: unknown[] = [];

@@ -375,6 +375,11 @@ describe('App authentication', () => {
         return new Response('[]', {
           headers: { 'Content-Type': 'application/json' },
         });
+      if (url.endsWith('/topic-schedules/workspace'))
+        return new Response(
+          JSON.stringify({ offerings: [], initialOffering: null }),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
       if (url.endsWith('/lesson-plans/offerings'))
         return new Response('[]', {
           headers: { 'Content-Type': 'application/json' },

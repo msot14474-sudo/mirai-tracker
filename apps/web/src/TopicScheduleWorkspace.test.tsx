@@ -144,6 +144,8 @@ function installFetchMock(
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
     onRequest?.(url, init);
+    if (url.endsWith('/topic-schedules/workspace'))
+      return json({ offerings, initialOffering: detail });
     if (url.endsWith('/topic-schedules/offerings')) return json(offerings);
     if (url.endsWith('/topic-schedules/offerings/offering-a'))
       return json(detail);

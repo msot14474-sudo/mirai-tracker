@@ -1580,18 +1580,16 @@ async function warmLessonPlanWorkspace(queryClient: QueryClient, campusId?: stri
 async function warmTopicScheduleWorkspace(queryClient: QueryClient, campusId?: string) {
   try {
     const { topicScheduleApi } = await import('./topicSchedules');
-    const offerings = await queryClient.fetchQuery({
-      queryKey: ['topic-schedules', 'offerings', campusId],
-      queryFn: () => topicScheduleApi.offerings(campusId),
+    const workspace = await queryClient.fetchQuery({
+      queryKey: ['topic-schedules', 'workspace', campusId],
+      queryFn: () => topicScheduleApi.workspace(campusId),
       staleTime: 60_000,
     });
-    const firstOffering = offerings[0];
-    if (firstOffering) {
-      await queryClient.prefetchQuery({
-        queryKey: ['topic-schedules', 'offering', firstOffering.id],
-        queryFn: () => topicScheduleApi.offering(firstOffering.id),
-        staleTime: 60_000,
-      });
+    if (workspace.initialOffering) {
+      queryClient.setQueryData(
+        ['topic-schedules', 'offering', workspace.initialOffering.id],
+        workspace.initialOffering,
+      );
     }
   } catch {
     // The workspace itself presents a retryable error if background warming fails.

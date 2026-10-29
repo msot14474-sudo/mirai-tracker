@@ -19,21 +19,27 @@ export function TopicScheduleWorkspace({
 }) {
   const queryClient = useQueryClient();
   const [offeringId, setOfferingId] = useState('');
-  const offerings = useQuery({
-    queryKey: ['topic-schedules', 'offerings', campusId],
-    queryFn: () => topicScheduleApi.offerings(campusId),
+  const workspace = useQuery({
+    queryKey: ['topic-schedules', 'workspace', campusId],
+    queryFn: () => topicScheduleApi.workspace(campusId),
     staleTime: 5 * 60_000,
   });
-  const selectedOfferingId = offerings.data?.some((o) => o.id === offeringId)
+  const offerings = workspace.data?.offerings;
+  const selectedOfferingId = offerings?.some((o) => o.id === offeringId)
     ? offeringId
-    : offerings.data?.[0]?.id || '';
+    : offerings?.[0]?.id || '';
   const detail = useQuery({
     queryKey: ['topic-schedules', 'offering', selectedOfferingId],
     queryFn: () => topicScheduleApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
     staleTime: 5 * 60_000,
+    initialData:
+      workspace.data?.initialOffering?.id === selectedOfferingId
+        ? workspace.data.initialOffering
+        : undefined,
+    initialDataUpdatedAt: workspace.dataUpdatedAt,
   });
-  const selectionIsLoading = offerings.isLoading;
+  const selectionIsLoading = workspace.isLoading;
 
   return (
     <section
@@ -50,9 +56,9 @@ export function TopicScheduleWorkspace({
         </div>
       </div>
 
-      {offerings.isError ? (
+      {workspace.isError ? (
         <p className="form-error" role="alert">
-          {offerings.error.message}
+          {workspace.error.message}
         </p>
       ) : null}
 
@@ -67,7 +73,7 @@ export function TopicScheduleWorkspace({
             label="Loading planned-date offerings"
           />
         ) : (
-          offerings.data?.map((offering) => (
+          offerings?.map((offering) => (
             <button
               key={offering.id}
               className={offering.id === selectedOfferingId ? 'selected' : ''}
@@ -103,7 +109,7 @@ export function TopicScheduleWorkspace({
 
       {selectionIsLoading ? (
         <LoadingSkeleton variant="table" label="Loading planned dates" />
-      ) : offerings.isError && !offerings.data ? null : !selectedOfferingId ? (
+      ) : workspace.isError && !workspace.data ? null : !selectedOfferingId ? (
         <div className="empty-state compact-empty">
           <span>01</span>
           <h3>No subject offerings</h3>

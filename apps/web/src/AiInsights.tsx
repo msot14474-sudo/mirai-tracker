@@ -609,7 +609,23 @@ async function getSnapshot(
   return (await apiFetch(`${apiUrl}/ai-insights?${query}`)).json();
 }
 export function cleanReply(text: string) {
-  const cleaned = text.replace(/^\[Incomplete response\]\s*/, '').trim();
+  const uuid =
+    '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+  const uuidList = new RegExp(
+    `\\s*\\((?:IDs?|record IDs?)\\s*:?\\s*${uuid}(?:\\s*,\\s*${uuid})*\\)`,
+    'gi',
+  );
+  const internalId = new RegExp(uuid, 'gi');
+  const cleaned = text
+    .replace(/^\[Incomplete response\]\s*/, '')
+    .replace(uuidList, '')
+    .replace(internalId, '')
+    .replace(/\(\s*(?:IDs?|record IDs?)?\s*\)/gi, '')
+    .replace(/\s+•\s+/g, '\n- ')
+    .replace(/^\s*•\s+/gm, '- ')
+    .replace(/\s+\|\s*$/gm, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
   return /^```(?:markdown|md)\s*\n[\s\S]*\n```$/.test(cleaned)
     ? cleaned.replace(/^```(?:markdown|md)\s*\n/, '').replace(/\n```$/, '')
     : cleaned;

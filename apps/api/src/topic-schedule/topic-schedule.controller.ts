@@ -34,6 +34,17 @@ const editors = [
 export class TopicScheduleController {
   constructor(private readonly schedules: TopicScheduleService) {}
 
+  @Get('workspace')
+  workspace(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('campusId') campusId?: string,
+  ) {
+    return this.schedules.workspace(
+      user,
+      campusId ? id(campusId) : undefined,
+    );
+  }
+
   @Get('offerings')
   offerings(
     @CurrentUser() user: AuthenticatedUser,

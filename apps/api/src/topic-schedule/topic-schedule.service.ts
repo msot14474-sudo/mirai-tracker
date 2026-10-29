@@ -75,7 +75,8 @@ export class TopicScheduleService {
           where: {
             status: { in: [LessonPlanStatus.ACTIVE, LessonPlanStatus.DRAFT] },
           },
-          orderBy: { version: 'desc' },
+          orderBy: [{ status: 'desc' }, { version: 'desc' }],
+          take: 1,
           select: { id: true, version: true, status: true },
         },
         scheduleVersions: {
@@ -121,12 +122,29 @@ export class TopicScheduleService {
 
   async offering(offeringId: string, user: AuthenticatedUser) {
     await this.access.assertCanManageOffering(user, offeringId);
-    const offering = await this.requirePlanningOffering(offeringId);
-    const baseline = await this.prisma.topicScheduleVersion.findFirst({
-      where: { offeringId },
-      orderBy: { version: 'asc' },
-      include: { entries: true },
-    });
+    return this.authorizedOffering(offeringId);
+  }
+
+  async workspace(user: AuthenticatedUser, campusId?: string) {
+    const offerings = await this.listOfferings(user, campusId);
+    const firstOffering = offerings[0];
+    return {
+      offerings,
+      initialOffering: firstOffering
+        ? await this.authorizedOffering(firstOffering.id)
+        : null,
+    };
+  }
+
+  private async authorizedOffering(offeringId: string) {
+    const [offering, baseline] = await Promise.all([
+      this.requirePlanningOffering(offeringId),
+      this.prisma.topicScheduleVersion.findFirst({
+        where: { offeringId },
+        orderBy: { version: 'asc' },
+        include: { entries: true },
+      }),
+    ]);
     return {
       ...serializeDetail(offering),
       baseline: baseline ? serializeVersion(baseline) : null,
@@ -725,7 +743,8 @@ export class TopicScheduleService {
           where: {
             status: { in: [LessonPlanStatus.ACTIVE, LessonPlanStatus.DRAFT] },
           },
-          orderBy: { version: 'desc' },
+          orderBy: [{ status: 'desc' }, { version: 'desc' }],
+          take: 1,
           include: {
             units: {
               orderBy: { sequence: 'asc' },
