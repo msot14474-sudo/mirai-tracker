@@ -27,6 +27,7 @@ import {
   verifyPasswordResetOtp,
 } from './auth';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import { TopicScheduleWorkspace } from './TopicScheduleWorkspace';
 
 const SemesterSetup = lazy(() =>
   import('./SemesterSetup').then((module) => ({
@@ -52,12 +53,6 @@ const TimetableSetup = lazy(() =>
 const LessonPlanWorkspace = lazy(() =>
   import('./LessonPlanWorkspace').then((module) => ({
     default: module.LessonPlanWorkspace,
-  })),
-);
-
-const TopicScheduleWorkspace = lazy(() =>
-  import('./TopicScheduleWorkspace').then((module) => ({
-    default: module.TopicScheduleWorkspace,
   })),
 );
 
@@ -954,13 +949,18 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   });
 
   useEffect(() => {
+    if (canManageLessonPlans && (!isGlobalAdministrator || selectedCampusId)) {
+      void warmTopicScheduleWorkspace(
+        queryClient,
+        selectedCampusId || undefined,
+      );
+    }
     const timer = window.setTimeout(() => {
       void Promise.allSettled([
         import('./SemesterSetup'),
         import('./SemesterImport'),
         import('./TimetableSetup'),
         import('./LessonPlanWorkspace'),
-        import('./TopicScheduleWorkspace'),
         import('./SessionLoggingWorkspace'),
         import('./ProgressDashboard'),
         import('./ExamReadinessView'),
@@ -972,7 +972,6 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
 
       if (canManageLessonPlans && (!isGlobalAdministrator || selectedCampusId)) {
         void warmLessonPlanWorkspace(queryClient, selectedCampusId || undefined);
-        void warmTopicScheduleWorkspace(queryClient, selectedCampusId || undefined);
       }
     }, 250);
     return () => window.clearTimeout(timer);
