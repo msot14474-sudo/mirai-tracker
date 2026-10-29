@@ -16,8 +16,6 @@ export type TopicScheduleOffering = {
     id: string;
     version: number;
     status: string;
-    topics: number;
-    totalPlannedMinutes: number;
   } | null;
   sessions: number;
   latestSchedule: {

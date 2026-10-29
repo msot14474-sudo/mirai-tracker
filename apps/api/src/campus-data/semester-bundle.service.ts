@@ -25,6 +25,7 @@ import {
 } from '../academic-calendar/calendar-engine';
 import { TimetableService } from '../timetable/timetable.service';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 import {
   buildTimetableSessions,
   formatTimetableTime,
@@ -645,7 +646,7 @@ export class SemesterBundleService {
       });
       const completion = +v.completion_percentage!;
       const data = {
-        title: v.topic_title!,
+        title: topicDisplayTitle(v.topic_title!, v.unit_title!),
         plannedMinutes: Math.round(+v.planned_hours! * 60),
         description: v.notes || null,
         currentCompletionPercentage: completion,

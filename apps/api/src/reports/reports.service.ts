@@ -12,6 +12,7 @@ import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 import { buildCsv, csvBuffer } from '../export/export-csv';
 import { ReportQuery } from './reports.schemas';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 
 type Identity = { id: string; name: string; code?: string };
 export type ReportStatus =
@@ -67,7 +68,12 @@ const detail = Prisma.validator<Prisma.SubjectOfferingInclude>()({
         take: 1,
         include: {
           loggedBy: { select: person },
-          carryForwardTopic: { select: { title: true } },
+          carryForwardTopic: {
+            select: {
+              title: true,
+              unit: { select: { title: true } },
+            },
+          },
           topicUpdates: { select: { minutesUsed: true } },
         },
       },
@@ -86,6 +92,7 @@ const courseDetail = Prisma.validator<Prisma.SubjectOfferingInclude>()({
       units: {
         orderBy: { sequence: 'asc' },
         select: {
+          title: true,
           topics: {
             orderBy: { sequence: 'asc' },
             select: {
@@ -255,7 +262,7 @@ export function courseRow(o: CourseOffering, now: Date): CourseRow {
     plan?.units.flatMap((u) =>
       u.topics.map((t) => ({
         id: t.id,
-        title: t.title,
+        title: topicDisplayTitle(t.title, u.title),
         plannedMinutes: t.plannedMinutes,
         status: t.status,
         completionPercentage: Number(t.currentCompletionPercentage),
@@ -655,7 +662,12 @@ export class ReportsService {
                 : Number(log.overallCompletionPercentage),
             covered: log.coveredSummary,
             leftOver: log.leftOverSummary ?? '',
-            carryForward: log.carryForwardTopic?.title ?? '',
+            carryForward: log.carryForwardTopic
+              ? topicDisplayTitle(
+                  log.carryForwardTopic.title,
+                  log.carryForwardTopic.unit.title,
+                )
+              : '',
             classwork: log.classworkStatus,
             homework: log.homeworkStatus,
             notes: log.notes ?? '',

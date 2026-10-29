@@ -146,6 +146,25 @@ describe('shared request protection', () => {
     await result;
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('stops a hanging read promptly instead of extending the loading screen with a retry', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(
+        (_url, init) =>
+          new Promise((_resolve, reject) =>
+            init?.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            ),
+          ),
+      );
+    const result = expect(apiFetch('/api/subjects')).rejects.toThrow(
+      'timed out',
+    );
+    await vi.advanceTimersByTimeAsync(10_000);
+    await result;
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it('discards a late unauthorized response from a previous session', async () => {
     let finish!: (response: Response) => void;
     vi.spyOn(globalThis, 'fetch').mockImplementation(

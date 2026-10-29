@@ -17,6 +17,7 @@ import { Prisma, TopicStatus } from '@prisma/client';
 import { RedisService } from '../redis/redis.service';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { PrismaService } from '../database/prisma.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { UploadedImportFile } from './semester-import.types';
 
@@ -800,7 +801,10 @@ export class ProgressImportService {
                 topics: {
                   create: preview.topics.map((t, i) => ({
                     sequence: i + 1,
-                    title: t.title,
+                    title: topicDisplayTitle(
+                      t.title,
+                      'Imported course progression',
+                    ),
                     description: t.description,
                     plannedMinutes: t.minutes,
                     currentCompletionPercentage: t.completion,

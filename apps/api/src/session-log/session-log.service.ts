@@ -24,6 +24,7 @@ import {
 } from '../academic-calendar/calendar-engine';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 import { TopicScheduleService } from '../topic-schedule/topic-schedule.service';
 import { CreateSessionLogInput } from './session-log.schemas';
 
@@ -388,7 +389,7 @@ function serializeSession(session: SessionWithContext) {
         unitSequence: unit.sequence,
         unitTitle: unit.title,
         sequence: topic.sequence,
-        title: topic.title,
+        title: topicDisplayTitle(topic.title, unit.title),
         plannedMinutes: topic.plannedMinutes,
         status: topic.status,
         currentCompletionPercentage: Number(topic.currentCompletionPercentage),

@@ -8,6 +8,7 @@ import {
   insightScope,
 } from '../ai-insights/ai-context.service';
 import { AiInsightsService } from '../ai-insights/ai-insights.service';
+import { userFacingAiText } from '../ai-insights/ai-output';
 import { EmailNotificationService } from '../missed-log-alert/email-notification.service';
 
 export function completedWeek(now: Date, timezone: string) {
@@ -151,7 +152,7 @@ export class WeeklySummaryService {
         }) => ({
           id,
           title,
-          text,
+          text: userFacingAiText(text),
           mode,
           weekStart,
           weekEnd,
@@ -368,7 +369,7 @@ export class WeeklySummaryService {
               true,
             );
             if (!result.incomplete && result.text) {
-              text = `${result.text}\n\n### Current buffer ratios\n${facts.map(f => `- ${f.subject} · ${f.batch}: ${f.bufferExplanation}`).join('\n')}`;
+              text = `${result.text}\n\n### Current buffer ratios\n${facts.map((f) => `- ${f.subject} · ${f.batch}: ${f.bufferExplanation}`).join('\n')}`;
               mode = 'ai';
             }
           } catch {
@@ -418,7 +419,7 @@ export class WeeklySummaryService {
             (saved.mode === 'data'
               ? 'AI was unavailable. This summary is calculated directly from your authorized records.\n\n'
               : 'AI summary — review suggested actions before making changes.\n\n') +
-            saved.text,
+            userFacingAiText(saved.text),
         });
         if (delivery.rejected?.length || !delivery.accepted?.length)
           throw new Error('Mail provider did not accept the recipient.');

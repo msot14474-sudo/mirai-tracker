@@ -55,7 +55,7 @@ export async function apiFetch(
     init.signal?.addEventListener('abort', abort, { once: true });
     const timeout = window.setTimeout(
       abort,
-      options.download ? 60_000 : read ? 15_000 : 60_000,
+      options.download ? 60_000 : read ? 10_000 : 60_000,
     );
     let error: RequestError;
     try {
@@ -171,6 +171,7 @@ export async function apiFetch(
     if (
       !read ||
       attempt >= 1 ||
+      controller.signal.aborted ||
       navigator.onLine === false ||
       (error.status !== 0 && ![502, 503, 504].includes(error.status))
     )

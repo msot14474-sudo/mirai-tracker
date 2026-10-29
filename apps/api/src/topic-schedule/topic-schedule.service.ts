@@ -25,6 +25,7 @@ import {
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 import {
   calculateTopicSchedule,
   calculateRemainingSchedule,
@@ -75,7 +76,7 @@ export class TopicScheduleService {
             status: { in: [LessonPlanStatus.ACTIVE, LessonPlanStatus.DRAFT] },
           },
           orderBy: { version: 'desc' },
-          include: { units: { include: { topics: true } } },
+          select: { id: true, version: true, status: true },
         },
         scheduleVersions: {
           orderBy: { version: 'desc' },
@@ -93,7 +94,6 @@ export class TopicScheduleService {
 
     return offerings.map((offering) => {
       const plan = preferredPlan(offering.lessonPlans);
-      const topics = plan?.units.flatMap((unit) => unit.topics) ?? [];
       const latest = offering.scheduleVersions[0] ?? null;
       return {
         id: offering.id,
@@ -104,11 +104,6 @@ export class TopicScheduleService {
               id: plan.id,
               version: plan.version,
               status: plan.status,
-              topics: topics.length,
-              totalPlannedMinutes: topics.reduce(
-                (total, topic) => total + topic.plannedMinutes,
-                0,
-              ),
             }
           : null,
         sessions: offering._count.sessions,
@@ -504,7 +499,7 @@ export class TopicScheduleService {
           )
           .map((t) => ({
             unit: u.title,
-            topic: t.title,
+            topic: topicDisplayTitle(t.title, u.title),
             minutesRemaining: Math.ceil(
               t.plannedMinutes *
                 (1 - Number(t.currentCompletionPercentage) / 100),
@@ -748,9 +743,6 @@ export class TopicScheduleService {
           include: {
             entries: {
               orderBy: { plannedStartDate: 'asc' },
-              include: {
-                topic: { include: { unit: true } },
-              },
             },
           },
         },
@@ -790,7 +782,7 @@ function calculateForOffering(offering: PlanningOffering) {
       unitSequence: unit.sequence,
       topicSequence: topic.sequence,
       unitTitle: unit.title,
-      title: topic.title,
+      title: topicDisplayTitle(topic.title, unit.title),
       requiredMinutes: topic.plannedMinutes,
     })),
   );
@@ -868,7 +860,7 @@ function serializeDetail(offering: PlanningOffering) {
                 unitSequence: unit.sequence,
                 topicSequence: topic.sequence,
                 unitTitle: unit.title,
-                title: topic.title,
+                title: topicDisplayTitle(topic.title, unit.title),
                 requiredMinutes: topic.plannedMinutes,
                 completionPercentage: Number(topic.currentCompletionPercentage),
                 skipped: topic.status === 'SKIPPED',
@@ -887,7 +879,7 @@ function serializeDetail(offering: PlanningOffering) {
       ? plan.units.flatMap((unit) =>
           unit.topics.map((topic) => ({
             id: topic.id,
-            title: topic.title,
+            title: topicDisplayTitle(topic.title, unit.title),
             completionPercentage: Number(topic.currentCompletionPercentage),
             status: topic.status,
           })),

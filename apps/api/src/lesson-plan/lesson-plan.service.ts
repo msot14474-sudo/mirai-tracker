@@ -19,6 +19,7 @@ import { AccessPolicyService } from '../auth/access-policy.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
 import { parseLessonPlanFile } from './lesson-plan.parser';
+import { topicDisplayTitle } from './topic-title';
 import {
   ExamScopeInput,
   LessonPlanImportOptions,
@@ -186,7 +187,7 @@ export class LessonPlanService {
                   topics: {
                     create: unit.topics.map((topic) => ({
                       sequence: topic.topicSequence,
-                      title: topic.topicTitle,
+                      title: topicDisplayTitle(topic.topicTitle, unit.title),
                       description: topic.topicDescription,
                       plannedMinutes: topic.plannedMinutes,
                     })),
@@ -318,7 +319,12 @@ export class LessonPlanService {
     assertDraft(topic.unit.lessonPlan.status);
     const updated = await this.prisma.topic.update({
       where: { id: topicId },
-      data: input,
+      data: {
+        ...input,
+        ...(input.title
+          ? { title: topicDisplayTitle(input.title, topic.unit.title) }
+          : {}),
+      },
     });
     await this.auditChange(
       user,
@@ -552,7 +558,7 @@ export class LessonPlanService {
                 data: {
                   unitId: unit.id,
                   sequence: row.topicSequence,
-                  title: row.topicTitle,
+                  title: topicDisplayTitle(row.topicTitle, unit.title),
                   description: row.topicDescription,
                   plannedMinutes: row.plannedMinutes,
                 },
@@ -841,7 +847,7 @@ function serializeOffering(
       topics: unit.topics.map((topic) => ({
         id: topic.id,
         sequence: topic.sequence,
-        title: topic.title,
+        title: topicDisplayTitle(topic.title, unit.title),
         description: topic.description,
         plannedMinutes: topic.plannedMinutes,
         status: topic.status,

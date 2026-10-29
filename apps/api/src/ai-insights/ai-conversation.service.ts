@@ -11,6 +11,7 @@ import {
   InsightFilter,
   InsightSnapshot,
 } from './ai-context.service';
+import { userFacingAiText } from './ai-output';
 export function conversationScope(
   user: AuthenticatedUser,
   filter: InsightFilter,
@@ -61,7 +62,13 @@ export class AiConversationService {
     return {
       id: conversation.id,
       title: conversation.title,
-      messages: conversation.messages.reverse(),
+      messages: conversation.messages.reverse().map((message) => ({
+        ...message,
+        content:
+          message.role === 'assistant'
+            ? userFacingAiText(message.content)
+            : message.content,
+      })),
       earlierMessages: Math.max(
         0,
         conversation.version * 2 - conversation.messages.length,
@@ -83,7 +90,16 @@ export class AiConversationService {
       throw new NotFoundException(
         'This conversation is unavailable in your current access scope. Start a new chat.',
       );
-    return { ...conversation, messages: conversation.messages.reverse() };
+    return {
+      ...conversation,
+      messages: conversation.messages.reverse().map((message) => ({
+        ...message,
+        content:
+          message.role === 'assistant'
+            ? userFacingAiText(message.content)
+            : message.content,
+      })),
+    };
   }
   async append(
     user: AuthenticatedUser,
@@ -120,7 +136,7 @@ export class AiConversationService {
             conversationId: conversation.id,
             ordinal: conversation.version * 2 + 2,
             role: 'assistant',
-            content: answer,
+            content: userFacingAiText(answer),
           },
         ],
       });

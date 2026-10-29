@@ -1,4 +1,7 @@
-import { calculateSubjectProgress, calculateExamReadiness } from '@mirai/calculations';
+import {
+  calculateSubjectProgress,
+  calculateExamReadiness,
+} from '@mirai/calculations';
 import {
   BadRequestException,
   ForbiddenException,
@@ -7,6 +10,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuthenticatedUser } from '../auth/auth.types';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 
 export function insightScope(
   user: AuthenticatedUser,
@@ -56,7 +60,14 @@ export class AiContextService {
       orderBy: { id: 'asc' },
       include: {
         subject: { select: { name: true, code: true } },
-        sessions: {select: {sessionDate: true, startsAt: true, endsAt: true, status: true}},
+        sessions: {
+          select: {
+            sessionDate: true,
+            startsAt: true,
+            endsAt: true,
+            status: true,
+          },
+        },
         timetableEntries: {
           where: { active: true },
           select: {
@@ -75,7 +86,8 @@ export class AiContextService {
               select: {
                 name: true,
                 campus: { select: { id: true, name: true, timezone: true } },
-                defaultOnTrackThreshold: true, defaultTightThreshold: true,
+                defaultOnTrackThreshold: true,
+                defaultTightThreshold: true,
                 examWindows: {
                   select: {
                     id: true,
@@ -256,7 +268,12 @@ export class AiContextService {
             take: 1,
             select: {
               notes: true,
-              carryForwardTopic: { select: { title: true } },
+              carryForwardTopic: {
+                select: {
+                  title: true,
+                  unit: { select: { title: true } },
+                },
+              },
               coveredSummary: true,
               leftOverSummary: true,
               classworkStatus: true,
@@ -310,27 +327,63 @@ export class AiContextService {
           u.topics.map((t) => ({
             id: t.id,
             unit: u.title,
-            title: t.title,
+            title: topicDisplayTitle(t.title, u.title),
             description: t.description,
             minutes: t.plannedMinutes,
-            completion: t.status === 'COMPLETED' ? 100 : Number(t.currentCompletionPercentage),
+            completion:
+              t.status === 'COMPLETED'
+                ? 100
+                : Number(t.currentCompletionPercentage),
             status: t.status,
             finishDate: dates.get(t.id) ?? null,
             examIds: t.examScopes.map((e) => e.examWindowId),
           })),
         ) ?? [];
-      const inScope = topics.filter(t => t.status !== 'SKIPPED');
+      const inScope = topics.filter((t) => t.status !== 'SKIPPED');
       const minutes = inScope.reduce((a, t) => a + t.minutes, 0);
       const completedMinutes = inScope.reduce(
-        (a, t) => a + (t.status === 'COMPLETED' ? t.minutes : (t.minutes * t.completion) / 100),
+        (a, t) =>
+          a +
+          (t.status === 'COMPLETED'
+            ? t.minutes
+            : (t.minutes * t.completion) / 100),
         0,
       );
-      const monitoring = plan && minutes > 0 && o.targetFinishDate ? calculateSubjectProgress({
-        asOfDate: today, targetFinishDate: o.targetFinishDate.toISOString().slice(0,10),
-        thresholds: {onTrack: Number(o.onTrackThreshold ?? o.batch.semester.defaultOnTrackThreshold ?? 1.15), tight: Number(o.tightThreshold ?? o.batch.semester.defaultTightThreshold ?? 1)},
-        topics: topics.map(t => ({id:t.id,title:t.title,plannedMinutes:t.minutes,status:t.status,completionPercentage:t.completion,plannedFinishDate:t.finishDate})),
-        sessions: (o.sessions ?? []).map(session => ({sessionDate:session.sessionDate.toISOString().slice(0,10),plannedMinutes:Math.round((session.endsAt.getTime()-session.startsAt.getTime())/60000),status:session.status})),
-      }) : null;
+      const monitoring =
+        plan && minutes > 0 && o.targetFinishDate
+          ? calculateSubjectProgress({
+              asOfDate: today,
+              targetFinishDate: o.targetFinishDate.toISOString().slice(0, 10),
+              thresholds: {
+                onTrack: Number(
+                  o.onTrackThreshold ??
+                    o.batch.semester.defaultOnTrackThreshold ??
+                    1.15,
+                ),
+                tight: Number(
+                  o.tightThreshold ??
+                    o.batch.semester.defaultTightThreshold ??
+                    1,
+                ),
+              },
+              topics: topics.map((t) => ({
+                id: t.id,
+                title: t.title,
+                plannedMinutes: t.minutes,
+                status: t.status,
+                completionPercentage: t.completion,
+                plannedFinishDate: t.finishDate,
+              })),
+              sessions: (o.sessions ?? []).map((session) => ({
+                sessionDate: session.sessionDate.toISOString().slice(0, 10),
+                plannedMinutes: Math.round(
+                  (session.endsAt.getTime() - session.startsAt.getTime()) /
+                    60000,
+                ),
+                status: session.status,
+              })),
+            })
+          : null;
       const overdue = topics.filter(
         (t) =>
           t.finishDate &&
@@ -355,9 +408,16 @@ export class AiContextService {
           `Follow up on ${unlogged} lecture${unlogged === 1 ? '' : 's'} without logs.`,
         );
       if (!o.faculty.length) issues.push('Assign a faculty member.');
-      if (!o.timetableEntries?.length) issues.push('Create the weekly timetable.');
-      if (monitoring?.status === 'DANGER') issues.push(`Teaching capacity is below remaining work: ${monitoring.availableHours} hours available, ${monitoring.remainingHours} hours remaining before the deadline.`);
-      if (monitoring?.status === 'TIGHT') issues.push('The timetable has little recovery buffer before the deadline.');
+      if (!o.timetableEntries?.length)
+        issues.push('Create the weekly timetable.');
+      if (monitoring?.status === 'DANGER')
+        issues.push(
+          `Teaching capacity is below remaining work: ${monitoring.availableHours} hours available, ${monitoring.remainingHours} hours remaining before the deadline.`,
+        );
+      if (monitoring?.status === 'TIGHT')
+        issues.push(
+          'The timetable has little recovery buffer before the deadline.',
+        );
       const recentHelp = recentGaps.filter(
         (g) => g.session.offeringId === o.id,
       ).length;
@@ -371,7 +431,15 @@ export class AiContextService {
         )
         .map((e) => {
           const scoped = inScope.filter((t) => t.examIds.includes(e.id));
-          const readiness = calculateExamReadiness(scoped.map(t => ({id:t.id,title:t.title,plannedMinutes:t.minutes,status:t.status,completionPercentage:t.completion})));
+          const readiness = calculateExamReadiness(
+            scoped.map((t) => ({
+              id: t.id,
+              title: t.title,
+              plannedMinutes: t.minutes,
+              status: t.status,
+              completionPercentage: t.completion,
+            })),
+          );
           return {
             readiness,
             name: e.name,
@@ -386,14 +454,33 @@ export class AiContextService {
           };
         });
       for (const e of exams) {
-        if (!e.scopeDefined) issues.push(`${e.name}: define the exam syllabus scope.`);
+        if (!e.scopeDefined)
+          issues.push(`${e.name}: define the exam syllabus scope.`);
         if (e.syllabusDeadline <= today && e.incompleteTopics)
           issues.push(
             `${e.name}: ${e.incompleteTopics} exam topics remain at the syllabus deadline.`,
           );
       }
       return {
-        monitoring: monitoring ? { ...monitoring, status: plan?.status !== 'ACTIVE' || !o.sessions?.length ? 'NEEDS_DATA' : monitoring.status } : null,
+        monitoring: monitoring
+          ? {
+              asOfDate: monitoring.asOfDate,
+              targetFinishDate: monitoring.targetFinishDate,
+              hoursInScope: monitoring.hoursInScope,
+              coveredHours: monitoring.coveredHours,
+              coveragePercentage: monitoring.coveragePercentage,
+              remainingHours: monitoring.remainingHours,
+              availableHours: monitoring.availableHours,
+              plannedHoursByToday: monitoring.plannedHoursByToday,
+              paceVsPlanHours: monitoring.paceVsPlanHours,
+              bufferRatio: monitoring.bufferRatio,
+              thresholds: monitoring.thresholds,
+              status:
+                plan?.status !== 'ACTIVE' || !o.sessions?.length
+                  ? 'NEEDS_DATA'
+                  : monitoring.status,
+            }
+          : null,
         id: o.id,
         status: o.status,
         localDate: today,

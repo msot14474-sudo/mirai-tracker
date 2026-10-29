@@ -7,7 +7,10 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TopicScheduleWorkspace } from './TopicScheduleWorkspace';
+import {
+  groupUnallocatedByUnit,
+  TopicScheduleWorkspace,
+} from './TopicScheduleWorkspace';
 
 afterEach(() => {
   cleanup();
@@ -155,6 +158,40 @@ function installFetchMock(
 }
 
 describe('TopicScheduleWorkspace', () => {
+  it('summarises repeated topic shortages by unit', () => {
+    expect(
+      groupUnallocatedByUnit([
+        {
+          id: 'topic-one',
+          unitSequence: 4,
+          topicSequence: 1,
+          unitTitle: 'APIs and deployment',
+          title: 'Foundations',
+          requiredMinutes: 120,
+          allocatedMinutes: 60,
+          remainingMinutes: 60,
+        },
+        {
+          id: 'topic-two',
+          unitSequence: 4,
+          topicSequence: 2,
+          unitTitle: 'APIs and deployment',
+          title: 'Guided practice',
+          requiredMinutes: 120,
+          allocatedMinutes: 0,
+          remainingMinutes: 120,
+        },
+      ]),
+    ).toEqual([
+      {
+        unitSequence: 4,
+        unitTitle: 'APIs and deployment',
+        remainingMinutes: 180,
+        topics: 2,
+      },
+    ]);
+  });
+
   it('does not show an empty offering result when loading fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       async () =>
@@ -178,8 +215,8 @@ describe('TopicScheduleWorkspace', () => {
     expect(screen.getAllByText('01 Jul 2026').length).toBeGreaterThan(0);
     expect(screen.getAllByText('03 Jul 2026').length).toBeGreaterThan(0);
     expect(screen.getByText('Linked Lists')).toBeInTheDocument();
-    expect(screen.getByText('30 min unallocated')).toBeInTheDocument();
-    expect(screen.getByText('Partially placed')).toBeInTheDocument();
+    expect(screen.getByText('30 min still needed')).toBeInTheDocument();
+    expect(screen.getByText('Partly scheduled')).toBeInTheDocument();
     expect(screen.getByText('2 usable classes')).toBeInTheDocument();
   });
 

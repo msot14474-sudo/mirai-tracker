@@ -397,6 +397,8 @@ it('supplies weighted hours and actual missing-log totals to the model', async (
   const compact = compactContext(snapshot);
   expect(compact.subjects[0]).toMatchObject({ plannedMinutes: 200, coveredMinutes: 50, remainingMinutes: 150 });
   expect(compact.subjects[0]!.missingLogs).toBe(snapshot.subjects[0]!.missingLogs);
+  expect(JSON.stringify(compact)).not.toContain('overdueTopicIds');
+  expect(JSON.stringify(compact)).not.toContain('campus-a');
 });
 it('marks provider-truncated replies as incomplete and never caches them as finished', async () => {
   process.env.OLLAMA_API_KEY = 'test';

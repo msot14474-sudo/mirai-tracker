@@ -25,6 +25,7 @@ import {
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 
 const progressInclude = Prisma.validator<Prisma.SubjectOfferingInclude>()({
   subject: { select: { id: true, code: true, name: true } },
@@ -297,7 +298,7 @@ function calculateOffering(offering: ProgressOffering, asOfDate: string) {
   const topics = lessonPlan.units.flatMap((unit) =>
     unit.topics.map((topic) => ({
       id: topic.id,
-      title: topic.title,
+      title: topicDisplayTitle(topic.title, unit.title),
       plannedMinutes: topic.plannedMinutes,
       status: topic.status,
       completionPercentage: Number(topic.currentCompletionPercentage),
@@ -359,7 +360,7 @@ function calculateOffering(offering: ProgressOffering, asOfDate: string) {
       .filter((topic) => overdueIds.has(topic.id))
       .map((topic) => ({
         id: topic.id,
-        title: topic.title,
+        title: topicDisplayTitle(topic.title),
         plannedFinishDate: topic.plannedFinishDate,
         completionPercentage: topic.completionPercentage,
       })),
@@ -449,7 +450,7 @@ function calculateExamReadinessView(
     const topics = lessonPlan.units.flatMap((unit) =>
       unit.topics.map((topic) => ({
         id: topic.id,
-        title: topic.title,
+        title: topicDisplayTitle(topic.title, unit.title),
         plannedMinutes: topic.plannedMinutes,
         status: topic.status,
         completionPercentage: Number(topic.currentCompletionPercentage),
@@ -468,12 +469,20 @@ function calculateExamReadinessView(
         targetFinishDate: formatIsoDate(exam.syllabusDeadline),
         topics: scopedTopics,
         thresholds: {
-          onTrack: Number(offering.onTrackThreshold ?? offering.batch.semester.defaultOnTrackThreshold),
-          tight: Number(offering.tightThreshold ?? offering.batch.semester.defaultTightThreshold),
+          onTrack: Number(
+            offering.onTrackThreshold ??
+              offering.batch.semester.defaultOnTrackThreshold,
+          ),
+          tight: Number(
+            offering.tightThreshold ??
+              offering.batch.semester.defaultTightThreshold,
+          ),
         },
-        sessions: offering.sessions.map(session => ({
+        sessions: offering.sessions.map((session) => ({
           sessionDate: formatIsoDate(session.sessionDate),
-          plannedMinutes: Math.round((session.endsAt.getTime() - session.startsAt.getTime()) / 60_000),
+          plannedMinutes: Math.round(
+            (session.endsAt.getTime() - session.startsAt.getTime()) / 60_000,
+          ),
           status: session.status,
         })),
       });
@@ -494,13 +503,18 @@ function calculateExamReadinessView(
           status: lessonPlan.status,
         },
         ...calculation,
-        buffer: calculation.topicsInScope ? {
-          availableHours: capacity.availableHours,
-          remainingHours: capacity.remainingHours,
-          bufferRatio: capacity.bufferRatio,
-          thresholds: capacity.thresholds,
-          status: lessonPlan.status !== 'ACTIVE' || !offering.sessions.length ? 'NEEDS_DATA' : capacity.status,
-        } : null,
+        buffer: calculation.topicsInScope
+          ? {
+              availableHours: capacity.availableHours,
+              remainingHours: capacity.remainingHours,
+              bufferRatio: capacity.bufferRatio,
+              thresholds: capacity.thresholds,
+              status:
+                lessonPlan.status !== 'ACTIVE' || !offering.sessions.length
+                  ? 'NEEDS_DATA'
+                  : capacity.status,
+            }
+          : null,
         topics: scopedTopics.map(({ examWindowIds: _ids, ...topic }) => topic),
       });
     }

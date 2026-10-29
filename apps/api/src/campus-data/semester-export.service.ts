@@ -8,6 +8,7 @@ import {
 } from '../academic-calendar/calendar-engine';
 import { VisitingFacultyService } from './visiting-faculty.service';
 import { ReportsService } from '../reports/reports.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 
 export type SemesterExportSheets = Record<string, Record<string, unknown>[]>;
 const date = (value: Date | null) => (value ? formatIsoDate(value) : '');
@@ -80,8 +81,22 @@ export class SemesterExportService {
             orderBy: { revision: 'desc' },
             include: {
               loggedBy: { select: person },
-              carryForwardTopic: { select: { title: true } },
-              topicUpdates: { include: { topic: { select: { title: true } } } },
+              carryForwardTopic: {
+                select: {
+                  title: true,
+                  unit: { select: { title: true } },
+                },
+              },
+              topicUpdates: {
+                include: {
+                  topic: {
+                    select: {
+                      title: true,
+                      unit: { select: { title: true } },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -106,7 +121,16 @@ export class SemesterExportService {
         where: { offering: { batch: { semesterId } } },
         orderBy: [{ offeringId: 'asc' }, { version: 'desc' }],
         include: {
-          entries: { include: { topic: { select: { title: true } } } },
+          entries: {
+            include: {
+              topic: {
+                select: {
+                  title: true,
+                  unit: { select: { title: true } },
+                },
+              },
+            },
+          },
         },
       }),
       this.reports.read(user, {
@@ -258,7 +282,12 @@ export class SemesterExportService {
               : Number(l.overallCompletionPercentage),
           covered: l.coveredSummary,
           left_over: l.leftOverSummary ?? '',
-          carry_forward_topic: l.carryForwardTopic?.title ?? '',
+          carry_forward_topic: l.carryForwardTopic
+            ? topicDisplayTitle(
+                l.carryForwardTopic.title,
+                l.carryForwardTopic.unit.title,
+              )
+            : '',
           classwork: l.classworkStatus,
           homework: l.homeworkStatus,
           notes: l.notes ?? '',
@@ -274,7 +303,7 @@ export class SemesterExportService {
             log_id: l.id,
             revision: l.revision,
             topic_id: t.topicId,
-            topic: t.topic.title,
+            topic: topicDisplayTitle(t.topic.title, t.topic.unit.title),
             completion_before: Number(t.completionBeforePercentage),
             completion_after: Number(t.completionAfterPercentage),
             minutes_used: t.minutesUsed ?? '',
@@ -313,7 +342,7 @@ export class SemesterExportService {
             unit: u.title,
             topic_id: t.id,
             sequence: t.sequence,
-            topic: t.title,
+            topic: topicDisplayTitle(t.title, u.title),
             description: t.description ?? '',
             planned_hours: t.plannedMinutes / 60,
             completion_percent: Number(t.currentCompletionPercentage),
@@ -330,7 +359,7 @@ export class SemesterExportService {
               plan_id: p.id,
               plan_version: p.version,
               topic_id: t.id,
-              topic: t.title,
+              topic: topicDisplayTitle(t.title, u.title),
               exam_id: e.examWindowId,
               exam: byExam.get(e.examWindowId) ?? '',
             })),
@@ -346,7 +375,7 @@ export class SemesterExportService {
           calculated_at: v.calculatedAt.toISOString(),
           reason: v.reason,
           topic_id: t.topicId,
-          topic: t.topic.title,
+          topic: topicDisplayTitle(t.topic.title, t.topic.unit.title),
           planned_start: date(t.plannedStartDate),
           planned_finish: date(t.plannedFinishDate),
           allocated_minutes: t.allocatedMinutes,

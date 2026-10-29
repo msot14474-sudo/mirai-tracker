@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
 import { LoadingSkeleton } from './LoadingSkeleton';
-import { TopicScheduleDetail, topicScheduleApi } from './topicSchedules';
+import {
+  TopicScheduleDetail,
+  TopicSchedulePreview,
+  topicScheduleApi,
+} from './topicSchedules';
 
 export function TopicScheduleWorkspace({
   campusId,
@@ -18,9 +22,7 @@ export function TopicScheduleWorkspace({
   const offerings = useQuery({
     queryKey: ['topic-schedules', 'offerings', campusId],
     queryFn: () => topicScheduleApi.offerings(campusId),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60_000,
   });
   const selectedOfferingId = offerings.data?.some((o) => o.id === offeringId)
     ? offeringId
@@ -29,9 +31,7 @@ export function TopicScheduleWorkspace({
     queryKey: ['topic-schedules', 'offering', selectedOfferingId],
     queryFn: () => topicScheduleApi.offering(selectedOfferingId),
     enabled: Boolean(selectedOfferingId),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60_000,
   });
   const selectionIsLoading = offerings.isLoading;
 
@@ -157,6 +157,9 @@ function ScheduleDetail({
     onSuccess: refresh,
   });
   const summary = detail.preview.summary;
+  const forecastShortfall = groupUnallocatedByUnit(
+    detail.forecast?.unscheduledTopics ?? [],
+  );
 
   if (!detail.plan) {
     return (
@@ -310,17 +313,19 @@ function ScheduleDetail({
             <div className="schedule-shortfall" role="note">
               <strong>More class time is needed</strong>
               <p>
-                The unfinished lesson plan is{' '}
+                Available classes are{' '}
                 {formatTeachingTime(detail.forecast.summary.shortfallMinutes)}{' '}
-                longer than the classes currently available before the target
-                date. Add an extra class or extend the timetable to place the
-                remaining work.
+                short of the lesson plan. Add an extra class or extend the
+                timetable before the target date.
               </p>
               <ul>
-                {detail.forecast.unscheduledTopics.map((topic) => (
-                  <li key={topic.id}>
-                    {topic.title} · {formatTeachingTime(topic.remainingMinutes)}{' '}
-                    unallocated
+                {forecastShortfall.map((unit) => (
+                  <li key={`${unit.unitSequence}:${unit.unitTitle}`}>
+                    <strong>{unit.unitTitle}</strong>
+                    <span>
+                      {formatTeachingTime(unit.remainingMinutes)} needs class
+                      time · {unit.topics} topic{unit.topics === 1 ? '' : 's'}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -393,10 +398,12 @@ function ScheduleDetail({
               </div>
               <span>{formatTeachingTime(topic.requiredMinutes)}</span>
               <span>
-                {topic.allocatedMinutes > 0 ? 'Partially placed' : 'Not placed'}
+                {topic.allocatedMinutes > 0
+                  ? 'Partly scheduled'
+                  : 'Needs class time'}
               </span>
               <span>
-                {formatTeachingTime(topic.remainingMinutes)} unallocated
+                {formatTeachingTime(topic.remainingMinutes)} still needed
               </span>
             </article>
           ))}
@@ -434,6 +441,35 @@ function ScheduleDetail({
         </section>
       </div>
     </div>
+  );
+}
+
+export function groupUnallocatedByUnit(
+  topics: TopicSchedulePreview['unscheduledTopics'],
+) {
+  const groups = new Map<
+    string,
+    {
+      unitSequence: number;
+      unitTitle: string;
+      remainingMinutes: number;
+      topics: number;
+    }
+  >();
+  for (const topic of topics) {
+    const key = `${topic.unitSequence}:${topic.unitTitle}`;
+    const group = groups.get(key) ?? {
+      unitSequence: topic.unitSequence,
+      unitTitle: topic.unitTitle,
+      remainingMinutes: 0,
+      topics: 0,
+    };
+    group.remainingMinutes += topic.remainingMinutes;
+    group.topics += 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort(
+    (left, right) => left.unitSequence - right.unitSequence,
   );
 }
 

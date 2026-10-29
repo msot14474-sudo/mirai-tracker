@@ -1,5 +1,8 @@
 import { academicTrackIdentity } from '@mirai/calculations';
-import { calculateExamReadiness, calculateSubjectProgress } from '@mirai/calculations';
+import {
+  calculateExamReadiness,
+  calculateSubjectProgress,
+} from '@mirai/calculations';
 import {
   LessonPlanStatus,
   Prisma,
@@ -11,6 +14,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { formatIsoDate } from '../academic-calendar/calendar-engine';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../database/prisma.service';
+import { topicDisplayTitle } from '../lesson-plan/topic-title';
 
 const studentBatchInclude = Prisma.validator<Prisma.BatchInclude>()({
   semester: {
@@ -186,7 +190,7 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
           id: topic.id,
           unit: { sequence: unit.sequence, title: unit.title },
           sequence: topic.sequence,
-          title: topic.title,
+          title: topicDisplayTitle(topic.title, unit.title),
           plannedMinutes: topic.plannedMinutes,
           status: topic.status,
           completionPercentage: Number(topic.currentCompletionPercentage),
@@ -200,20 +204,36 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
         })),
       ) ?? [];
     const calculation = calculateExamReadiness(topics);
-    const capacity = plan && calculation.topicsInScope ? calculateSubjectProgress({
-      asOfDate,
-      targetFinishDate: formatIsoDate(offering.targetFinishDate ?? batch.semester.endDate),
-      topics,
-      thresholds: {
-        onTrack: Number(offering.onTrackThreshold ?? batch.semester.defaultOnTrackThreshold ?? 1.15),
-        tight: Number(offering.tightThreshold ?? batch.semester.defaultTightThreshold ?? 1),
-      },
-      sessions: offering.sessions.map(session => ({
-        sessionDate: formatIsoDate(session.sessionDate),
-        plannedMinutes: Math.round((session.endsAt.getTime() - session.startsAt.getTime()) / 60_000),
-        status: session.status ?? 'SCHEDULED',
-      })),
-    }) : null;
+    const capacity =
+      plan && calculation.topicsInScope
+        ? calculateSubjectProgress({
+            asOfDate,
+            targetFinishDate: formatIsoDate(
+              offering.targetFinishDate ?? batch.semester.endDate,
+            ),
+            topics,
+            thresholds: {
+              onTrack: Number(
+                offering.onTrackThreshold ??
+                  batch.semester.defaultOnTrackThreshold ??
+                  1.15,
+              ),
+              tight: Number(
+                offering.tightThreshold ??
+                  batch.semester.defaultTightThreshold ??
+                  1,
+              ),
+            },
+            sessions: offering.sessions.map((session) => ({
+              sessionDate: formatIsoDate(session.sessionDate),
+              plannedMinutes: Math.round(
+                (session.endsAt.getTime() - session.startsAt.getTime()) /
+                  60_000,
+              ),
+              status: session.status ?? 'SCHEDULED',
+            })),
+          })
+        : null;
     const weeklyClasses = offering.timetableEntries
       .filter(
         (entry) =>
@@ -230,13 +250,20 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
 
     return {
       id: offering.id,
-      buffer: capacity ? {
-        availableHours: capacity.availableHours,
-        remainingHours: capacity.remainingHours,
-        bufferRatio: capacity.bufferRatio,
-        thresholds: capacity.thresholds,
-        status: !offering.timetableEntries.length && !(offering._count?.sessions ?? offering.sessions.length) && capacity.remainingHours > 0 ? 'NEEDS_DATA' : capacity.status,
-      } : null,
+      buffer: capacity
+        ? {
+            availableHours: capacity.availableHours,
+            remainingHours: capacity.remainingHours,
+            bufferRatio: capacity.bufferRatio,
+            thresholds: capacity.thresholds,
+            status:
+              !offering.timetableEntries.length &&
+              !(offering._count?.sessions ?? offering.sessions.length) &&
+              capacity.remainingHours > 0
+                ? 'NEEDS_DATA'
+                : capacity.status,
+          }
+        : null,
       subject: offering.subject,
       track: academicTrackIdentity(offering.academicTrack),
       teachers: [
@@ -257,13 +284,16 @@ function serializeStudentOverview(batch: StudentBatch, asOfDate: string) {
       weeklyClasses,
       weeklyHours:
         weeklyClasses.reduce((total, entry) => total + entry.minutes, 0) / 60,
-      upcomingClasses: offering.sessions.filter(s => !s.status || s.status === 'SCHEDULED').slice(0, 5).map((session) => ({
-        id: session.id,
-        date: formatIsoDate(session.sessionDate),
-        startsAt: session.startsAt.toISOString(),
-        endsAt: session.endsAt.toISOString(),
-        isExtraClass: session.isExtraSession,
-      })),
+      upcomingClasses: offering.sessions
+        .filter((s) => !s.status || s.status === 'SCHEDULED')
+        .slice(0, 5)
+        .map((session) => ({
+          id: session.id,
+          date: formatIsoDate(session.sessionDate),
+          startsAt: session.startsAt.toISOString(),
+          endsAt: session.endsAt.toISOString(),
+          isExtraClass: session.isExtraSession,
+        })),
       lessonPlan: plan
         ? { id: plan.id, version: plan.version, status: plan.status }
         : null,
