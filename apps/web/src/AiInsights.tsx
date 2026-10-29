@@ -617,6 +617,9 @@ export function cleanReply(text: string) {
   );
   const internalId = new RegExp(uuid, 'gi');
   const cleaned = text
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/[\u00a0\u202f]/g, ' ')
+    .replace(/\s*<br\s*\/?\s*>\s*/gi, '\n')
     .replace(/^\[Incomplete response\]\s*/, '')
     .replace(uuidList, '')
     .replace(internalId, '')

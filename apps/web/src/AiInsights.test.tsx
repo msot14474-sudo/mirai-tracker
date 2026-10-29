@@ -63,6 +63,16 @@ it('removes internal identifiers and formats run-on AI bullets', () => {
     '4 overdue topics\n- 6 scheduled classes without logs\n- 16 h available',
   );
 });
+
+it('cleans old AI replies containing hidden Unicode formatting', () => {
+  expect(
+    cleanReply(
+      '4 overdue topics (IDs\u202f6cdc0c2b‑c797‑4c5d‑b3ae‑256e0ec17444) <br>• 6 scheduled classes without logs <br>• 16\u202fh available |',
+    ),
+  ).toBe(
+    '4 overdue topics\n- 6 scheduled classes without logs\n- 16 h available',
+  );
+});
 function setup(ready = false, fail = false, empty = false, canLog = false) {
   const requests: unknown[] = [];
   const onOpen = vi.fn();
