@@ -2121,7 +2121,8 @@
 /* Keep mobile menus out of the page flow and isolate their touch scrolling. */
 .mobile-menu-backdrop { display: none; }
 @media (max-width: 900px) {
-  .dashboard-shell .app-sidebar { min-height: 64px; overflow-anchor: none; }
+  .dashboard-shell .app-sidebar { position: fixed; inset: 0 0 auto; height: 64px; min-height: 64px; overflow-anchor: none; }
+  .dashboard-shell .dashboard-main { padding-top: 64px; }
   .dashboard-shell .mobile-menu-backdrop {
     display: block;
     position: fixed;
