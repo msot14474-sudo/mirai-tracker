@@ -2027,3 +2027,43 @@
 .student-import-preview .table-scroll {
   max-height: 360px;
 }
+
+/* Let team tables scroll inside their card rather than widening the page. */
+.campus-team-directory,
+.campus-team-directory .table-scroll {
+  min-width: 0;
+  max-width: 100%;
+}
+.campus-team-heading > div { min-width: 0; }
+.campus-team-counts { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .campus-team-counts > span { padding: 10px 12px; }
+  .dashboard-shell .rp-filter-grid { gap: 16px; }
+  .dashboard-shell .rp-section-heading { gap: 12px; }
+}
+
+/* Instructions are neutral; reserve warning colours for actual risk. */
+.dashboard-shell .exam-formula {
+  background: #f4f7fc;
+  border: 1px solid #e0e7f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #61718a;
+  font-size: 13px;
+}
+.dashboard-shell .exam-formula strong { color: #354760; }
+@media (max-width: 700px) {
+  .dashboard-shell .topbar-title strong {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+  .student-overview .student-batch-banner dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .student-overview .student-batch-banner dl > div:last-child { grid-column: 1 / -1; }
+  .student-overview .student-batch-banner dl > div { padding: 8px 10px; }
+  .managed-accounts-layout > .access-create-panel,
+  .managed-accounts-layout > .managed-account-editor { order: -1; }
+}

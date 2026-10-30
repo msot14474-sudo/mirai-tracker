@@ -81,7 +81,6 @@ export function ProgressDashboard({
         </p>
       ) : !dashboard.data?.summary ? (
         <div className="empty-state compact-empty">
-          <span>11</span>
           <h3>No progress to calculate yet</h3>
           <p>
             Progress appears after a linked subject has an active lesson plan.

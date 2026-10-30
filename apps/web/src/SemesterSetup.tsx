@@ -243,7 +243,6 @@ export function SemesterSetup({
               <LoadingSkeleton variant="panel" label="Loading semesters" />
             ) : !semesterId ? (
               <div className="empty-state">
-                <span>01</span>
                 <h3>Select or create a semester</h3>
                 <p>Its calculated working-day summary will appear here.</p>
               </div>

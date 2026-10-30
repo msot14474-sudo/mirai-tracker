@@ -63,7 +63,6 @@ export function ExamReadinessView({ campusId }: { campusId?: string }) {
         </p>
       ) : exams.length === 0 ? (
         <div className="empty-state compact-empty">
-          <span>12</span>
           <h3>No upcoming exams</h3>
           <p>Future exam windows in your permitted scope will appear here.</p>
         </div>

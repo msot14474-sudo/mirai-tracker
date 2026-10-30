@@ -86,8 +86,7 @@ function SubjectDirectory({
         <div>
           <h3>{catalog.data?.length ?? 0} campus subjects</h3>
           <p>
-            Open a subject to see its progress, teacher, timetable, lesson plan
-            and exams. The semester and batch are shown on each link.
+            Select a subject below to explore its details.
           </p>
         </div>
         <button className="primary-button" onClick={() => setCreate(true)}>
@@ -636,23 +635,24 @@ function SubjectDetail({
                     {reportDate(e.startDate)} – {reportDate(e.endDate)}
                   </p>
                   <p>Syllabus deadline: {reportDate(e.syllabusDeadline)}</p>
-                  <ul>
-                    {units
-                      .flatMap((u) => u.topics)
-                      .filter((t) =>
-                        t.examScopes.some((scope) => scope.id === e.id),
-                      )
-                      .map((t) => (
-                        <li key={t.id}>
-                          {t.title} ·{' '}
-                          {reportNumber(
-                            Number(t.currentCompletionPercentage),
-                            '%',
-                          )}{' '}
-                          covered
-                        </li>
-                      ))}
-                  </ul>
+                  {units.map((unit) => {
+                    const topics = unit.topics.filter((topic) =>
+                      topic.examScopes.some((scope) => scope.id === e.id),
+                    );
+                    if (!topics.length) return null;
+                    return (
+                      <details className="subject-exam-unit" key={unit.id}>
+                        <summary>{unit.title} · {topics.length} topics</summary>
+                        <ul>
+                          {topics.map((topic) => (
+                            <li key={topic.id}>
+                              {topic.title} · {reportNumber(Number(topic.currentCompletionPercentage), '%')} covered
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    );
+                  })}
                   {!units.some((u) =>
                     u.topics.some((t) =>
                       t.examScopes.some((scope) => scope.id === e.id),

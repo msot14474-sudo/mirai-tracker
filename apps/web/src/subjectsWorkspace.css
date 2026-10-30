@@ -138,3 +138,7 @@
     flex-direction: column;
   }
 }
+
+.subject-exam-unit { border-top: 1px solid #e5ebf3; padding: 12px 0; }
+.subject-exam-unit summary { cursor: pointer; color: #334e76; font-size: 13px; font-weight: 600; }
+.subject-exam-unit ul { padding-left: 20px; }

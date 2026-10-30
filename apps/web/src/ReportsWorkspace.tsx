@@ -524,12 +524,12 @@ function metricsFor(tab: ReportTab, data: ReportsData) {
         value: data.faculty.length,
         note: data.facultyOnly
           ? 'Your own activity'
-          : 'Within your permitted scope',
+          : 'Faculty you can manage',
       },
       {
         label: 'Sessions logged',
         value: data.faculty.reduce((n, r) => n + r.sessionsLogged, 0),
-        note: 'Latest log author; revisions counted once',
+        note: 'Each class log is counted once',
       },
       {
         label: 'Plans uploaded',
@@ -771,8 +771,8 @@ export function ReportsWorkspace({
             </h2>
             <p>
               {facultyOnly
-                ? 'Your assigned subjects in your campus only. Downloads use the same access.'
-                : 'Only records within your account’s campus access are available.'}
+                ? 'Review and download reports for your assigned subjects.'
+                : 'Choose a campus, subject or date range.'}
             </p>
           </div>
           <button
@@ -869,10 +869,10 @@ export function ReportsWorkspace({
         </div>
         <p className="rp-filter-note">
           {mode === 'progress'
-            ? 'Mirai and University are tracks within each batch. Coverage uses saved lesson plans and logs; teaching hours left use future class dates.'
+            ? 'Progress uses saved lesson plans and class logs. Available hours come from upcoming classes.'
             : facultyOnly
-              ? 'Dates filter your recorded classes. Subject progress shows the current saved position; teaching capacity uses upcoming classes.'
-              : 'Dates filter class dates, faculty log/upload dates and exam windows. Course progress shows the current saved position; teaching capacity is calculated after today.'}
+              ? 'Dates filter class records. Coverage is current; available hours count upcoming classes.'
+              : 'Dates filter classes, faculty activity and exams. Coverage is current; available hours count upcoming classes.'}
         </p>
         {dateError ? (
           <p role="alert" className="form-error">

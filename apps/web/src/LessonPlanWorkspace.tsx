@@ -123,7 +123,6 @@ export function LessonPlanWorkspace({
           ) : offerings.isError &&
             !offerings.data ? null : !selectedOfferingId ? (
             <div className="empty-state">
-              <span>01</span>
               <h3>No subject offerings</h3>
               <p>
                 No semester batch is assigned for teaching yet. Ask the
@@ -251,7 +250,6 @@ function LessonPlanDetailView({ detail }: { detail: LessonPlanDetail }) {
         </>
       ) : (
         <div className="empty-state compact-empty">
-          <span>02</span>
           <h3>Upload the first lesson plan</h3>
           <p>
             The supplied template includes sample units, topics, hours and exam

@@ -41,7 +41,7 @@ export function SessionLoggingWorkspace({ campusId }: { campusId?: string }) {
     >
       <div className="workspace-heading logging-heading">
         <div>
-          <p className="step-label">Faculty daily flow</p>
+          <p className="step-label">Daily logging</p>
           <h2 id="session-log-title">Log today’s classes</h2>
           <p>
             Your timetable and current topic are already filled in. Confirm the
@@ -58,10 +58,6 @@ export function SessionLoggingWorkspace({ campusId }: { campusId?: string }) {
         </label>
       </div>
 
-      <div className="speed-banner">
-        <strong>Under-one-minute flow</strong>
-        <span>Open the class · check the prefill · tap confirm</span>
-      </div>
 
       {day.isLoading ? (
         <LoadingSkeleton variant="list" label="Loading your timetable" />

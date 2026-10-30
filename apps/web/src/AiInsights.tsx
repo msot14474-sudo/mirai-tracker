@@ -1,11 +1,12 @@
 import { WeeklySummaries } from './WeeklySummaries';
-import { BufferRatio, BufferMetrics } from './BufferRatio';
+import type { BufferMetrics } from './BufferRatio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { apiFetch, apiUrl } from './http';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import './AiInsights.css';
 
 type Subject = {
   id: string;
@@ -13,13 +14,15 @@ type Subject = {
   name: string;
   batch: string;
   campus: { name: string };
-  monitoring?: BufferMetrics & {
-    status: string;
-    remainingHours: number;
-    availableHours: number;
-    bufferRatio: number | null;
-    paceVsPlanHours: number;
-  } | null;
+  monitoring?:
+    | (BufferMetrics & {
+        status: string;
+        remainingHours: number;
+        availableHours: number;
+        bufferRatio: number | null;
+        paceVsPlanHours: number;
+      })
+    | null;
   completion: number | null;
   plan: { version: number; status: string } | null;
   teachers: string[];
@@ -89,7 +92,6 @@ type ManagementView =
 export function AiInsights({
   campusId,
   canLog,
-  onOpen,
 }: {
   campusId?: string;
   canLog: boolean;
@@ -98,6 +100,7 @@ export function AiInsights({
   const [question, setQuestion] = useState('');
   const [selectedConversationId, setConversationId] = useState('');
   const transcript = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
   const client = useQueryClient();
   const scope = {
     ...(campusId ? { campusId } : {}),
@@ -200,17 +203,14 @@ export function AiInsights({
     report.isPending,
     report.data,
   ]);
-  const subjectName = (id: string) => {
-    const s = data?.subjects.find((s) => s.id === id);
-    return s ? `${s.code} · ${s.batch}` : 'Subject';
-  };
   return (
     <section className="ai-workspace">
       <header className="ai-heading">
         <div>
           <h2>AI insights</h2>
+          <p>Clarity for your next academic decision.</p>
         </div>
-        <WeeklySummaries campusId={campusId} compact/>
+        <WeeklySummaries campusId={campusId} compact />
       </header>
       {query.isPending ? (
         <LoadingSkeleton variant="cards" label="Loading academic insights" />
@@ -224,6 +224,18 @@ export function AiInsights({
       ) : data ? (
         <>
           <div className="ai-conversation">
+            <div className="ai-conversation-heading">
+              <span className="ai-assistant-symbol">
+                <InsightIcon kind="spark" />
+              </span>
+              <div>
+                <strong>Mirai AI</strong>
+                <span>Your academic assistant</span>
+              </div>
+              <span className="ai-scope-note">
+                Based on your permitted records
+              </span>
+            </div>
             <div
               className="ai-transcript"
               ref={transcript}
@@ -252,23 +264,55 @@ export function AiInsights({
               !report.isPending &&
               !report.data ? (
                 <div className="ai-chat-welcome">
-                  <h3>What would you like to work on?</h3>
-                  <p>Ask about lectures, plans or what needs attention.</p>
+                  <h3>What would you like to explore?</h3>
+                  <p>
+                    Review progress, prepare for classes or turn your teaching
+                    records into a useful report.
+                  </p>
                   <div className="ai-suggestions">
                     {[
-                      'Which subjects need attention?',
-                      'What should we focus on next?',
-                      canLog
-                        ? 'Summarise my upcoming classes and preparation priorities.'
-                        : 'Summarise upcoming classes and preparation priorities.',
-                    ].map((prompt) => (
+                      {
+                        title: 'Review subject progress',
+                        description:
+                          'Spot delays and subjects that need attention.',
+                        icon: 'chart',
+                        prompt: 'Which subjects need attention?',
+                      },
+                      {
+                        title: 'Find the next step',
+                        description:
+                          'Get focused suggestions for what to do next.',
+                        icon: 'target',
+                        prompt: 'What should we focus on next?',
+                      },
+                      {
+                        title: 'Prepare for classes',
+                        description:
+                          'Look ahead at upcoming lectures and preparation.',
+                        icon: 'calendar',
+                        prompt: canLog
+                          ? 'Summarise my upcoming classes and preparation priorities.'
+                          : 'Summarise upcoming classes and preparation priorities.',
+                      },
+                    ].map(({ title, description, icon, prompt }) => (
                       <button
                         key={prompt}
                         type="button"
+                        aria-label={prompt}
                         disabled={report.isPending}
-                        onClick={() => setQuestion(prompt)}
+                        onClick={() => {
+                          setQuestion(prompt);
+                          composer.current?.focus();
+                        }}
                       >
-                        {prompt}
+                        <span className="ai-prompt-icon">
+                          <InsightIcon kind={icon} />
+                        </span>
+                        <strong>{title}</strong>
+                        <span>{description}</span>
+                        <span className="ai-prompt-arrow" aria-hidden="true">
+                          ↗
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -367,7 +411,7 @@ export function AiInsights({
               {!data.ai.ready ? (
                 <p className="ai-connection-note" role="status">
                   AI is not connected. Ask your administrator to check the
-                  provider settings. You can still download a data report below.
+                  provider settings. You can still generate a data report below.
                 </p>
               ) : null}
               {chatBusy ? (
@@ -380,6 +424,7 @@ export function AiInsights({
               <label htmlFor="ai-question">Message Mirai AI</label>
               <textarea
                 id="ai-question"
+                ref={composer}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => {
@@ -426,176 +471,64 @@ export function AiInsights({
                     disabled={report.isPending || (data.ai.ready && chatBusy)}
                     onClick={() => report.mutate({ useAi: data.ai.ready })}
                   >
+                    <InsightIcon kind="report" />
                     {data.ai.ready
                       ? 'Generate AI report'
                       : 'Generate data report'}
                   </button>
                   <button type="submit" disabled={!canSend || !question.trim()}>
-                    Send
+                    Send <InsightIcon kind="send" />
                   </button>
                 </div>
               </div>
             </form>
           </div>
-          <details className="ai-academic-context">
-            <summary>Academic context and priorities</summary>
-            <div className="ai-metrics">
-              {[
-                ['Subjects', data.summary.subjects],
-                ['Need attention', data.summary.attention],
-                ['Overdue topics', data.summary.overdueTopics],
-                ['Missing logs', data.summary.missingLogs],
-                [
-                  'Need-help responses',
-                  `${data.summary.needsHelp} / ${data.summary.reviews}`,
-                ],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-            {!data.subjects.length ? (
-              <p className="empty-copy">
-                No subjects are available in your assigned scope.
-              </p>
-            ) : (
-              <div className="ai-subjects">
-                <h3>Subject priorities</h3>
-                {data.subjects.map((subject) => (
-                  <article key={subject.id} className="ai-subject">
-                    <header>
-                      <div>
-                        <small>
-                          {subject.code} · {subject.batch} ·{' '}
-                          {subject.campus.name}
-                        </small>
-                        <h4>{subject.name}</h4>
-                        <p>
-                          {subject.teachers.join(', ') ||
-                            'Faculty not assigned'}
-                        </p>
-                      </div>
-                      <strong>
-                        {subject.completion === null
-                          ? 'No plan'
-                          : `${subject.completion}% covered`}
-                      </strong>
-                    </header>
-                    {subject.monitoring && (
-                      <p>
-                        {subject.monitoring.status.replaceAll('_', ' ')} ·{' '}
-                        {subject.monitoring.remainingHours}h remaining ·{' '}
-                        {subject.monitoring.availableHours}h available · Pace{' '}
-                        {subject.monitoring.paceVsPlanHours}h
-                      </p>
-                    )}
-                    <BufferRatio metrics={subject.monitoring} />
-                    {subject.issues.length ? (
-                      <ul>
-                        {subject.issues.map((issue) => (
-                          <li key={issue}>{issue}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No issues detected in recorded plans and logs.</p>
-                    )}
-                    <p>
-                      <strong>Next in plan:</strong>{' '}
-                      {subject.nextTopics.join(' → ') ||
-                        'No remaining topics recorded'}
-                    </p>
-                    {subject.exams.map((exam) => (
-                      <p key={exam.name}>
-                        <strong>{exam.name}</strong> · {exam.date} ·{' '}
-                        {exam.scopeTopics
-                          ? `${exam.incompleteTopics}/${exam.scopeTopics} scope topics incomplete`
-                          : 'Exam scope missing'}
-                      </p>
-                    ))}
-                    <div className="ai-actions">
-                      <button
-                        type="button"
-                        onClick={() => onOpen('lesson-plans')}
-                      >
-                        Review lesson plans
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onOpen('planned-dates')}
-                      >
-                        Manage planned dates
-                      </button>
-                      {canLog && subject.missingLogs ? (
-                        <button
-                          type="button"
-                          onClick={() => onOpen('daily-logging')}
-                        >
-                          Update lecture logs
-                        </button>
-                      ) : null}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-            <div className="ai-detail-grid">
-              <section>
-                <h3>Student understanding gaps</h3>
-                <p>
-                  {data.summary.needsHelp} need-help responses ·{' '}
-                  {data.summary.reviews} reviews total
-                </p>
-                {data.recentGaps.length ? (
-                  data.recentGaps.map((gap, index) => (
-                    <article
-                      className="ai-detail"
-                      key={`${gap.session.id}-${index}`}
-                    >
-                      <strong>{subjectName(gap.session.offeringId)}</strong>
-                      <small>
-                        {new Date(gap.session.startsAt).toLocaleString()}
-                      </small>
-                      <p>{gap.unclearTopics}</p>
-                    </article>
-                  ))
-                ) : (
-                  <p>
-                    No understanding gaps have been submitted in this scope.
-                  </p>
-                )}
-              </section>
-              <section>
-                <h3>Upcoming lectures</h3>
-                {data.upcomingLectures.length ? (
-                  data.upcomingLectures.map((lecture) => (
-                    <article className="ai-detail" key={lecture.id}>
-                      <strong>{subjectName(lecture.offeringId)}</strong>
-                      <p>{new Date(lecture.startsAt).toLocaleString()}</p>
-                    </article>
-                  ))
-                ) : (
-                  <p>No upcoming lectures are scheduled in this scope.</p>
-                )}
-              </section>
-            </div>
-            <details className="ai-coverage">
-              <summary>Report context and coverage</summary>
-              <p>{data.coverage.note}</p>
-              <p>
-                {data.coverage.recentLecturesIncluded} of{' '}
-                {data.coverage.pastLectures} past lectures detailed ·{' '}
-                {data.coverage.upcomingIncluded} of{' '}
-                {data.coverage.upcomingLectures} upcoming lectures ·{' '}
-                {data.coverage.feedbackGapsIncluded} of{' '}
-                {data.coverage.feedbackGaps} understanding gaps
-              </p>
-            </details>
-          </details>
         </>
       ) : null}
     </section>
+  );
+}
+function InsightIcon({ kind }: { kind: string }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {kind === 'chart' ? (
+        <>
+          <path d="M4 4v16h16M8 15v-4m5 4V7m5 8v-6" />
+        </>
+      ) : kind === 'calendar' ? (
+        <>
+          <rect x="3" y="5" width="18" height="16" rx="3" />
+          <path d="M7 3v4m10-4v4M3 11h18m-13 4h3m3 0h2" />
+        </>
+      ) : kind === 'target' ? (
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="m12 12 8-8" />
+        </>
+      ) : kind === 'report' ? (
+        <>
+          <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8m-8 4h5" />
+        </>
+      ) : kind === 'send' ? (
+        <path d="m5 12 7-7 7 7M12 5v14" />
+      ) : (
+        <>
+          <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z" />
+          <path d="M20 2v4m-2-2h4" />
+        </>
+      )}
+    </svg>
   );
 }
 async function getSnapshot(
@@ -609,8 +542,7 @@ async function getSnapshot(
   return (await apiFetch(`${apiUrl}/ai-insights?${query}`)).json();
 }
 export function cleanReply(text: string) {
-  const uuid =
-    '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+  const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
   const uuidList = new RegExp(
     `\\s*\\((?:IDs?|record IDs?)\\s*:?\\s*${uuid}(?:\\s*,\\s*${uuid})*\\)`,
     'gi',

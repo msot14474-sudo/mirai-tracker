@@ -293,7 +293,7 @@ export function FacultyAccessWorkspace({
               </p>
             </div>
             <div className="access-directory-actions">
-              <span>{accounts.data?.accounts?.length ?? 0} accounts</span>
+              <span>{accounts.isLoading ? 'Loading accounts…' : accounts.isError ? 'Accounts unavailable' : `${accounts.data?.accounts?.length ?? 0} accounts`}</span>
               <button
                 type="button"
                 onClick={() => setShowStudents(!showStudents)}
@@ -870,7 +870,6 @@ export function FacultyAccessWorkspace({
                 </form>
               ) : (
                 <div className="managed-account-placeholder">
-                  <span>01</span>
                   <h3>Select an account</h3>
                 </div>
               )}

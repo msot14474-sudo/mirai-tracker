@@ -51,8 +51,8 @@ export function TopicScheduleWorkspace({
           <h2 id="topic-schedule-title">Planned topic dates</h2>
         </div>
         <div className="engine-rule">
-          <strong>Calculation rule</strong>
-          <span>Ordered topic minutes ÷ usable scheduled minutes</span>
+          <strong>How dates are planned</strong>
+          <span>Topics follow your lesson plan and available class times.</span>
         </div>
       </div>
 
@@ -111,7 +111,6 @@ export function TopicScheduleWorkspace({
         <LoadingSkeleton variant="table" label="Loading planned dates" />
       ) : workspace.isError && !workspace.data ? null : !selectedOfferingId ? (
         <div className="empty-state compact-empty">
-          <span>01</span>
           <h3>No subject offerings</h3>
           <p>No offering is available for planned-date calculation.</p>
         </div>
@@ -170,7 +169,6 @@ function ScheduleDetail({
   if (!detail.plan) {
     return (
       <div className="empty-state compact-empty">
-        <span>02</span>
         <h3>Lesson plan required</h3>
         {canManageSessions && (
           <CalendarChangeReview

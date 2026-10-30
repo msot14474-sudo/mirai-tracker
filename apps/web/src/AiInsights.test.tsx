@@ -125,37 +125,43 @@ function setup(ready = false, fail = false, empty = false, canLog = false) {
   );
   return { requests, onOpen };
 }
-it('shows grounded priorities without header action buttons', async () => {
-  const { requests, onOpen } = setup();
-  await screen.findByText('Data Structures');
+it('shows the focused assistant without academic context panels', async () => {
+  const { requests } = setup();
+  await screen.findByText('What would you like to explore?');
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
-  fireEvent.click(screen.getByText('Academic context and priorities'));
-  fireEvent.click(screen.getByRole('button', { name: 'Review lesson plans' }));
-  expect(onOpen).toHaveBeenCalledWith('lesson-plans');
   expect(
-    screen.queryByRole('button', { name: 'Generate report' }),
+    screen.queryByText('Academic context and priorities'),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('button', { name: 'Refresh' }),
+    screen.queryByText('Student understanding gaps'),
   ).not.toBeInTheDocument();
   expect(requests).toEqual([]);
 });
-it.each([false, true])('offers upcoming-class preparation within the current scope (canLog=%s)', async (canLog) => {
-  const { requests } = setup(true, false, false, canLog);
-  const question = canLog
-    ? 'Summarise my upcoming classes and preparation priorities.'
-    : 'Summarise upcoming classes and preparation priorities.';
-  fireEvent.click(await screen.findByRole('button', { name: question }));
-  expect(screen.queryByRole('button', { name: 'Summarise student understanding gaps.' })).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Message Mirai AI')).toHaveValue(question);
-  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-  await waitFor(() => expect(requests).toEqual([
-    { campusId: 'campus-a', useAi: true, question },
-  ]));
-});
+it.each([false, true])(
+  'offers upcoming-class preparation within the current scope (canLog=%s)',
+  async (canLog) => {
+    const { requests } = setup(true, false, false, canLog);
+    const question = canLog
+      ? 'Summarise my upcoming classes and preparation priorities.'
+      : 'Summarise upcoming classes and preparation priorities.';
+    fireEvent.click(await screen.findByRole('button', { name: question }));
+    expect(
+      screen.queryByRole('button', {
+        name: 'Summarise student understanding gaps.',
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Message Mirai AI')).toHaveValue(question);
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() =>
+      expect(requests).toEqual([
+        { campusId: 'campus-a', useAi: true, question },
+      ]),
+    );
+  },
+);
 it('submits AI questions with selected scope but never client context', async () => {
   const { requests } = setup(true);
-  await screen.findByText('Data Structures');
+  await screen.findByText('What would you like to explore?');
   fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
     target: { value: 'What next?' },
   });
@@ -168,13 +174,13 @@ it('submits AI questions with selected scope but never client context', async ()
 });
 it('keeps dashboard usable when report generation fails', async () => {
   setup(true, true);
-  await screen.findByText('Data Structures');
+  await screen.findByText('What would you like to explore?');
   fireEvent.click(screen.getByRole('button', { name: 'Generate AI report' }));
   await screen.findByRole('alert');
   expect(
     screen.getByRole('button', { name: 'Generate AI report' }),
   ).toBeEnabled();
-  expect(screen.getByText('Data Structures')).toBeInTheDocument();
+  expect(screen.getByLabelText('Message Mirai AI')).toBeEnabled();
 });
 it('escapes model and student text in downloadable reports', async () => {
   const html = await reportHtml({
@@ -290,7 +296,7 @@ it('allows setup questions when the campus has no subjects yet', async () => {
 
 it('does not offer a report download after a response', async () => {
   const { requests } = setup(true);
-  await screen.findByText('Data Structures');
+  await screen.findByText('What would you like to explore?');
   fireEvent.change(screen.getByLabelText('Message Mirai AI'), {
     target: { value: 'What next?' },
   });

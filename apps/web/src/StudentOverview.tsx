@@ -36,8 +36,7 @@ export function StudentOverview() {
           <p className="step-label">Student view</p>
           <h2 id="student-overview-title">My subjects</h2>
           <p>
-            Your teachers, class dates, syllabus and exams, together in one
-            place. Subjects are linked to your enrolled batch and campus.
+            Your subjects, teachers, class dates and exams.
           </p>
         </div>
       </div>
@@ -57,7 +56,6 @@ export function StudentOverview() {
         </div>
       ) : !overview.data?.batch ? (
         <div className="empty-state compact-empty">
-          <span>13</span>
           <h3>Batch details unavailable</h3>
           <p>Your coordinator can verify your active student enrolment.</p>
         </div>

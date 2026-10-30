@@ -312,7 +312,6 @@ export function TimetableSetup({
             semesters.isError ||
             offerings.isError ? null : !offeringId ? (
             <div className="empty-state">
-              <span>01</span>
               <h3>{semesterId ? 'No subjects' : 'Select a semester'}</h3>
               <p>
                 {semesterId
