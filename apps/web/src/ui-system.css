@@ -2113,6 +2113,6 @@
 
 @media (max-width: 640px) {
   /* Account actions remain in the mobile profile menu. */
-  .dashboard-shell .topbar-sign-out { display: none; }
+  .dashboard-shell .topbar .topbar-actions > .topbar-sign-out { display: none !important; }
   .dashboard-shell .topbar-title { flex: 1; min-width: 0; }
 }

@@ -52,17 +52,20 @@
     gap: 8px;
   }
   .semester-workspace .calendar-row {
-    grid-template-columns: 64px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     padding: 12px 8px;
   }
   .semester-workspace .calendar-row > b {
     font-size: 11px;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
   }
   .semester-workspace .calendar-row > span {
     font-size: 12px;
-    grid-column: auto;
-    grid-row: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .semester-workspace .setup-forms {
     grid-template-columns: minmax(0, 1fr);
