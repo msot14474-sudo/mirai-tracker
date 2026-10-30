@@ -76,6 +76,9 @@ it('opens weekly summaries in AI without a report-download button and labels del
     screen.getByText(/Email delivery needs attention/),
   ).toBeInTheDocument();
   expect(screen.queryByText('Download report')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByLabelText('Close weekly summaries'));
+  expect(document.body.style.overflow).toBe('hidden');
+  fireEvent.keyDown(document, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(document.body.style.overflow).toBe('');
+  expect(screen.getByRole('button', { name: 'Weekly summaries' })).toHaveFocus();
 });

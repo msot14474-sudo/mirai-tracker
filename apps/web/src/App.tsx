@@ -900,6 +900,30 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const sidebarNavigationRef = useRef<HTMLElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!navigationOpen && !profileMenuOpen) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!sidebarRef.current?.contains(event.target as Node)) {
+        setNavigationOpen(false);
+        setProfileMenuOpen(false);
+      }
+    };
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      sidebarRef.current?.querySelector<HTMLButtonElement>(
+        profileMenuOpen ? '.sidebar-account' : '.sidebar-menu-toggle',
+      )?.focus();
+      setNavigationOpen(false);
+      setProfileMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    document.addEventListener('keydown', dismissEscape);
+    return () => {
+      document.removeEventListener('pointerdown', dismissOutside);
+      document.removeEventListener('keydown', dismissEscape);
+    };
+  }, [navigationOpen, profileMenuOpen]);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -1362,7 +1386,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
     <main
       className={`dashboard-shell ${activeView === 'ai-insights' ? 'dashboard-ai-focus' : ''} ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
     >
-      <aside className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''} ${showSidebarScrollCue ? 'sidebar-scroll-cued' : ''}`} onKeyDown={(event) => { if (event.key === 'Escape') { setNavigationOpen(false); setProfileMenuOpen(false); } }}>
+      <aside ref={sidebarRef} className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''} ${showSidebarScrollCue ? 'sidebar-scroll-cued' : ''}`}>
         <button
           type="button"
           className="sidebar-brand"

@@ -139,6 +139,121 @@
   }
 }
 
-.subject-exam-unit { border-top: 1px solid #e5ebf3; padding: 12px 0; }
-.subject-exam-unit summary { cursor: pointer; color: #334e76; font-size: 13px; font-weight: 600; }
-.subject-exam-unit ul { padding-left: 20px; }
+.subject-exam-unit {
+  border-top: 1px solid #e5ebf3;
+  padding: 12px 0;
+}
+.subject-exam-unit summary {
+  cursor: pointer;
+  color: #334e76;
+  font-size: 13px;
+  font-weight: 600;
+}
+.subject-exam-unit ul {
+  padding-left: 20px;
+}
+
+.subject-directory :is(h3, strong, small, .subject-code),
+.subject-detail :is(h1, h3, h4, p, dd, strong) {
+  overflow-wrap: anywhere;
+}
+.subject-offering-link > span {
+  min-width: 0;
+}
+.subject-unit > summary {
+  cursor: pointer;
+  padding: 18px 0;
+  color: #243b5a;
+  font-size: 14px;
+}
+.subject-unit > summary span {
+  display: block;
+  margin: 6px 0 0 18px;
+  font-size: 12px;
+  color: #63748d;
+}
+.subject-unit {
+  border-top: 1px solid #e5ebf3;
+  padding-bottom: 0;
+}
+.subject-unit[open] {
+  padding-bottom: 20px;
+}
+.subject-unit > summary:focus-visible,
+.subject-exam-unit > summary:focus-visible {
+  outline: 2px solid #2858c7;
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .subject-detail .rp-tabbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .subject-detail .rp-tabbar button {
+    white-space: normal;
+    padding: 10px 8px;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .subject-detail .rp-header h1 {
+    font-size: 26px;
+  }
+  .subject-detail-grid article {
+    padding: 18px;
+  }
+  .subject-directory-card {
+    padding: 18px;
+  }
+  .subject-detail .subject-record-scroll {
+    max-height: none;
+  }
+  .subject-detail .subject-mobile-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .subject-mobile-table > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .subject-mobile-table > tbody {
+    display: grid;
+    gap: 12px;
+    padding: 10px;
+  }
+  .subject-mobile-table > tbody > tr {
+    display: block;
+    border: 1px solid #e1e8f2;
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .subject-detail .subject-mobile-table td {
+    display: grid;
+    grid-template-columns: minmax(75px, 0.7fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 9px 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .subject-mobile-table td::before {
+    content: attr(data-label);
+    color: #63748d;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .subject-detail .subject-mobile-table td + td {
+    border-top: 1px solid #eff2f7;
+  }
+  .subject-detail .subject-mobile-table td:first-child {
+    font-weight: 600;
+  }
+  .subject-back {
+    min-height: 44px;
+  }
+}

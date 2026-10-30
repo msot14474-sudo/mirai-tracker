@@ -1,3 +1,4 @@
+import './MobileWorkflows.css';
 import { useMutation } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { OfferingTimetable, timetableApi } from './timetable';

@@ -1,0 +1,74 @@
+.semester-month-controls {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 12px;
+  margin: 18px 0 10px;
+}
+.semester-month-controls label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.semester-month-controls button {
+  min-height: 44px;
+  padding: 8px;
+}
+.semester-month-count {
+  font-size: 13px;
+  color: #63748d;
+}
+.semester-workspace
+  :is(h2, h3, h4, strong, .subject-code, .calendar-row > span) {
+  overflow-wrap: anywhere;
+}
+.semester-workspace
+  :is(
+    .calendar-preview,
+    .calendar-detail,
+    .semester-month-view,
+    .setup-forms,
+    .setup-card
+  ) {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .semester-workspace .calendar-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .semester-workspace .calendar-summary > div {
+    padding: 12px 8px;
+  }
+  .semester-workspace .calendar-summary span {
+    font-size: 11px;
+  }
+  .semester-workspace .calendar-summary strong {
+    font-size: 24px;
+  }
+  .semester-workspace .subheading-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .semester-workspace .calendar-row {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 8px;
+  }
+  .semester-workspace .calendar-row > b {
+    font-size: 11px;
+  }
+  .semester-workspace .calendar-row > span {
+    font-size: 12px;
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .semester-workspace .setup-forms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .semester-workspace .exam-list > div {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

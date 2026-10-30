@@ -1,0 +1,97 @@
+.student-overview :is(h3, h4, strong, small, dd, .student-topic-row > div) {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.student-overview .student-subject-card > header > div {
+  min-width: 0;
+}
+.student-disclosure > summary {
+  cursor: pointer;
+  color: #2b466e;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 0;
+  line-height: 1.6;
+}
+.student-disclosure > summary small {
+  display: block;
+  margin-left: 16px;
+  color: #63748d;
+  font-weight: 400;
+}
+.student-disclosure > summary:focus-visible {
+  outline: 2px solid #2858c7;
+  outline-offset: 3px;
+}
+.student-syllabus-unit {
+  border-top: 1px solid #e5ebf3;
+  margin-top: 10px;
+}
+.student-overview .student-exam-subject {
+  padding: 10px 0;
+}
+.student-overview .student-exam-subject > div {
+  margin-top: 10px;
+}
+@media (max-width: 640px) {
+  .student-overview .student-subject-card {
+    padding: 18px;
+  }
+  .student-overview .student-subject-card > header {
+    gap: 10px;
+    align-items: start;
+  }
+  .student-overview .student-subject-card > header > strong {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .student-overview .student-subject-card h4 {
+    font-size: 18px;
+    line-height: 1.35;
+  }
+  .student-overview .student-section-heading {
+    align-items: start;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .student-overview .student-teacher {
+    flex-direction: column;
+    align-items: start;
+    gap: 4px;
+  }
+  .student-overview .student-class-dates li,
+  .student-overview .student-weekly-list li {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+  .student-overview .student-exam-dates {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .student-overview .student-exam-card > header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .student-overview .student-plan-details > summary,
+  .student-disclosure > summary {
+    min-height: 44px;
+  }
+}
+
+.student-overview .student-exam-unit-list {
+  display: grid;
+  gap: 14px;
+}
+.student-exam-unit-list h6 {
+  margin: 0;
+  color: #3c5275;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.student-exam-unit-list ul {
+  margin: 6px 0 0;
+  padding-left: 17px;
+  color: #5e6c83;
+  font-size: 12px;
+  line-height: 1.8;
+}

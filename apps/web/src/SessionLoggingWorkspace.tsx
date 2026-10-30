@@ -1,3 +1,4 @@
+import './MobileWorkflows.css';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useRef, useState } from 'react';
 import { formatTeachingTime } from './lessonPlans';
@@ -57,7 +58,6 @@ export function SessionLoggingWorkspace({ campusId }: { campusId?: string }) {
           />
         </label>
       </div>
-
 
       {day.isLoading ? (
         <LoadingSkeleton variant="list" label="Loading your timetable" />
@@ -123,7 +123,7 @@ function SessionLogCard({
           'timetable',
           'topic-schedules',
           'progress-dashboard',
-        'reports',
+          'reports',
           'exam-readiness',
           'student-overview',
           'ai-insights',
@@ -241,6 +241,11 @@ function SessionLogCard({
               <button
                 type="button"
                 className="text-button"
+                disabled={session.topics.every((topic) =>
+                  form.topicUpdates.some(
+                    (update) => update.topicId === topic.id,
+                  ),
+                )}
                 onClick={() => {
                   const next = session.topics.find(
                     (topic) =>

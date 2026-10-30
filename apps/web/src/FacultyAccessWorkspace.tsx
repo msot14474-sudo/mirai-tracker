@@ -1,3 +1,4 @@
+import './MobileWorkflows.css';
 import { StudentAccessImport } from './StudentAccessImport';
 import { StudentEnrollmentFields } from './StudentEnrollmentFields';
 import { CampusTeamDirectory } from './CampusTeamDirectory';
@@ -37,6 +38,9 @@ export function FacultyAccessWorkspace({
 }) {
   const queryClient = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
+  const accountEditor = useRef<HTMLFormElement>(null);
+  const pendingEditorFocus = useRef(false);
+  const [editorFocusRequest, requestEditorFocus] = useState(0);
   const campuses = useQuery({
     queryKey: ['academic', 'campuses'],
     queryFn: academicApi.campuses,
@@ -51,6 +55,21 @@ export function FacultyAccessWorkspace({
   const [accountType, setAccountType] = useState<AccountType>('FACULTY');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [revokeAccountId, setRevokeAccountId] = useState('');
+
+  useEffect(() => {
+    if (!pendingEditorFocus.current) return;
+    const editor = showCreate ? form.current : accountEditor.current;
+    if (!editor) return;
+    pendingEditorFocus.current = false;
+    editor
+      .querySelector<HTMLInputElement>(
+        'input:not([type="hidden"]):not(:disabled), select:not(:disabled)',
+      )
+      ?.focus({ preventScroll: true });
+    if (window.matchMedia?.('(max-width: 1050px)').matches) {
+      editor.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+    }
+  }, [showCreate, selectedAccountId, editorFocusRequest]);
 
   useEffect(() => {
     if (!campusId && campuses.data?.[0]) setCampusId(campuses.data[0].id);
@@ -293,7 +312,13 @@ export function FacultyAccessWorkspace({
               </p>
             </div>
             <div className="access-directory-actions">
-              <span>{accounts.isLoading ? 'Loading accounts…' : accounts.isError ? 'Accounts unavailable' : `${accounts.data?.accounts?.length ?? 0} accounts`}</span>
+              <span>
+                {accounts.isLoading
+                  ? 'Loading accounts…'
+                  : accounts.isError
+                    ? 'Accounts unavailable'
+                    : `${accounts.data?.accounts?.length ?? 0} accounts`}
+              </span>
               <button
                 type="button"
                 onClick={() => setShowStudents(!showStudents)}
@@ -303,6 +328,8 @@ export function FacultyAccessWorkspace({
               <button
                 type="button"
                 onClick={() => {
+                  pendingEditorFocus.current = true;
+                  requestEditorFocus((request) => request + 1);
                   setShowCreate(true);
                   setSelectedAccountId('');
                 }}
@@ -362,6 +389,8 @@ export function FacultyAccessWorkspace({
                             : undefined
                         }
                         onClick={() => {
+                          pendingEditorFocus.current = true;
+                          requestEditorFocus((request) => request + 1);
                           setShowCreate(false);
                           setSelectedAccountId(account.id);
                           updateAccount.reset();
@@ -709,6 +738,7 @@ export function FacultyAccessWorkspace({
                     selectedAccount.status +
                     accountRoleLabel(selectedAccount)
                   }
+                  ref={accountEditor}
                   className="managed-account-editor"
                   onSubmit={submitAccountUpdate}
                 >

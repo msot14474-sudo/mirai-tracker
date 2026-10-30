@@ -17,6 +17,7 @@ import {
   statusLabel,
 } from './reports';
 import './reports.css';
+import './ResponsiveRecords.css';
 
 export const reportTabs: {
   id: ReportTab;
@@ -133,27 +134,32 @@ function ReportTable({
   return (
     <>
       <div
-        className="rp-table-scroll"
+        className="rp-table-scroll responsive-records"
         tabIndex={0}
         role="region"
         aria-label={`${caption} table`}
       >
-        <table>
+        <table role="table">
           <caption>{caption}</caption>
-          <thead>
-            <tr>
+          <thead role="rowgroup">
+            <tr role="row">
               {headers.map((h) => (
-                <th key={h} scope="col">
+                <th key={h} scope="col" role="columnheader">
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             {rows.slice(current * size, (current + 1) * size).map((r) => (
-              <tr key={r.id}>
+              <tr key={r.id} role="row">
                 {r.cells.map((cell, i) => (
-                  <td key={headers[i]}>{cell}</td>
+                  <td key={headers[i]} role="cell" data-label={headers[i]}>
+                    <span className="record-field-label" aria-hidden="true">
+                      {headers[i]}
+                    </span>
+                    <div className="record-field-value">{cell}</div>
+                  </td>
                 ))}
               </tr>
             ))}

@@ -2067,3 +2067,46 @@
   .managed-accounts-layout > .access-create-panel,
   .managed-accounts-layout > .managed-account-editor { order: -1; }
 }
+
+/* Mobile popovers must escape the compact header, but stay inside the screen. */
+@media (max-width: 900px) {
+  .dashboard-shell .app-sidebar {
+    overflow: visible;
+    z-index: 60;
+  }
+  .dashboard-shell .sidebar-navigation-frame .sidebar-navigation {
+    width: auto;
+    max-height: min(65dvh, calc(100dvh - 90px));
+    overscroll-behavior: contain;
+  }
+  .dashboard-shell .sidebar-account-menu {
+    width: min(18rem, calc(100vw - 32px));
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+  }
+  .dashboard-shell .sidebar-account-menu button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .dashboard-shell .sidebar-account,
+  .dashboard-shell .sidebar-menu-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .dashboard-shell .sidebar-account { justify-content: center; }
+  .dashboard-shell .sidebar-navigation button { overflow-wrap: anywhere; }
+}
+@media (max-width: 420px) {
+  .dashboard-shell .app-sidebar.navigation-open .sidebar-navigation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .weekly-summary-dialog { max-height: calc(100dvh - 24px); min-width: 0; }
+  .weekly-summary-dialog header { padding: 16px; gap: 12px; flex-shrink: 0; }
+  .weekly-summary-dialog header h2 { font-size: 19px; }
+  .weekly-summary-dialog header button { min-height: 44px; flex-shrink: 0; }
+  .weekly-summary-content { min-height: 0; overscroll-behavior: contain; }
+  .weekly-summary-card .ai-markdown { padding: 0 14px 16px; overflow-wrap: anywhere; }
+}

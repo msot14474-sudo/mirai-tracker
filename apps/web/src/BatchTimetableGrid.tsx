@@ -1,3 +1,4 @@
+import './MobileWorkflows.css';
 import { OfferingListItem, TimetableEntry } from './timetable';
 
 const days = [
@@ -59,7 +60,19 @@ export function BatchTimetableGrid({
               <tr key={time}>
                 <th scope="row">{time}</th>
                 {shownDays.map((day, i) => (
-                  <td key={day}>
+                  <td
+                    key={day}
+                    data-day={day}
+                    className={
+                      entries.some(
+                        ({ entry }) =>
+                          entry.weekday === i + 1 &&
+                          `${entry.startTime}–${entry.endTime}` === time,
+                      )
+                        ? 'has-class'
+                        : 'empty-day'
+                    }
+                  >
                     {entries
                       .filter(
                         ({ entry }) =>

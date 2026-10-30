@@ -81,9 +81,11 @@ function json(value: unknown) {
   });
 }
 
-function renderWorkspace(client = new QueryClient({
+function renderWorkspace(
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })) {
+  }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <SessionLoggingWorkspace />
@@ -107,11 +109,24 @@ function installFetchMock(
 }
 
 describe('SessionLoggingWorkspace', () => {
+  it('enables adding a topic after removing it and prevents a no-op when all are selected', async () => {
+    installFetchMock();
+    renderWorkspace();
+    const remove = await screen.findByRole('button', { name: 'Remove Arrays' });
+    fireEvent.click(remove);
+    const add = screen.getByRole('button', { name: 'Add topic' });
+    expect(add).toBeEnabled();
+    fireEvent.click(add);
+    expect(screen.getByLabelText('Arrays minutes used')).toBeInTheDocument();
+    expect(add).toBeDisabled();
+  });
+
   it('shows the timetable and current-topic prefill', async () => {
     installFetchMock();
     renderWorkspace();
 
     expect(await screen.findByText('Data Structures')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add topic' })).toBeDisabled();
     expect(screen.getByText('09:00 am')).toBeInTheDocument();
     expect(screen.getByLabelText('Arrays completion after class')).toHaveValue(
       50,
@@ -130,7 +145,9 @@ describe('SessionLoggingWorkspace', () => {
         writes.push({ url, body: JSON.parse(String(init.body)) });
       }
     });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const overviewKey = ['ai-insights', 'campus-a', ''];
     client.setQueryData(overviewKey, { coverage: { loggedLectures: 0 } });
     renderWorkspace(client);
@@ -161,7 +178,9 @@ describe('SessionLoggingWorkspace', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Saved revision',
     );
-    await waitFor(() => expect(client.getQueryState(overviewKey)?.isInvalidated).toBe(true));
+    await waitFor(() =>
+      expect(client.getQueryState(overviewKey)?.isInvalidated).toBe(true),
+    );
   });
 
   it('captures a cancellation reason without advancing a topic', async () => {

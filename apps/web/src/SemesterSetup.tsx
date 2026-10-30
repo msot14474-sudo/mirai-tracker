@@ -1,3 +1,5 @@
+import { SemesterCalendarPreview } from './SemesterCalendarPreview';
+import './academicMobile.css';
 import { ExamCalendarEditor } from './ExamCalendarEditor';
 import { BufferThresholdSettings } from './BufferThresholdSettings';
 import { academicTrackIdentity } from './tracks';
@@ -275,7 +277,10 @@ export function SemesterSetup({
                 </div>
 
                 <div className="calendar-preview">
-                  <BufferThresholdSettings key={semesterId} semester={calendar.data.semester} />
+                  <BufferThresholdSettings
+                    key={semesterId}
+                    semester={calendar.data.semester}
+                  />
                   <div className="subheading-row">
                     <h3>Full semester calendar</h3>
                     <span>
@@ -283,30 +288,10 @@ export function SemesterSetup({
                       {calendar.data.semester.endDate}
                     </span>
                   </div>
-                  <div
-                    className="schedule-date-list"
-                    tabIndex={0}
-                    role="region"
-                    aria-label="All semester dates"
-                  >
-                    {calendar.data.days.map((day) => (
-                      <div className="calendar-row" key={day.date}>
-                        <time dateTime={day.date}>
-                          {day.date}
-                          <small className="calendar-weekday">
-                            {day.weekday.toLowerCase()}
-                          </small>
-                        </time>
-                        <span>
-                          {day.override?.title ??
-                            day.reason.replaceAll('_', ' ')}
-                        </span>
-                        <b className={day.working ? 'working' : 'closed'}>
-                          {day.working ? 'Teaching' : 'Closed'}
-                        </b>
-                      </div>
-                    ))}
-                  </div>
+                  <SemesterCalendarPreview
+                    key={`calendar-${semesterId}`}
+                    calendar={calendar.data}
+                  />
                 </div>
 
                 <div className="setup-forms">

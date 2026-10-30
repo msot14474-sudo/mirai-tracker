@@ -31,7 +31,6 @@ export function HelpWorkspace({
 
       <section className="help-topic-grid" aria-label="Help topics">
         <article>
-          <span>01</span>
           <h2>Sign-in and OTP</h2>
           <p>Check the OTP inbox saved in your account settings.</p>
           <button type="button" onClick={onOpenAccount}>
@@ -39,12 +38,10 @@ export function HelpWorkspace({
           </button>
         </article>
         <article>
-          <span>02</span>
           <h2>Campus access</h2>
           <p>Your administrator controls campus and role permissions.</p>
         </article>
         <article>
-          <span>03</span>
           <h2>Classes and progress</h2>
           <p>Your timetable, lesson plan and class logs determine progress.</p>
         </article>

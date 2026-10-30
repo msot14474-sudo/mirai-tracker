@@ -1,0 +1,236 @@
+/* Forms keep their controls readable and reachable at phone widths. */
+@media (max-width: 700px) {
+  .dashboard-shell .faculty-access-workspace .managed-account-editor,
+  .dashboard-shell .faculty-access-workspace .faculty-access-form {
+    scroll-margin-top: 90px;
+  }
+  .dashboard-shell .faculty-access-workspace .managed-account-identity strong,
+  .dashboard-shell .faculty-access-workspace .managed-account-identity > span,
+  .dashboard-shell .faculty-access-workspace .managed-account-identity > small {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .dashboard-shell .faculty-access-workspace .managed-account-identity strong {
+    flex-wrap: wrap;
+  }
+  .dashboard-shell
+    .faculty-access-workspace
+    .managed-account-row
+    > button:first-child {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+  }
+  .dashboard-shell
+    .faculty-access-workspace
+    .managed-account-row
+    > button:first-child
+    > b {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .dashboard-shell
+    .faculty-access-workspace
+    :is(
+      .managed-account-editor header,
+      .access-directory-actions,
+      .access-type-tabs
+    ) {
+    flex-wrap: wrap;
+  }
+  .dashboard-shell .student-access-import .campus-data-actions {
+    flex-wrap: wrap;
+  }
+  .dashboard-shell .student-access-import .campus-data-actions > button {
+    flex: 1 1 140px;
+    white-space: normal;
+    min-height: 44px;
+  }
+  .dashboard-shell
+    :is(
+      .session-log-workspace,
+      .topic-schedule-workspace,
+      .faculty-access-workspace,
+      .single-class-editor
+    )
+    :is(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+  .dashboard-shell
+    .topic-schedule-workspace
+    .timeline-row
+    > [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .dashboard-shell .topic-schedule-workspace .timeline-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+    overflow-wrap: anywhere;
+    padding: 14px 10px;
+  }
+  .dashboard-shell .topic-schedule-workspace .timeline-row > div {
+    grid-column: 1 / -1;
+  }
+  .dashboard-shell .single-class-editor .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .dashboard-shell .session-log-workspace .topic-progress-row {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 12px;
+    position: relative;
+  }
+  .dashboard-shell .session-log-workspace .topic-progress-row > label {
+    grid-column: 1 / -1;
+  }
+  .dashboard-shell .session-log-workspace .topic-progress-row > .icon-button {
+    grid-column: 2;
+    grid-row: 4;
+    min-width: 44px;
+    min-height: 44px;
+    justify-self: end;
+  }
+  .dashboard-shell
+    .session-log-workspace
+    .topic-progress-editor
+    .subheading-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .dashboard-shell .session-log-workspace .topic-progress-editor .text-button {
+    min-height: 44px;
+  }
+  .dashboard-shell
+    .faculty-access-workspace
+    :is(.managed-accounts, .managed-account-editor, .access-create-panel) {
+    padding: 14px;
+  }
+  .dashboard-shell .faculty-access-workspace .access-type-tabs > button {
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+.dashboard-shell .saved-topic-timeline > summary {
+  cursor: pointer;
+  padding: 14px 0;
+  color: #355d9d;
+  font-weight: 650;
+}
+@media (max-width: 700px) {
+  .dashboard-shell .topic-schedule-workspace .capacity-row > .text-button,
+  .dashboard-shell .faculty-access-workspace .access-directory-actions > button,
+  .dashboard-shell .faculty-access-workspace .account-remove-button {
+    min-height: 44px;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid {
+    overflow: visible;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid tbody {
+    display: grid;
+    gap: 16px;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid tbody th:first-child {
+    display: block;
+    width: auto;
+    padding: 12px;
+    background: #edf3ff;
+    text-align: left;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid td {
+    display: block;
+    width: auto;
+    padding: 10px;
+    border: 0;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid td.empty-day {
+    display: none;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid td.has-class::before {
+    content: attr(data-day);
+    display: block;
+    color: #526789;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .dashboard-shell .timetable-workspace .batch-week-grid .batch-week-class {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+}
+.dashboard-shell .schedule-list-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+.dashboard-shell .schedule-list-actions > span {
+  color: #64748b;
+  font-size: 13px;
+}
+.dashboard-shell .schedule-list-actions > button {
+  min-height: 44px;
+}
+/* Cancel and Move previously occupied the same grid cell. */
+.dashboard-shell .topic-schedule-workspace .capacity-row > .text-button {
+  grid-row: auto;
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .dashboard-shell .topic-schedule-workspace .capacity-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .dashboard-shell .topic-schedule-workspace .capacity-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .dashboard-shell .topic-schedule-workspace .capacity-row > input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .dashboard-shell .topic-schedule-workspace .capacity-row > .text-button {
+    grid-column: auto;
+  }
+}
+.dashboard-shell .schedule-class-filter {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+  color: #526789;
+  font-size: 13px;
+}
+.dashboard-shell .schedule-class-filter select {
+  width: 100%;
+  min-height: 44px;
+}

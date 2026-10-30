@@ -84,10 +84,14 @@ function SubjectDirectory({
     <section className="subject-directory">
       <div className="subject-directory-toolbar">
         <div>
-          <h3>{catalog.data?.length ?? 0} campus subjects</h3>
-          <p>
-            Select a subject below to explore its details.
-          </p>
+          <h3>
+            {catalog.isPending
+              ? 'Loading subjects…'
+              : catalog.isError
+                ? 'Campus subjects'
+                : `${catalog.data.length} campus subjects`}
+          </h3>
+          <p>Select a subject below to explore its details.</p>
         </div>
         <button className="primary-button" onClick={() => setCreate(true)}>
           Add subject
@@ -372,6 +376,25 @@ function SubjectDetail({
             id={`subject-tab-${id}`}
             aria-controls="subject-detail-panel"
             aria-selected={tab === id}
+            tabIndex={tab === id ? 0 : -1}
+            onKeyDown={(event) => {
+              const ids = ['overview', 'lectures', 'plan', 'exams'];
+              const index = ids.indexOf(id!);
+              const target =
+                event.key === 'ArrowRight'
+                  ? (index + 1) % ids.length
+                  : event.key === 'ArrowLeft'
+                    ? (index + ids.length - 1) % ids.length
+                    : event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? ids.length - 1
+                        : -1;
+              if (target < 0) return;
+              event.preventDefault();
+              setTab(ids[target]!);
+              document.getElementById(`subject-tab-${ids[target]}`)?.focus();
+            }}
             key={id}
             onClick={() => setTab(id!)}
           >
@@ -487,7 +510,7 @@ function SubjectDetail({
                 role="region"
                 aria-label="Upcoming lectures"
               >
-                <table>
+                <table className="subject-mobile-table">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -499,8 +522,8 @@ function SubjectDetail({
                   <tbody>
                     {upcoming.map((s) => (
                       <tr key={s.id}>
-                        <td>{reportDate(s.sessionDate)}</td>
-                        <td>
+                        <td data-label="Date">{reportDate(s.sessionDate)}</td>
+                        <td data-label="Time">
                           {new Date(s.startsAt).toLocaleTimeString(undefined, {
                             timeZone: tz,
                             hour: '2-digit',
@@ -513,8 +536,10 @@ function SubjectDetail({
                             minute: '2-digit',
                           })}
                         </td>
-                        <td>{reportNumber(s.plannedMinutes / 60)}</td>
-                        <td>
+                        <td data-label="Hours">
+                          {reportNumber(s.plannedMinutes / 60)}
+                        </td>
+                        <td data-label="Class">
                           {s.isExtraSession ? 'Extra class' : 'Scheduled'}
                         </td>
                       </tr>
@@ -573,12 +598,24 @@ function SubjectDetail({
               <LoadingSkeleton label="Loading teaching plan" />
             )}
             {units.map((u) => (
-              <section className="subject-unit" key={u.id}>
-                <h4>
-                  {u.sequence}. {u.title}
-                </h4>
+              <details className="subject-unit" key={u.id}>
+                <summary>
+                  <strong>
+                    {u.sequence}. {u.title}
+                  </strong>
+                  <span>
+                    {u.topics.length} topics ·{' '}
+                    {reportNumber(
+                      u.topics.reduce(
+                        (total, topic) => total + topic.plannedMinutes,
+                        0,
+                      ) / 60,
+                      ' h',
+                    )}
+                  </span>
+                </summary>
                 <div className="rp-table-scroll" tabIndex={0}>
-                  <table>
+                  <table className="subject-mobile-table">
                     <thead>
                       <tr>
                         <th>Topic</th>
@@ -591,16 +628,20 @@ function SubjectDetail({
                     <tbody>
                       {u.topics.map((t) => (
                         <tr key={t.id}>
-                          <td>{t.title}</td>
-                          <td>{reportNumber(t.plannedMinutes / 60)}</td>
-                          <td>
+                          <td data-label="Topic">{t.title}</td>
+                          <td data-label="Planned hours">
+                            {reportNumber(t.plannedMinutes / 60)}
+                          </td>
+                          <td data-label="Covered">
                             {reportNumber(
                               Number(t.currentCompletionPercentage),
                               '%',
                             )}
                           </td>
-                          <td>{t.status.toLowerCase().replaceAll('_', ' ')}</td>
-                          <td>
+                          <td data-label="Status">
+                            {t.status.toLowerCase().replaceAll('_', ' ')}
+                          </td>
+                          <td data-label="Exam syllabus">
                             {t.examScopes.map((e) => e.name).join(', ') ||
                               'Not in exam scope'}
                           </td>
@@ -609,7 +650,7 @@ function SubjectDetail({
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </details>
             ))}
           </section>
         )}
@@ -642,11 +683,18 @@ function SubjectDetail({
                     if (!topics.length) return null;
                     return (
                       <details className="subject-exam-unit" key={unit.id}>
-                        <summary>{unit.title} · {topics.length} topics</summary>
+                        <summary>
+                          {unit.title} · {topics.length} topics
+                        </summary>
                         <ul>
                           {topics.map((topic) => (
                             <li key={topic.id}>
-                              {topic.title} · {reportNumber(Number(topic.currentCompletionPercentage), '%')} covered
+                              {topic.title} ·{' '}
+                              {reportNumber(
+                                Number(topic.currentCompletionPercentage),
+                                '%',
+                              )}{' '}
+                              covered
                             </li>
                           ))}
                         </ul>

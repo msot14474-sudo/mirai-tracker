@@ -283,3 +283,47 @@ it('lets faculty view classes without timetable editing controls', async () => {
     screen.queryByRole('button', { name: 'Restore' }),
   ).not.toBeInTheDocument();
 });
+
+it('keeps long class lists manageable while allowing every class to be reached', async () => {
+  const longDetail = {
+    ...detail,
+    sessions: Array.from({ length: 18 }, (_, index) => ({
+      ...detail.sessions[0]!,
+      id: `class-${index}`,
+    })),
+  };
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    json({ offerings, initialOffering: longDetail }),
+  );
+  renderWorkspace();
+  const more = await screen.findByRole('button', { name: 'Show more classes' });
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(
+    8,
+  );
+  fireEvent.click(more);
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(
+    16,
+  );
+  fireEvent.click(more);
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(
+    18,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Show fewer classes' }));
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(
+    8,
+  );
+});
+
+it('opens upcoming classes first and keeps past classes available', async () => {
+  const mixedDetail = { ...detail, sessions: [
+    { ...detail.sessions[0]!, startsAt: '2000-01-01T03:30:00Z', endsAt: '2000-01-01T04:30:00Z' },
+    { ...detail.sessions[1]!, startsAt: '2099-01-01T03:30:00Z', endsAt: '2099-01-01T04:30:00Z' },
+  ] };
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ offerings, initialOffering: mixedDetail }));
+  renderWorkspace();
+  const filter = await screen.findByLabelText('Show scheduled classes');
+  expect(filter).toHaveValue('upcoming');
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(1);
+  fireEvent.change(filter, { target: { value: 'all' } });
+  expect(screen.getAllByRole('button', { name: 'Cancel class' })).toHaveLength(2);
+});

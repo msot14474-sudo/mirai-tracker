@@ -65,6 +65,9 @@ describe('M13 student overview', () => {
     expect(within(exam).getByText('4 DAYS')).toBeInTheDocument();
     expect(within(exam).getByText('12 Oct–16 Oct')).toBeInTheDocument();
     expect(within(exam).getByText('Syllabus scope')).toBeInTheDocument();
+    expect(
+      within(exam).getByRole('heading', { name: 'Unit 1 · Linear structures' }),
+    ).toBeInTheDocument();
     expect(within(exam).getAllByText('Arrays')[0]).toBeInTheDocument();
     expect(within(exam).getByText('Linked Lists')).toBeInTheDocument();
     expect(within(exam).queryByText('Queues')).not.toBeInTheDocument();

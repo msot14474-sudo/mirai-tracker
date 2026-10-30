@@ -168,3 +168,24 @@ it('prefers the active semester for workspaces that require one semester', async
   expect(await screen.findByText('Selected Semester 1')).toBeInTheDocument();
   expect(screen.getByLabelText('Semester')).toHaveValue('semester-a');
 });
+
+it('supports arrow-key navigation between subject tabs and loads the selected view', async () => {
+  show();
+  fireEvent.click(
+    await screen.findByRole('button', { name: /Open Web Development/ }),
+  );
+  const overview = screen.getByRole('tab', { name: 'Overview' });
+  overview.focus();
+  fireEvent.keyDown(overview, { key: 'ArrowRight' });
+  const lectures = screen.getByRole('tab', { name: 'Lectures' });
+  expect(lectures).toHaveFocus();
+  expect(lectures).toHaveAttribute('aria-selected', 'true');
+  expect(overview).toHaveAttribute('tabindex', '-1');
+  fireEvent.keyDown(lectures, { key: 'End' });
+  const exams = screen.getByRole('tab', { name: 'Exam syllabus & readiness' });
+  expect(exams).toHaveFocus();
+  expect(exams).toHaveAttribute('aria-selected', 'true');
+  await waitFor(() =>
+    expect(lessonPlanApi.offering).toHaveBeenCalledWith('offering-a'),
+  );
+});

@@ -303,6 +303,28 @@ describe('App authentication', () => {
     );
   });
 
+  it('dismisses mobile menus outside the header and with Escape, and keeps them exclusive', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('FACULTY'));
+    renderApp();
+    const account = await screen.findByRole('button', { name: 'Open account menu for Sample Faculty' });
+    const menu = screen.getByRole('button', { name: 'Menu', hidden: true });
+    fireEvent.click(menu);
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(account);
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(account).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(account).toHaveAttribute('aria-expanded', 'false');
+    expect(account).toHaveFocus();
+    fireEvent.click(menu);
+    fireEvent.pointerDown(document.body);
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(account);
+    fireEvent.click(menu);
+    expect(account).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('returns to sign in when a protected request reports an invalid session', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       if (String(input).endsWith('/auth/me')) return userResponse('FACULTY');

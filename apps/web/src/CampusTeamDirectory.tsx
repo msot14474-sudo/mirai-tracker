@@ -1,4 +1,5 @@
 import { facultyAccessApi } from './facultyAccess';
+import './ResponsiveRecords.css';
 
 type CampusTeam = Awaited<ReturnType<typeof facultyAccessApi.network>>[number];
 export function CampusTeamDirectory({ campus }: { campus: CampusTeam }) {
@@ -21,19 +22,32 @@ export function CampusTeamDirectory({ campus }: { campus: CampusTeam }) {
         </div>
       </header>
       {campus.people.length ? (
-        <div className="table-scroll">
-          <table className="campus-team-table">
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Role</th>
-                <th>Subjects and batches</th>
+        <div className="table-scroll responsive-records campus-team-records">
+          <table
+            className="campus-team-table"
+            role="table"
+            aria-label={`${campus.name} team`}
+          >
+            <thead role="rowgroup">
+              <tr role="row">
+                <th scope="col" role="columnheader">
+                  Member
+                </th>
+                <th scope="col" role="columnheader">
+                  Role
+                </th>
+                <th scope="col" role="columnheader">
+                  Subjects and batches
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {campus.people.map((person) => (
-                <tr key={`${person.id}-${person.role}`}>
-                  <td>
+                <tr key={`${person.id}-${person.role}`} role="row">
+                  <td role="cell" data-label="Member">
+                    <span className="record-field-label" aria-hidden="true">
+                      Member
+                    </span>
                     <div className="team-member">
                       <span className="team-avatar" aria-hidden="true">
                         {person.name
@@ -51,7 +65,10 @@ export function CampusTeamDirectory({ campus }: { campus: CampusTeam }) {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td role="cell" data-label="Role">
+                    <span className="record-field-label" aria-hidden="true">
+                      Role
+                    </span>
                     <span
                       className={`team-role ${person.role === 'CAMPUS_MANAGER' ? 'manager' : ''}`}
                     >
@@ -60,7 +77,10 @@ export function CampusTeamDirectory({ campus }: { campus: CampusTeam }) {
                         : 'Faculty'}
                     </span>
                   </td>
-                  <td>
+                  <td role="cell" data-label="Subjects and batches">
+                    <span className="record-field-label" aria-hidden="true">
+                      Subjects and batches
+                    </span>
                     {person.role === 'CAMPUS_MANAGER' ? (
                       <span className="team-scope">
                         Campus timetable and faculty access

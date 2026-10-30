@@ -1,3 +1,4 @@
+import './MobileWorkflows.css';
 import { SubjectBufferRatio } from './BufferRatio';
 import { CalendarChangeReview } from './CalendarChangeReview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -122,6 +123,7 @@ export function TopicScheduleWorkspace({
         </p>
       ) : detail.data ? (
         <ScheduleDetail
+          key={detail.data.id}
           detail={detail.data}
           canManageSessions={canManageSessions}
         />
@@ -138,6 +140,13 @@ function ScheduleDetail({
   canManageSessions: boolean;
 }) {
   const queryClient = useQueryClient();
+  const [visibleClasses, setVisibleClasses] = useState(8);
+  const [includePastClasses, setIncludePastClasses] = useState(false);
+  const upcomingClasses = detail.sessions.filter(
+    (session) => new Date(session.endsAt).getTime() >= Date.now(),
+  );
+  const showUpcoming = upcomingClasses.length > 0 && !includePastClasses;
+  const displayedClasses = showUpcoming ? upcomingClasses : detail.sessions;
   const refresh = async () => {
     await Promise.all(
       [
@@ -304,10 +313,16 @@ function ScheduleDetail({
           </div>
           {detail.forecast.allocations.map((topic) => (
             <div className="timeline-row" key={topic.id}>
-              <strong>{topic.title}</strong>
-              <span>{formatTeachingTime(topic.requiredMinutes)}</span>
-              <span>{displayDate(topic.plannedStartDate)}</span>
-              <span>
+              <div>
+                <strong>{topic.title}</strong>
+              </div>
+              <span data-label="Teaching time">
+                {formatTeachingTime(topic.requiredMinutes)}
+              </span>
+              <span data-label="Start">
+                {displayDate(topic.plannedStartDate)}
+              </span>
+              <span data-label="Finish">
                 {displayDate(topic.plannedFinishDate)}
                 {topic.afterTarget ? ' · After deadline' : ''}
               </span>
@@ -363,58 +378,68 @@ function ScheduleDetail({
               {detail.preview.allocations.length}/{detail.plan.topics} placed
             </span>
           </div>
-          <div className="timeline-header" aria-hidden="true">
-            <span>Topic</span>
-            <span>Time</span>
-            <span>Start</span>
-            <span>Finish</span>
-          </div>
-          {detail.preview.allocations.map((topic) => (
-            <article className="timeline-row" key={topic.id}>
-              <div>
-                <small>
-                  U{topic.unitSequence}.{topic.topicSequence} ·{' '}
-                  {topic.unitTitle}
-                </small>
-                <strong>{topic.title}</strong>
-              </div>
-              <span>{formatTeachingTime(topic.requiredMinutes)}</span>
-              <time dateTime={topic.plannedStartDate}>
-                {displayDate(topic.plannedStartDate)}
-              </time>
-              <time
-                dateTime={topic.plannedFinishDate}
-                className={topic.afterTarget ? 'late-date' : ''}
-              >
-                {displayDate(topic.plannedFinishDate)}
-                {topic.afterTarget ? <small>After target</small> : null}
-              </time>
-            </article>
-          ))}
-          {detail.preview.unscheduledTopics.map((topic) => (
-            <article className="timeline-row unscheduled" key={topic.id}>
-              <div>
-                <small>
-                  U{topic.unitSequence}.{topic.topicSequence} ·{' '}
-                  {topic.unitTitle}
-                </small>
-                <strong>{topic.title}</strong>
-              </div>
-              <span>{formatTeachingTime(topic.requiredMinutes)}</span>
-              <span>
-                {topic.allocatedMinutes > 0
-                  ? 'Partly scheduled'
-                  : 'Needs class time'}
-              </span>
-              <span>
-                {formatTeachingTime(topic.remainingMinutes)} still needed
-              </span>
-            </article>
-          ))}
-          {detail.preview.allocations.length === 0 &&
-          detail.preview.unscheduledTopics.length === 0 ? (
-            <p className="empty-copy">No topics are available to schedule.</p>
-          ) : null}
+          <details className="saved-topic-timeline">
+            <summary>
+              View full topic timeline ({detail.plan.topics} topics)
+            </summary>
+            <div className="timeline-header" aria-hidden="true">
+              <span>Topic</span>
+              <span>Time</span>
+              <span>Start</span>
+              <span>Finish</span>
+            </div>
+            {detail.preview.allocations.map((topic) => (
+              <article className="timeline-row" key={topic.id}>
+                <div>
+                  <small>
+                    U{topic.unitSequence}.{topic.topicSequence} ·{' '}
+                    {topic.unitTitle}
+                  </small>
+                  <strong>{topic.title}</strong>
+                </div>
+                <span data-label="Teaching time">
+                  {formatTeachingTime(topic.requiredMinutes)}
+                </span>
+                <time data-label="Start" dateTime={topic.plannedStartDate}>
+                  {displayDate(topic.plannedStartDate)}
+                </time>
+                <time
+                  data-label="Finish"
+                  dateTime={topic.plannedFinishDate}
+                  className={topic.afterTarget ? 'late-date' : ''}
+                >
+                  {displayDate(topic.plannedFinishDate)}
+                  {topic.afterTarget ? <small>After target</small> : null}
+                </time>
+              </article>
+            ))}
+            {detail.preview.unscheduledTopics.map((topic) => (
+              <article className="timeline-row unscheduled" key={topic.id}>
+                <div>
+                  <small>
+                    U{topic.unitSequence}.{topic.topicSequence} ·{' '}
+                    {topic.unitTitle}
+                  </small>
+                  <strong>{topic.title}</strong>
+                </div>
+                <span data-label="Teaching time">
+                  {formatTeachingTime(topic.requiredMinutes)}
+                </span>
+                <span data-label="Schedule">
+                  {topic.allocatedMinutes > 0
+                    ? 'Partly scheduled'
+                    : 'Needs class time'}
+                </span>
+                <span data-label="Still needed">
+                  {formatTeachingTime(topic.remainingMinutes)} still needed
+                </span>
+              </article>
+            ))}
+            {detail.preview.allocations.length === 0 &&
+            detail.preview.unscheduledTopics.length === 0 ? (
+              <p className="empty-copy">No topics are available to schedule.</p>
+            ) : null}
+          </details>
         </section>
 
         <section
@@ -432,8 +457,26 @@ function ScheduleDetail({
               ? 'Move or cancel an upcoming class here. Later topic dates adjust automatically.'
               : 'View your upcoming classes here. Record completed or cancelled lectures in Daily logging; ask your campus manager to change class times.'}
           </p>
+          <label className="schedule-class-filter">
+            Show classes
+            <select
+              aria-label="Show scheduled classes"
+              value={showUpcoming ? 'upcoming' : 'all'}
+              onChange={(event) => {
+                setIncludePastClasses(event.target.value === 'all');
+                setVisibleClasses(8);
+              }}
+            >
+              <option value="upcoming" disabled={!upcomingClasses.length}>
+                Upcoming classes ({upcomingClasses.length})
+              </option>
+              <option value="all">
+                All classes ({detail.sessions.length})
+              </option>
+            </select>
+          </label>
           <div className="capacity-list">
-            {detail.sessions.map((session) => (
+            {displayedClasses.slice(0, visibleClasses).map((session) => (
               <SessionCapacityRow
                 key={session.id}
                 canManageSessions={canManageSessions}
@@ -442,6 +485,31 @@ function ScheduleDetail({
               />
             ))}
           </div>
+          {displayedClasses.length > 8 && (
+            <div className="schedule-list-actions">
+              <span>
+                {Math.min(visibleClasses, displayedClasses.length)} of{' '}
+                {displayedClasses.length} classes
+              </span>
+              {visibleClasses < displayedClasses.length ? (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setVisibleClasses((count) => count + 8)}
+                >
+                  Show more classes
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setVisibleClasses(8)}
+                >
+                  Show fewer classes
+                </button>
+              )}
+            </div>
+          )}
         </section>
       </div>
     </div>
@@ -598,9 +666,10 @@ function SessionCapacityRow({
           <button
             type="button"
             className="text-button"
+            aria-expanded={moving}
             onClick={() => setMoving(!moving)}
           >
-            Move class
+            {moving ? 'Close move form' : 'Move class'}
           </button>
           {moving && (
             <div className="lecture-move-fields">
@@ -639,6 +708,7 @@ function SessionCapacityRow({
                   !date ||
                   !startTime ||
                   !endTime ||
+                  endTime <= startTime ||
                   !reason.trim()
                 }
                 onClick={() => move.mutate()}

@@ -1,0 +1,115 @@
+.responsive-records .record-field-label {
+  display: none;
+}
+
+/* Keep a single semantic table; on phones each record becomes a labelled card. */
+@media (max-width: 640px) {
+  .reports-workspace .rp-table-scroll.responsive-records,
+  .responsive-records.campus-team-records {
+    overflow: visible;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .responsive-records table,
+  .table-scroll.responsive-records table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .responsive-records thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .responsive-records tbody {
+    display: grid;
+    gap: 14px;
+  }
+
+  .rp-results .responsive-records tbody {
+    padding: 0 14px;
+  }
+
+  .responsive-records tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    min-width: 0;
+    padding: 4px 14px;
+    border: 1px solid #dde6f1;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .responsive-records tbody td {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    padding: 12px 0;
+    border: 0;
+    border-bottom: 1px solid #edf1f6;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .responsive-records tbody td:first-child,
+  .responsive-records td:is([data-label='Subject'], [data-label='Batch'], [data-label='Batch / Semester'], [data-label='Faculty'], [data-label='Logged by'], [data-label='Teaching Record'], [data-label='Assigned Subjects / Recorded Work'], [data-label='Activity'], [data-label='Status'], [data-label='Readiness Status'], [data-label='Worst Subject']),
+  .campus-team-records tbody td {
+    grid-column: 1 / -1;
+  }
+
+  .responsive-records .record-field-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #5c6e86;
+    font-size: 11px;
+    line-height: 1.45;
+    font-weight: 600;
+  }
+
+  .responsive-records :is(.record-field-value, .rp-subject-cell, .rp-details, .rp-log-summary, .rp-subject-list, .rp-timeline, .rp-coverage, .team-member) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .responsive-records .team-member > div {
+    min-width: 0;
+  }
+
+  .responsive-records :is(.rp-log-summary > p, .rp-timeline) {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .responsive-records .rp-details summary {
+    padding: 10px 0;
+    font-size: 12px;
+    min-height: 24px;
+  }
+
+  .responsive-records .rp-subject-cell > strong {
+    font-size: 15px;
+  }
+
+  .responsive-records tbody td small {
+    font-size: 11px;
+  }
+
+  .rp-pagination {
+    flex-wrap: wrap;
+    padding: 14px;
+  }
+
+  .rp-pagination button {
+    min-height: 44px;
+  }
+}

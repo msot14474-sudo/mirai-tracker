@@ -6,6 +6,7 @@ import {
   StudentTopic,
   studentViewApi,
 } from './studentView';
+import './studentOverview.css';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
 const examTypeLabels: Record<StudentExam['type'], string> = {
@@ -35,9 +36,7 @@ export function StudentOverview() {
         <div>
           <p className="step-label">Student view</p>
           <h2 id="student-overview-title">My subjects</h2>
-          <p>
-            Your subjects, teachers, class dates and exams.
-          </p>
+          <p>Your subjects, teachers, class dates and exams.</p>
         </div>
       </div>
 
@@ -197,8 +196,8 @@ function StudentSubjectCard({
       </div>
 
       <BufferRatio metrics={subject.buffer} />
-      <div className="student-topic-section covered-work">
-        <h5>What we covered</h5>
+      <details className="student-topic-section covered-work student-disclosure">
+        <summary>What we covered</summary>
         {subject.coveredTopics.length ? (
           subject.coveredTopics
             .slice(-3)
@@ -208,7 +207,7 @@ function StudentSubjectCard({
         ) : (
           <p>No topics have been marked covered yet.</p>
         )}
-      </div>
+      </details>
 
       <div className="student-topic-section next-work">
         <h5>Coming next</h5>
@@ -259,14 +258,32 @@ function StudentSubjectCard({
             View teaching plan · {subject.completedTopics} of{' '}
             {subject.totalTopics} topics complete
           </summary>
-          {subject.syllabusTopics.map((topic, index) => (
-            <StudentTopicRow
-              topic={topic}
-              key={topic.id}
-              mode={topic.status === 'COMPLETED' ? 'covered' : 'next'}
-              index={index}
-            />
-          ))}
+          {Array.from(
+            new Set(subject.syllabusTopics.map((topic) => topic.unit.sequence)),
+          ).map((sequence) => {
+            const topics = subject.syllabusTopics.filter(
+              (topic) => topic.unit.sequence === sequence,
+            );
+            return (
+              <details
+                className="student-syllabus-unit student-disclosure"
+                key={sequence}
+              >
+                <summary>
+                  Unit {sequence} · {topics[0]!.unit.title}
+                  <small>{topics.length} topics</small>
+                </summary>
+                {topics.map((topic, index) => (
+                  <StudentTopicRow
+                    topic={topic}
+                    key={topic.id}
+                    mode={topic.status === 'COMPLETED' ? 'covered' : 'next'}
+                    index={index}
+                  />
+                ))}
+              </details>
+            );
+          })}
         </details>
       )}
       {!!subject.weeklyClasses?.length && (
@@ -363,16 +380,38 @@ function StudentExamCard({ exam }: { exam: StudentExam }) {
         <h5>Syllabus scope</h5>
         {exam.subjects.length ? (
           exam.subjects.map((subject) => (
-            <div className="student-exam-subject" key={subject.id}>
-              <strong>
-                {subject.subject.code} · {subject.subject.name}
-              </strong>
-              <div>
-                {subject.topics.map((topic) => (
-                  <span key={topic.id}>{topic.title}</span>
-                ))}
+            <details
+              className="student-exam-subject student-disclosure"
+              key={subject.id}
+            >
+              <summary>
+                {subject.subject.name}
+                <small>
+                  {subject.subject.code} · {subject.topics.length} topics
+                </small>
+              </summary>
+              <div className="student-exam-unit-list">
+                {Array.from(
+                  new Set(subject.topics.map((topic) => topic.unit.sequence)),
+                ).map((sequence) => {
+                  const topics = subject.topics.filter(
+                    (topic) => topic.unit.sequence === sequence,
+                  );
+                  return (
+                    <section key={sequence}>
+                      <h6>
+                        Unit {sequence} · {topics[0]!.unit.title}
+                      </h6>
+                      <ul>
+                        {topics.map((topic) => (
+                          <li key={topic.id}>{topic.title}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  );
+                })}
               </div>
-            </div>
+            </details>
           ))
         ) : (
           <p>Scope has not been published yet.</p>
