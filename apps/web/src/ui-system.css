@@ -2116,3 +2116,69 @@
   .dashboard-shell .topbar .topbar-actions > .topbar-sign-out { display: none !important; }
   .dashboard-shell .topbar-title { flex: 1; min-width: 0; }
 }
+
+
+/* Keep mobile menus out of the page flow and isolate their touch scrolling. */
+.mobile-menu-backdrop { display: none; }
+@media (max-width: 900px) {
+  .dashboard-shell .app-sidebar { min-height: 64px; overflow-anchor: none; }
+  .dashboard-shell .mobile-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 64px 0 0;
+    z-index: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgb(11 31 66 / 24%);
+    touch-action: none;
+    cursor: default;
+  }
+  .dashboard-shell .sidebar-navigation-frame {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    z-index: 2;
+    min-width: 0;
+  }
+  .dashboard-shell .navigation-open .sidebar-navigation-frame { display: block; }
+  .dashboard-shell .sidebar-navigation-frame .sidebar-navigation {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-height: min(70dvh, calc(100dvh - 80px));
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    overflow-anchor: none;
+    padding: 10px;
+  }
+  .dashboard-shell .sidebar-account-wrap { z-index: 2; }
+  .dashboard-shell .sidebar-account-menu[hidden] { display: none; }
+  .dashboard-shell :is(.sidebar-menu-toggle, .sidebar-account, .sidebar-navigation button) { touch-action: manipulation; }
+}
+.semester-subject-options {
+  min-width: 0;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #dce4f0;
+  border-radius: 12px;
+}
+.semester-subject-options legend { padding: 0 6px; font-weight: 600; }
+.semester-subject-options > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 4px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.semester-subject-options input[type='checkbox'] { flex: 0 0 auto; margin: 3px 0 0; }
+@media (max-width: 480px) {
+  .dashboard-shell .rp-filter-grid { grid-template-columns: minmax(0, 1fr); }
+}

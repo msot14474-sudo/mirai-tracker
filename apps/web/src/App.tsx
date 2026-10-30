@@ -903,25 +903,72 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
   const sidebarRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!navigationOpen && !profileMenuOpen) return;
-    const dismissOutside = (event: PointerEvent) => {
-      if (!sidebarRef.current?.contains(event.target as Node)) {
-        setNavigationOpen(false);
-        setProfileMenuOpen(false);
-      }
-    };
-    const dismissEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      sidebarRef.current?.querySelector<HTMLButtonElement>(
-        profileMenuOpen ? '.sidebar-account' : '.sidebar-menu-toggle',
-      )?.focus();
+    const sidebar = sidebarRef.current;
+    const isPhoneLayout = () => window.innerWidth <= 900;
+    const trigger = sidebar?.querySelector<HTMLButtonElement>(
+      profileMenuOpen ? '.sidebar-account' : '.sidebar-menu-toggle',
+    );
+    const dismiss = (restoreFocus = false) => {
+      if (restoreFocus) trigger?.focus({ preventScroll: true });
       setNavigationOpen(false);
       setProfileMenuOpen(false);
     };
+    const dismissOutside = (event: PointerEvent) => {
+      if (!sidebar?.contains(event.target as Node)) dismiss();
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        dismiss(true);
+        return;
+      }
+      const items = Array.from(sidebar?.querySelectorAll<HTMLButtonElement>(
+        profileMenuOpen ? '.sidebar-account-menu button:not(:disabled)' : '.sidebar-navigation button',
+      ) ?? []);
+      const current = items.indexOf(document.activeElement as HTMLButtonElement);
+      if (profileMenuOpen && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+          : event.key === 'ArrowDown' ? (current + 1) % items.length
+          : current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;
+        items[index]?.focus({ preventScroll: true });
+      }
+      if (event.key === 'Tab' && isPhoneLayout()) {
+        const controls = [
+          sidebar?.querySelector<HTMLButtonElement>('.sidebar-menu-toggle'),
+          ...items,
+          sidebar?.querySelector<HTMLButtonElement>('.sidebar-account'),
+        ].filter((item): item is HTMLButtonElement => !!item);
+        const index = controls.indexOf(document.activeElement as HTMLButtonElement);
+        if (event.shiftKey && index <= 0) {
+          event.preventDefault();
+          controls.at(-1)?.focus({ preventScroll: true });
+        } else if (!event.shiftKey && (index === controls.length - 1 || index < 0)) {
+          event.preventDefault();
+          controls[0]?.focus({ preventScroll: true });
+        }
+      }
+    };
+    // Reset the menu itself, without moving the page underneath it.
+    if (navigationOpen && sidebarNavigationRef.current) sidebarNavigationRef.current.scrollTop = 0;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
+    if (isPhoneLayout()) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+    const handleResize = () => {
+      if (!isPhoneLayout()) dismiss();
+    };
     document.addEventListener('pointerdown', dismissOutside);
-    document.addEventListener('keydown', dismissEscape);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleResize);
     return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
       document.removeEventListener('pointerdown', dismissOutside);
-      document.removeEventListener('keydown', dismissEscape);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleResize);
     };
   }, [navigationOpen, profileMenuOpen]);
   const campuses = useQuery({
@@ -1387,6 +1434,19 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
       className={`dashboard-shell ${activeView === 'ai-insights' ? 'dashboard-ai-focus' : ''} ${isLeavingDashboard ? 'route-surface-exit' : 'route-surface-enter'}`}
     >
       <aside ref={sidebarRef} className={`app-sidebar ${navigationOpen ? 'navigation-open' : ''} ${showSidebarScrollCue ? 'sidebar-scroll-cued' : ''}`}>
+        {(navigationOpen || profileMenuOpen) && (
+          <button
+            type="button"
+            className="mobile-menu-backdrop"
+            aria-label="Close mobile menu"
+            tabIndex={-1}
+            onClick={() => {
+              sidebarRef.current?.querySelector<HTMLButtonElement>(profileMenuOpen ? '.sidebar-account' : '.sidebar-menu-toggle')?.focus({ preventScroll: true });
+              setNavigationOpen(false);
+              setProfileMenuOpen(false);
+            }}
+          />
+        )}
         <button
           type="button"
           className="sidebar-brand"
@@ -1444,7 +1504,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
         <div
           className={`sidebar-account-wrap ${profileMenuOpen ? 'open' : ''}`}
         >
-          <div className="sidebar-account-menu" role="menu" hidden={!profileMenuOpen}>
+          <div id="account-menu" className="sidebar-account-menu" role="menu" hidden={!profileMenuOpen}>
             <button
               type="button"
               role="menuitem"
@@ -1486,6 +1546,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
             className="sidebar-account"
             aria-label={`Open account menu for ${user.name}`}
             aria-haspopup="menu"
+            aria-controls="account-menu"
             aria-expanded={profileMenuOpen}
             onClick={() => { setProfileMenuOpen((open) => !open); setNavigationOpen(false); }}
           >

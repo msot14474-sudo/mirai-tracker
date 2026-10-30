@@ -15,6 +15,7 @@ import { App } from './App';
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function renderApp() {
@@ -323,6 +324,60 @@ describe('App authentication', () => {
     fireEvent.click(menu);
     expect(account).toHaveAttribute('aria-expanded', 'false');
     expect(menu).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it.each(['FACULTY', 'CAMPUS_MANAGER', 'STUDENT'] as const)(
+    'isolates mobile menu scrolling and restores it for %s', async (role) => {
+      vi.stubGlobal('innerWidth', 390);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse(role));
+      renderApp();
+      const menu = await screen.findByRole('button', { name: 'Menu', hidden: true });
+      const navigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
+      navigation.scrollTop = 180;
+      fireEvent.click(menu);
+      expect(navigation.scrollTop).toBe(0);
+      expect(document.body.style.overflow).toBe('hidden');
+      expect(document.documentElement.style.overflow).toBe('hidden');
+      fireEvent.click(screen.getByRole('button', { name: 'Close mobile menu', hidden: true }));
+      expect(menu).toHaveAttribute('aria-expanded', 'false');
+      expect(menu).toHaveFocus();
+      expect(document.body.style.overflow).toBe('');
+      expect(document.documentElement.style.overflow).toBe('');
+      fireEvent.click(menu);
+      cleanup();
+      expect(document.body.style.overflow).toBe('');
+    },
+  );
+
+  it('supports account-menu keyboard selection and keeps phone focus in the open header', async () => {
+    vi.stubGlobal('innerWidth', 390);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('FACULTY'));
+    renderApp();
+    const account = await screen.findByRole('button', { name: 'Open account menu for Sample Faculty' });
+    account.focus();
+    fireEvent.click(account);
+    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitem', { name: 'My account' })).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'End' });
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus();
+    account.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Menu', hidden: true })).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(account).toHaveFocus();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('closes mobile overlays when resizing to the desktop layout', async () => {
+    vi.stubGlobal('innerWidth', 390);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(userResponse('FACULTY'));
+    renderApp();
+    const menu = await screen.findByRole('button', { name: 'Menu', hidden: true });
+    fireEvent.click(menu);
+    vi.stubGlobal('innerWidth', 1280);
+    fireEvent(window, new Event('resize'));
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('returns to sign in when a protected request reports an invalid session', async () => {

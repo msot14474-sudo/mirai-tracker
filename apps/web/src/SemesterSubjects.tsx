@@ -138,7 +138,7 @@ export function SemesterSubjects({
           Mirai and University subjects share the same batch. Choose the track
           for the subjects selected below.
         </p>
-        <fieldset>
+        <fieldset className="semester-subject-options">
           <legend>Select subjects for this batch</legend>
           {subjects.isError && <p role="alert">{subjects.error.message}</p>}
           {subjects.data
