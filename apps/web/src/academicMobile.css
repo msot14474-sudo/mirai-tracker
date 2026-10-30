@@ -72,3 +72,17 @@
     gap: 6px;
   }
 }
+
+@media (max-width: 640px) {
+  .semester-month-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .semester-month-controls label {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .semester-month-controls > button {
+    grid-row: 2;
+  }
+}

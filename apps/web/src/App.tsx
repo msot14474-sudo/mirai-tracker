@@ -1535,7 +1535,7 @@ function Dashboard({ user }: { user: AuthenticatedUser }) {
                 </button>
               ) : null}
               <button
-                className="secondary-button"
+                className="secondary-button topbar-sign-out"
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
               >

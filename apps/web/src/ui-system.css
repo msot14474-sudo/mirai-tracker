@@ -2110,3 +2110,9 @@
   .weekly-summary-content { min-height: 0; overscroll-behavior: contain; }
   .weekly-summary-card .ai-markdown { padding: 0 14px 16px; overflow-wrap: anywhere; }
 }
+
+@media (max-width: 640px) {
+  /* Account actions remain in the mobile profile menu. */
+  .dashboard-shell .topbar-sign-out { display: none; }
+  .dashboard-shell .topbar-title { flex: 1; min-width: 0; }
+}
