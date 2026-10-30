@@ -329,3 +329,30 @@
     margin-top: 16px;
   }
 }
+
+/* Laptop windows need the same visible starting actions as larger displays. */
+@media (min-width: 641px) and (max-height: 850px) {
+  .ai-workspace .ai-chat-welcome {
+    padding-block: 10px;
+  }
+  .ai-workspace .ai-chat-welcome h3 {
+    font-size: 30px;
+  }
+  .ai-workspace .ai-chat-welcome p {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .ai-workspace .ai-suggestions {
+    margin-top: 18px;
+  }
+  .ai-workspace .ai-suggestions button {
+    min-height: 124px;
+    padding: 14px;
+    gap: 7px;
+  }
+  .ai-workspace .ai-conversation .ai-composer textarea {
+    height: 44px;
+    min-height: 44px;
+  }
+}
